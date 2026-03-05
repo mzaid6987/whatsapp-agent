@@ -304,6 +304,18 @@ async function webhookHandler(req, res) {
       return;
     }
 
+    // Check if customer is blocked (pre-activation CSV numbers)
+    const blockedCheck = customerModel.findByPhone(fromPhone);
+    if (blockedCheck && blockedCheck.is_blocked) {
+      // Blocked customer — save message but don't reply
+      const convo = conversationModel.getOrCreateActive(blockedCheck.id, 'nureva');
+      messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
+      conversationModel.updateLastMessage(convo.id, messageText);
+      console.log('[WA Webhook] Blocked customer, skipping:', fromPhone);
+      _broadcast({ type: 'new_message', phone: fromPhone, source: 'whatsapp', contactName, result: { reply: null, incoming: messageText } });
+      return;
+    }
+
     // Unsupported media types (sticker, video, document, location, contacts)
     if (['sticker', 'video', 'document', 'location', 'contacts'].includes(msg.type)) {
       const replyText = msg.type === 'video'

@@ -267,7 +267,7 @@
     };
 
     // CSV upload
-    function uploadCSV() {
+    async function uploadCSV() {
       const fileInput = document.getElementById('csvFile');
       const statusEl = document.getElementById('csvStatus');
       if (!fileInput.files.length) {
@@ -277,10 +277,31 @@
       }
       const file = fileInput.files[0];
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = async function(e) {
         const lines = e.target.result.split('\n').map(l => l.trim()).filter(l => l && /\d{10,}/.test(l));
-        statusEl.textContent = `${lines.length} phone numbers found — upload to DB pending (DB integration coming)`;
-        statusEl.style.color = '#25D366';
+        if (lines.length === 0) {
+          statusEl.textContent = 'Koi valid phone number nahi mila';
+          statusEl.style.color = '#FF3B30';
+          return;
+        }
+        statusEl.textContent = `${lines.length} numbers uploading...`;
+        statusEl.style.color = '#667781';
+        try {
+          const result = await api('/api/csv-upload', {
+            method: 'POST',
+            body: JSON.stringify({ phones: lines })
+          });
+          if (result.success) {
+            statusEl.textContent = `Done! ${result.added} new added, ${result.updated} existing blocked. Total: ${result.total} numbers blocked.`;
+            statusEl.style.color = '#25D366';
+          } else {
+            statusEl.textContent = 'Error: ' + (result.error || 'Unknown');
+            statusEl.style.color = '#FF3B30';
+          }
+        } catch (err) {
+          statusEl.textContent = 'Upload failed: ' + err.message;
+          statusEl.style.color = '#FF3B30';
+        }
       };
       reader.readAsText(file);
     }

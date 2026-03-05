@@ -688,6 +688,39 @@ app.post('/api/bot/toggle', requireAuth, (req, res) => {
   }
 });
 
+// CSV Upload — block pre-activation numbers
+app.post('/api/csv-upload', requireAuth, (req, res) => {
+  try {
+    const { phones } = req.body;
+    if (!phones || !Array.isArray(phones) || phones.length === 0) {
+      return res.status(400).json({ error: 'No phone numbers provided' });
+    }
+    let added = 0, updated = 0;
+    for (const raw of phones) {
+      const digits = raw.replace(/\D/g, '');
+      if (digits.length < 10) continue;
+      // Normalize: 923001234567 → 03001234567
+      let phone = digits;
+      if (phone.startsWith('92') && phone.length === 12) phone = '0' + phone.slice(2);
+      if (phone.startsWith('3') && phone.length === 10) phone = '0' + phone;
+      const existing = customerModel.findByPhone(phone);
+      if (existing) {
+        if (!existing.is_blocked) {
+          customerModel.update(existing.id, { is_blocked: 1 });
+          updated++;
+        }
+      } else {
+        const created = customerModel.create(phone);
+        customerModel.update(created.id, { is_blocked: 1 });
+        added++;
+      }
+    }
+    res.json({ success: true, added, updated, total: added + updated });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Cache stats
 app.get('/api/cache/stats', requireAuth, (req, res) => {
   try {
