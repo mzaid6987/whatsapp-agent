@@ -149,14 +149,8 @@
         </div>
       </div>
       <div class="api-key-group">
-        <label>Claude API Key (Anthropic)</label>
-        <div class="api-key-input">
-          <input type="password" id="claude_api_key" data-section="api_keys" placeholder="sk-ant-xxxxxxxxx...">
-          <button class="btn btn-sm btn-outline" onclick="togglePasswordVisibility('claude_api_key')">Show</button>
-        </div>
-      </div>
-      <div class="api-key-group">
-        <label>OpenAI API Key (Whisper voice-to-text)</label>
+        <label>OpenAI API Key (Chat + Whisper)</label>
+        <p style="color:#667781;font-size:11px;margin:-4px 0 6px;">Environment variable se load hoti hai — yahan se override kar sakte ho</p>
         <div class="api-key-input">
           <input type="password" id="openai_api_key" data-section="api_keys" placeholder="sk-xxxxxxxxx...">
           <button class="btn btn-sm btn-outline" onclick="togglePasswordVisibility('openai_api_key')">Show</button>
