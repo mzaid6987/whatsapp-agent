@@ -23,8 +23,8 @@ function qualityGate(response) {
   if (!response) return response;
   let text = response;
 
-  // Strip emojis
-  text = text.replace(EMOJI_REGEX, '').trim();
+  // Keep emojis — they improve WhatsApp readability
+  // (Previously stripped, but product list + responses need them)
 
   // Replace Arabic/Urdu script with Roman equivalents (AI sometimes mixes scripts)
   // Common Arabic letters → Roman Urdu sound
@@ -83,8 +83,8 @@ function qualityGate(response) {
     }
   }
 
-  // Clean up double spaces from emoji removal
-  text = text.replace(/\s{2,}/g, ' ').trim();
+  // Clean up double spaces (but preserve newlines)
+  text = text.replace(/ {2,}/g, ' ').trim();
 
   // Ensure no empty response
   if (!text) text = 'Ji sir, batayein kaise madad karun?';
