@@ -264,9 +264,12 @@ async function openChat(chatId) {
     (conv.needs_human ? 'Human Assigned' : 'Bot Handling') +
     ' - ' + (conv.state === 'CANCEL_AFTER_CONFIRM' ? 'CANCEL AFTER CONFIRMATION' : conv.state);
 
-  // Take over / resume buttons
+  // Complaint / Take over / Resume buttons
+  const btnComplaint = document.getElementById('btnMarkComplaint');
   const btnTakeOver = document.getElementById('btnTakeOver');
   const btnResumeBot = document.getElementById('btnResumeBot');
+  const isComplaint = !!(conv.complaint_flag || conv.state === 'COMPLAINT');
+  btnComplaint.classList.toggle('hidden', isComplaint);
   if (conv.needs_human) {
     btnTakeOver.classList.add('hidden');
     btnResumeBot.classList.remove('hidden');
@@ -480,6 +483,21 @@ async function resumeBot() {
   const conv = conversations.find(c => c.id === currentChatId);
   if (conv) {
     conv.needs_human = false;
+    openChat(currentChatId);
+    renderChatList(conversations);
+  }
+}
+
+async function markComplaint() {
+  if (!currentChatId) return;
+  const conv = conversations.find(c => c.id === currentChatId);
+  if (!conv) return;
+  if (conv.complaint_flag) return; // already complaint
+  const res = await api('/api/conversations/' + currentChatId + '/complaint', { method: 'POST' });
+  if (res?.success) {
+    conv.complaint_flag = 1;
+    conv.needs_human = true;
+    conv.state = 'COMPLAINT';
     openChat(currentChatId);
     renderChatList(conversations);
   }
