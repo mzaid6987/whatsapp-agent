@@ -91,6 +91,16 @@
       <h2>Settings</h2>
     </div>
 
+    <!-- Deploy -->
+    <div class="settings-section">
+      <h3 class="settings-section-title">Deploy & Restart</h3>
+      <p style="color:#667781;font-size:13px;margin-bottom:12px;">GitHub se latest code pull karke server restart karega. Push ke baad yeh button dabao.</p>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn btn-green" id="btnDeploy" onclick="deployServer()" style="padding:10px 24px;font-size:15px;">Deploy Now</button>
+        <span id="deployStatus" style="color:#667781;font-size:13px;"></span>
+      </div>
+    </div>
+
     <!-- Bot Control -->
     <div class="settings-section">
       <h3 class="settings-section-title">Bot Control</h3>
@@ -255,6 +265,40 @@
 
   <script src="/admin/app.js"></script>
   <script>
+    async function deployServer() {
+      const btn = document.getElementById('btnDeploy');
+      const status = document.getElementById('deployStatus');
+      if (!confirm('Deploy karein? Server restart hoga.')) return;
+      btn.disabled = true;
+      btn.textContent = 'Deploying...';
+      status.textContent = 'Git pull ho raha hai...';
+      try {
+        const res = await fetch('/deploy?token=nuvenza-deploy-2026', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          status.textContent = 'Deploy done! Server restarting... 10 sec wait karo.';
+          status.style.color = '#22c55e';
+          setTimeout(() => {
+            status.textContent = 'Reloading...';
+            window.location.reload();
+          }, 10000);
+        } else {
+          status.textContent = 'Error: ' + (data.error || 'Unknown');
+          status.style.color = '#e53e3e';
+          btn.disabled = false;
+          btn.textContent = 'Deploy Now';
+        }
+      } catch (e) {
+        // process.exit() kills connection — this is expected
+        status.textContent = 'Server restarting... 10 sec wait karo.';
+        status.style.color = '#22c55e';
+        setTimeout(() => {
+          status.textContent = 'Reloading...';
+          window.location.reload();
+        }, 10000);
+      }
+    }
+
     // Sync the big bot status toggle on settings page
     const origUpdateBotUI = updateBotUI;
     updateBotUI = function(enabled) {

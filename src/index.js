@@ -837,14 +837,13 @@ app.post('/deploy', (req, res) => {
     const pullResult = execSync('git pull origin main', { cwd: appRoot, timeout: 30000 }).toString();
     console.log('[DEPLOY] git pull:', pullResult);
 
-    // Touch tmp/restart.txt to trigger Passenger restart
-    const fs = require('fs');
-    const tmpDir = path.join(appRoot, 'tmp');
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, 'restart.txt'), Date.now().toString());
-    console.log('[DEPLOY] Restart triggered');
+    res.json({ success: true, output: pullResult, restarting: true });
 
-    res.json({ success: true, output: pullResult });
+    // Kill process after response sent — Passenger auto-respawns with new code
+    setTimeout(() => {
+      console.log('[DEPLOY] Restarting via process.exit()...');
+      process.exit(0);
+    }, 500);
   } catch (err) {
     console.error('[DEPLOY] Error:', err.message);
     res.status(500).json({ error: err.message });
