@@ -193,6 +193,7 @@
         <button class="btn btn-primary" onclick="uploadCSV()">Upload</button>
       </div>
       <div id="csvStatus" style="margin-top:8px;font-size:13px;color:#667781;"></div>
+      <div id="blockedList" style="margin-top:16px;"></div>
     </div>
 
     <!-- Follow-Up Timing -->
@@ -294,6 +295,7 @@
           if (result.success) {
             statusEl.textContent = `Done! ${result.added} new added, ${result.updated} existing blocked. Total: ${result.total} numbers blocked.`;
             statusEl.style.color = '#25D366';
+            loadBlockedList();
           } else {
             statusEl.textContent = 'Error: ' + (result.error || 'Unknown');
             statusEl.style.color = '#FF3B30';
@@ -305,6 +307,45 @@
       };
       reader.readAsText(file);
     }
+
+    // Load blocked customers list
+    async function loadBlockedList() {
+      const container = document.getElementById('blockedList');
+      if (!container) return;
+      try {
+        const rows = await api('/api/blocked-customers');
+        if (!rows || rows.length === 0) {
+          container.innerHTML = '<p style="color:#667781;font-size:12px;">No blocked numbers</p>';
+          return;
+        }
+        let html = `<p style="font-size:13px;font-weight:600;margin-bottom:8px;">Blocked Numbers (${rows.length})</p>`;
+        html += '<div style="max-height:300px;overflow-y:auto;border:1px solid #e0e0e0;border-radius:8px;">';
+        html += '<table style="width:100%;font-size:13px;border-collapse:collapse;">';
+        rows.forEach(r => {
+          const phone = r.phone.startsWith('92') ? '0' + r.phone.slice(2) : r.phone;
+          html += `<tr style="border-bottom:1px solid #f0f0f0;">
+            <td style="padding:8px 12px;">${phone}</td>
+            <td style="padding:8px 12px;color:#667781;">${r.name || '-'}</td>
+            <td style="padding:8px 4px;text-align:right;">
+              <button onclick="unblockCustomer(${r.id})" style="padding:4px 10px;font-size:11px;background:#FF3B30;color:white;border:none;border-radius:6px;cursor:pointer;">Unblock</button>
+            </td>
+          </tr>`;
+        });
+        html += '</table></div>';
+        container.innerHTML = html;
+      } catch (e) {
+        container.innerHTML = '';
+      }
+    }
+
+    async function unblockCustomer(id) {
+      if (!confirm('Unblock? Bot will reply to this number again.')) return;
+      await api('/api/customers/' + id + '/unblock', { method: 'POST' });
+      loadBlockedList();
+    }
+
+    // Load on page init
+    loadBlockedList();
   </script>
 </body>
 </html>

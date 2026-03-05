@@ -721,6 +721,26 @@ app.post('/api/csv-upload', requireAuth, (req, res) => {
   }
 });
 
+// Blocked customers list
+app.get('/api/blocked-customers', requireAuth, (req, res) => {
+  try {
+    const rows = getDb().prepare('SELECT id, phone, name FROM customers WHERE is_blocked = 1 ORDER BY phone').all();
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Unblock customer
+app.post('/api/customers/:id/unblock', requireAuth, (req, res) => {
+  try {
+    customerModel.update(parseInt(req.params.id), { is_blocked: 0 });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Cache stats
 app.get('/api/cache/stats', requireAuth, (req, res) => {
   try {
