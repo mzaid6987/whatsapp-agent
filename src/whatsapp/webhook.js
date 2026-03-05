@@ -184,7 +184,7 @@ async function webhookHandler(req, res) {
 
     // Get credentials
     const accessToken = settingsModel.get('meta_whatsapp_token', '');
-    const apiKey = process.env.OPENAI_API_KEY || '';
+    const apiKey = settingsModel.get('openai_api_key', '') || process.env.OPENAI_API_KEY || '';
 
     if (!accessToken) {
       console.error('[WA Webhook] No access token configured');

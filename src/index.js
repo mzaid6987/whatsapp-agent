@@ -643,7 +643,12 @@ app.get('/api/stores', requireAuth, (req, res) => {
 // Settings
 app.get('/api/settings', requireAuth, (req, res) => {
   try {
-    res.json(settingsModel.getAll());
+    const settings = settingsModel.getAll();
+    // Show env key if no DB override set
+    if (!settings.openai_api_key && process.env.OPENAI_API_KEY) {
+      settings.openai_api_key = process.env.OPENAI_API_KEY;
+    }
+    res.json(settings);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
