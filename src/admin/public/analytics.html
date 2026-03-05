@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics — WhatsApp Agent</title>
+  <link rel="stylesheet" href="/admin/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    .analytics-controls { display:flex; gap:12px; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
+    .analytics-controls input, .analytics-controls select { padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
+    .analytics-controls .btn-active { background:var(--wa-dark); color:white; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; }
+    .analytics-controls .btn-inactive { background:white; color:var(--text-dark); border:1px solid var(--border); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; }
+    .section-title { font-size:16px; font-weight:600; margin:24px 0 12px; color:var(--text-dark); }
+    .charts-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+    .stat-cards-8 { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:24px; }
+    .funnel-container { background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08); margin-bottom:24px; }
+    .funnel-step { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid #f0f0f0; }
+    .funnel-step:last-child { border-bottom:none; }
+    .funnel-bar { height:28px; border-radius:4px; background:var(--wa-green); display:flex; align-items:center; padding:0 10px; color:white; font-size:12px; font-weight:600; min-width:40px; transition:width 0.5s; }
+    .funnel-label { font-size:13px; color:var(--text-secondary); min-width:120px; }
+    .funnel-count { font-size:13px; font-weight:600; min-width:40px; text-align:right; }
+    .funnel-pct { font-size:12px; color:var(--text-light); min-width:50px; }
+    .data-table { width:100%; border-collapse:collapse; background:white; border-radius:10px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.08); margin-bottom:24px; }
+    .data-table th { background:#f8f9fa; padding:10px 12px; text-align:left; font-size:12px; color:var(--text-secondary); font-weight:600; text-transform:uppercase; }
+    .data-table td { padding:10px 12px; border-top:1px solid #f0f0f0; font-size:13px; }
+    .data-table tr:hover { background:#f8f9fa; }
+    .badge-red { background:#FFE5E5; color:#FF3B30; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+    .badge-green { background:#E5F9E5; color:#34C759; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+    .badge-orange { background:#FFF3E0; color:#FF9500; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+    .badge-blue { background:#E3F2FD; color:#007AFF; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+    .cost-highlight { font-size:24px; font-weight:700; color:var(--wa-dark); }
+    .clickable { cursor:pointer; color:var(--blue-info); text-decoration:underline; }
+    @media (max-width: 768px) {
+      .stat-cards-8 { grid-template-columns:repeat(2, 1fr); }
+      .charts-row { grid-template-columns:1fr; }
+      .funnel-label { min-width:80px; font-size:11px; }
+      .data-table { font-size:12px; }
+      .data-table th, .data-table td { padding:8px 6px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="bot-status on" id="botStatus" onclick="toggleBot()">
+        <span class="bot-status-dot"></span>
+        <span id="botStatusText">BOT ON</span>
+      </div>
+      <span class="header-title">WhatsApp Agent</span>
+    </div>
+    <div class="header-right">
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- NAV BAR -->
+  <nav class="nav-bar">
+    <a href="/admin/" class="nav-item" data-page="chats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/customers.html" class="nav-item" data-page="customers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      Customers
+    </a>
+    <a href="/admin/orders.html" class="nav-item" data-page="orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      Orders
+    </a>
+    <a href="/admin/analytics.html" class="nav-item active" data-page="analytics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H4.6c-.6 0-.6-.4-.6-1V3"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+      Analytics
+    </a>
+    <a href="/admin/stats.html" class="nav-item" data-page="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </a>
+    <a href="/admin/products.html" class="nav-item" data-page="products">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/></svg>
+      Products
+    </a>
+    <a href="/admin/settings.html" class="nav-item" data-page="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- MOBILE NAV -->
+  <nav class="mobile-nav">
+    <a href="/admin/" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/orders.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      Orders
+    </a>
+    <a href="/admin/analytics.html" class="mobile-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H4.6c-.6 0-.6-.4-.6-1V3"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+      Analytics
+    </a>
+    <a href="/admin/stats.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </a>
+    <a href="/admin/settings.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="page-header">
+      <h2>Analytics Dashboard</h2>
+    </div>
+
+    <!-- Controls -->
+    <div class="analytics-controls">
+      <button id="btnDaily" class="btn-active" onclick="setMode('daily')">Daily</button>
+      <button id="btnMonthly" class="btn-inactive" onclick="setMode('monthly')">Monthly</button>
+      <input type="date" id="datePicker" onchange="loadAnalytics()">
+      <input type="month" id="monthPicker" onchange="loadAnalytics()" style="display:none;">
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="stat-cards-8">
+      <div class="stat-card"><div class="stat-value" id="kpiChats">-</div><div class="stat-label">Total Chats</div></div>
+      <div class="stat-card"><div class="stat-value" id="kpiOrders">-</div><div class="stat-label">Orders</div></div>
+      <div class="stat-card"><div class="stat-value" id="kpiRevenue">-</div><div class="stat-label">Revenue</div></div>
+      <div class="stat-card"><div class="stat-value" id="kpiConversion">-</div><div class="stat-label">Conversion</div></div>
+      <div class="stat-card"><div class="stat-value" id="kpiAiCost">-</div><div class="stat-label">AI Cost</div></div>
+      <div class="stat-card"><div class="stat-value" id="kpiTemplatePct">-</div><div class="stat-label">Template %</div></div>
+      <div class="stat-card"><div class="stat-value" id="kpiSpam">-</div><div class="stat-label">Spam</div></div>
+      <div class="stat-card"><div class="stat-value" id="kpiComplaints">-</div><div class="stat-label">Complaints</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="chart-container">
+        <div class="chart-title">Chats vs Orders Trend</div>
+        <canvas id="trendChart" height="220"></canvas>
+      </div>
+      <div class="chart-container">
+        <div class="chart-title">Response Sources</div>
+        <canvas id="sourceChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <!-- Funnel -->
+    <div class="section-title">Conversion Funnel</div>
+    <div class="funnel-container" id="funnelContainer">
+      <div style="color:var(--text-light);text-align:center;padding:20px;">Loading...</div>
+    </div>
+
+    <!-- Order Breakdown -->
+    <div class="section-title">Order Breakdown</div>
+    <div class="charts-row">
+      <div class="chart-container">
+        <div class="chart-title">Orders by Status</div>
+        <canvas id="orderStatusChart" height="200"></canvas>
+      </div>
+      <div class="chart-container">
+        <div class="chart-title">Discount Stats</div>
+        <div id="discountStats" style="padding:10px;">-</div>
+      </div>
+    </div>
+
+    <!-- Complaints -->
+    <div class="section-title">Complaints</div>
+    <div class="charts-row">
+      <div class="stat-card"><div class="stat-value" id="complaintTotal">-</div><div class="stat-label">Total Complaints</div></div>
+      <div class="stat-card"><div class="stat-value" id="complaintResolved" style="color:var(--green-success)">-</div><div class="stat-label">Human Resolved</div></div>
+      <div class="stat-card"><div class="stat-value" id="complaintPending" style="color:var(--red-alert)">-</div><div class="stat-label">Pending</div></div>
+    </div>
+    <table class="data-table" id="complaintTable" style="display:none;">
+      <thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Last Message</th><th>Time</th></tr></thead>
+      <tbody id="complaintBody"></tbody>
+    </table>
+
+    <!-- AI Cost Breakdown -->
+    <div class="section-title">AI Cost Breakdown</div>
+    <div class="stat-cards-8" style="grid-template-columns:repeat(4,1fr);">
+      <div class="stat-card"><div class="cost-highlight" id="costTotal">-</div><div class="stat-label">Total Cost (Rs)</div></div>
+      <div class="stat-card"><div class="stat-value" id="costAi">-</div><div class="stat-label">AI Chat Cost</div></div>
+      <div class="stat-card"><div class="stat-value" id="costMedia">-</div><div class="stat-label">Voice/Image Cost</div></div>
+      <div class="stat-card"><div class="stat-value" id="costAvg">-</div><div class="stat-label">Avg/Chat</div></div>
+    </div>
+
+    <!-- Lost Customers -->
+    <div class="section-title">Lost Customers</div>
+    <table class="data-table" id="lostTable">
+      <thead><tr><th>Name</th><th>Phone</th><th>Drop-off State</th><th>Reason</th><th>Last Message</th><th>Time</th></tr></thead>
+      <tbody id="lostBody"><tr><td colspan="6" style="text-align:center;color:var(--text-light);">Loading...</td></tr></tbody>
+    </table>
+
+    <!-- Follow-up -->
+    <div class="section-title">Follow-up Status</div>
+    <table class="data-table" id="followupTable">
+      <thead><tr><th>Name</th><th>Phone</th><th>State</th><th>Follow-up</th><th>Follow-up Date</th><th>Last Active</th></tr></thead>
+      <tbody id="followupBody"><tr><td colspan="6" style="text-align:center;color:var(--text-light);">Loading...</td></tr></tbody>
+    </table>
+
+  </main>
+
+  <script src="/admin/app.js"></script>
+  <script>
+    let mode = 'daily';
+    let trendChart, sourceChart, orderStatusChart;
+
+    // Set today as default
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('datePicker').value = today;
+    document.getElementById('monthPicker').value = today.slice(0, 7);
+
+    function setMode(m) {
+      mode = m;
+      document.getElementById('btnDaily').className = m === 'daily' ? 'btn-active' : 'btn-inactive';
+      document.getElementById('btnMonthly').className = m === 'monthly' ? 'btn-active' : 'btn-inactive';
+      document.getElementById('datePicker').style.display = m === 'daily' ? '' : 'none';
+      document.getElementById('monthPicker').style.display = m === 'monthly' ? '' : 'none';
+      loadAnalytics();
+    }
+
+    async function loadAnalytics() {
+      const params = mode === 'daily'
+        ? `date=${document.getElementById('datePicker').value}`
+        : `month=${document.getElementById('monthPicker').value}`;
+      const data = await api(`/api/analytics?${params}`);
+      if (!data) return;
+      render(data);
+    }
+
+    function render(d) {
+      // KPI
+      el('kpiChats').textContent = d.total_chats;
+      el('kpiOrders').textContent = d.total_orders;
+      el('kpiRevenue').textContent = 'Rs.' + (d.total_revenue || 0).toLocaleString();
+      el('kpiConversion').textContent = d.conversion_rate + '%';
+      el('kpiAiCost').textContent = 'Rs.' + d.total_cost_rs;
+      el('kpiTemplatePct').textContent = d.template_pct + '%';
+      el('kpiSpam').textContent = d.spam_chats;
+      el('kpiComplaints').textContent = d.total_complaints;
+
+      // Trend chart
+      renderTrendChart(d.chart_labels, d.chart_chats, d.chart_orders);
+      // Source chart
+      renderSourceChart(d.template_msgs, d.ai_msgs, d.human_msgs);
+      // Funnel
+      renderFunnel(d.funnel, d.total_chats);
+      // Order status
+      renderOrderStatus(d.orders_by_status);
+      // Discount
+      renderDiscount(d.discount_stats);
+      // Complaints
+      el('complaintTotal').textContent = d.total_complaints;
+      el('complaintResolved').textContent = d.complaints_human_resolved;
+      el('complaintPending').textContent = d.complaints_pending;
+      renderComplaintTable(d.complaint_list);
+      // AI Cost
+      el('costTotal').textContent = 'Rs.' + d.total_cost_rs;
+      el('costAi').textContent = 'Rs.' + d.ai_cost_rs;
+      el('costMedia').textContent = 'Rs.' + d.media_cost_rs;
+      el('costAvg').textContent = 'Rs.' + d.avg_cost_per_chat;
+      // Lost customers
+      renderLostTable(d.lost_customers);
+      // Follow-up
+      renderFollowupTable(d.follow_up_list);
+    }
+
+    function el(id) { return document.getElementById(id); }
+
+    function renderTrendChart(labels, chats, orders) {
+      if (trendChart) trendChart.destroy();
+      trendChart = new Chart(el('trendChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Chats', data: chats, backgroundColor: 'rgba(37,211,102,0.6)', borderRadius: 4 },
+            { label: 'Orders', data: orders, backgroundColor: 'rgba(7,94,84,0.8)', borderRadius: 4 },
+          ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+      });
+    }
+
+    function renderSourceChart(template, ai, human) {
+      if (sourceChart) sourceChart.destroy();
+      sourceChart = new Chart(el('sourceChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Template', 'AI', 'Human'],
+          datasets: [{ data: [template, ai, human], backgroundColor: ['#25D366', '#FF9500', '#007AFF'] }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+
+    function renderFunnel(funnel, total) {
+      if (!funnel || !funnel.length) { el('funnelContainer').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);">No data</div>'; return; }
+      const maxCount = funnel[0]?.count || total || 1;
+      const stateLabels = {
+        'GREETING': 'Greeting',
+        'PRODUCT_INQUIRY': 'Product View',
+        'PRODUCT_SELECTION': 'Product Select',
+        'COLLECT_NAME': 'Name',
+        'COLLECT_PHONE': 'Phone',
+        'COLLECT_DELIVERY_PHONE': 'Delivery Phone',
+        'COLLECT_CITY': 'City',
+        'COLLECT_ADDRESS': 'Address',
+        'ORDER_SUMMARY': 'Order Summary',
+        'UPSELL_HOOK': 'Upsell',
+        'UPSELL_SHOW': 'Upsell Show',
+        'ORDER_CONFIRMED': 'Order Done'
+      };
+      let html = '';
+      for (const step of funnel) {
+        const pct = maxCount > 0 ? ((step.count / maxCount) * 100).toFixed(0) : 0;
+        const barW = Math.max(pct, 5);
+        const label = stateLabels[step.state] || step.state;
+        const color = step.state === 'ORDER_CONFIRMED' ? 'var(--wa-dark)' : 'var(--wa-green)';
+        html += `<div class="funnel-step">
+          <span class="funnel-label">${label}</span>
+          <div style="flex:1;"><div class="funnel-bar" style="width:${barW}%;background:${color};">${step.count}</div></div>
+          <span class="funnel-pct">${pct}%</span>
+        </div>`;
+      }
+      el('funnelContainer').innerHTML = html;
+    }
+
+    function renderOrderStatus(statuses) {
+      if (orderStatusChart) orderStatusChart.destroy();
+      if (!statuses || !statuses.length) {
+        orderStatusChart = new Chart(el('orderStatusChart'), { type: 'doughnut', data: { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#eee'] }] } });
+        return;
+      }
+      const colors = { confirmed: '#FF9500', processing: '#007AFF', shipped: '#5856D6', delivered: '#34C759', returned: '#FF3B30', cancelled: '#8E8E93' };
+      orderStatusChart = new Chart(el('orderStatusChart'), {
+        type: 'doughnut',
+        data: {
+          labels: statuses.map(s => s.status),
+          datasets: [{ data: statuses.map(s => s.count), backgroundColor: statuses.map(s => colors[s.status] || '#ccc') }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+
+    function renderDiscount(ds) {
+      if (!ds || ds.count === 0) {
+        el('discountStats').innerHTML = '<div style="color:var(--text-light);padding:20px;text-align:center;">No discounts given</div>';
+        return;
+      }
+      el('discountStats').innerHTML = `
+        <div style="display:grid;gap:12px;">
+          <div><span style="font-size:24px;font-weight:700;color:var(--wa-dark);">${ds.count}</span> <span style="color:var(--text-secondary);">orders with discount</span></div>
+          <div><span style="font-size:20px;font-weight:600;">${Math.round(ds.avg_pct)}%</span> <span style="color:var(--text-secondary);">avg discount</span></div>
+          <div><span style="font-size:20px;font-weight:600;">Rs.${Math.round(ds.total_disc).toLocaleString()}</span> <span style="color:var(--text-secondary);">total discount given</span></div>
+        </div>`;
+    }
+
+    function renderComplaintTable(list) {
+      if (!list || !list.length) { el('complaintTable').style.display = 'none'; return; }
+      el('complaintTable').style.display = '';
+      el('complaintBody').innerHTML = list.map(c => `<tr>
+        <td>${c.name || '-'}</td>
+        <td>${c.phone || '-'}</td>
+        <td><span class="badge-orange">${c.state}</span></td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.last_message || '-'}</td>
+        <td>${fmtTime(c.last_message_at)}</td>
+      </tr>`).join('');
+    }
+
+    function renderLostTable(list) {
+      if (!list || !list.length) { el('lostBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-light);">No lost customers</td></tr>'; return; }
+      el('lostBody').innerHTML = list.map(c => `<tr>
+        <td>${c.name || '-'}</td>
+        <td>${c.phone || '-'}</td>
+        <td><span class="badge-blue">${c.state}</span></td>
+        <td>${c.reason}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.last_message || '-'}</td>
+        <td>${fmtTime(c.last_message_at)}</td>
+      </tr>`).join('');
+    }
+
+    function renderFollowupTable(list) {
+      if (!list || !list.length) { el('followupBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-light);">No pending follow-ups</td></tr>'; return; }
+      el('followupBody').innerHTML = list.map(f => `<tr>
+        <td>${f.name || '-'}</td>
+        <td>${f.phone || '-'}</td>
+        <td><span class="badge-blue">${f.state}</span></td>
+        <td>${f.followed_up ? '<span class="badge-green">Yes</span>' : '<span class="badge-red">No</span>'}</td>
+        <td>${f.follow_up_date ? fmtTime(f.follow_up_date) : '-'}</td>
+        <td>${fmtTime(f.last_message_at)}</td>
+      </tr>`).join('');
+    }
+
+    function fmtTime(t) {
+      if (!t) return '-';
+      const d = new Date(t);
+      return d.toLocaleDateString('en-PK', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Load on page ready
+    document.addEventListener('DOMContentLoaded', loadAnalytics);
+  </script>
+</body>
+</html>

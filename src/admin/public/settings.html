@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — WhatsApp Agent</title>
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="bot-status on" id="botStatus" onclick="toggleBot()">
+        <span class="bot-status-dot"></span>
+        <span id="botStatusText">BOT ON</span>
+      </div>
+      <span class="header-title">WhatsApp Agent</span>
+    </div>
+    <div class="header-right">
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- NAV BAR (Desktop) -->
+  <nav class="nav-bar">
+    <a href="/admin/" class="nav-item" data-page="chats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/customers.html" class="nav-item" data-page="customers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Customers
+    </a>
+    <a href="/admin/orders.html" class="nav-item" data-page="orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Orders
+    </a>
+    <a href="/admin/analytics.html" class="nav-item" data-page="analytics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H4.6c-.6 0-.6-.4-.6-1V3"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+      Analytics
+    </a>
+    <a href="/admin/stats.html" class="nav-item" data-page="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </a>
+    <a href="/admin/products.html" class="nav-item" data-page="products">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      Products
+    </a>
+    <a href="/admin/settings.html" class="nav-item active" data-page="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+    <a href="/admin/test-chat.html" class="nav-item" data-page="test-chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      Test Chat
+    </a>
+  </nav>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mobile-nav">
+    <a href="/admin/" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/orders.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      Orders
+    </a>
+    <a href="/admin/analytics.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H4.6c-.6 0-.6-.4-.6-1V3"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+      Analytics
+    </a>
+    <a href="/admin/stats.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </a>
+    <a href="/admin/test-chat.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      Test
+    </a>
+    <a href="/admin/settings.html" class="mobile-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="page-header">
+      <h2>Settings</h2>
+    </div>
+
+    <!-- Bot Control -->
+    <div class="settings-section">
+      <h3 class="settings-section-title">Bot Control</h3>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div class="bot-status on" id="botStatusBig" onclick="toggleBot()" style="font-size:18px;padding:12px 24px;cursor:pointer;">
+          <span class="bot-status-dot"></span>
+          <span id="botStatusTextBig">BOT ON</span>
+        </div>
+        <span style="color:#667781;font-size:13px;">Click to toggle bot globally ON/OFF</span>
+      </div>
+    </div>
+
+    <!-- API Keys — User's requested section -->
+    <div class="settings-section">
+      <h3 class="settings-section-title">API Keys & Credentials</h3>
+      <p style="color:#667781;font-size:13px;margin-bottom:16px;">WhatsApp, AI, aur integrations ke credentials yahan daalein</p>
+
+      <div class="settings-group-title">Meta WhatsApp Cloud API</div>
+      <div class="api-key-group">
+        <label>WhatsApp Access Token</label>
+        <div class="api-key-input">
+          <input type="password" id="meta_whatsapp_token" data-section="api_keys" placeholder="EAAxxxxxxxxx...">
+          <button class="btn btn-sm btn-outline" onclick="togglePasswordVisibility('meta_whatsapp_token')">Show</button>
+        </div>
+      </div>
+      <div class="api-key-group">
+        <label>Phone Number ID</label>
+        <div class="api-key-input">
+          <input type="text" id="meta_phone_number_id" data-section="api_keys" placeholder="1234567890xxxxx">
+        </div>
+      </div>
+      <div class="api-key-group">
+        <label>Webhook Verify Token</label>
+        <div class="api-key-input">
+          <input type="text" id="meta_verify_token" data-section="api_keys" placeholder="your-custom-verify-token">
+        </div>
+      </div>
+      <div class="api-key-group">
+        <label>App Secret</label>
+        <div class="api-key-input">
+          <input type="password" id="meta_app_secret" data-section="api_keys" placeholder="abcdef123456...">
+          <button class="btn btn-sm btn-outline" onclick="togglePasswordVisibility('meta_app_secret')">Show</button>
+        </div>
+      </div>
+
+      <div class="settings-group-title" style="margin-top:20px;">AI Services</div>
+      <div class="api-key-group">
+        <label>Claude API Key (Anthropic)</label>
+        <div class="api-key-input">
+          <input type="password" id="claude_api_key" data-section="api_keys" placeholder="sk-ant-xxxxxxxxx...">
+          <button class="btn btn-sm btn-outline" onclick="togglePasswordVisibility('claude_api_key')">Show</button>
+        </div>
+      </div>
+      <div class="api-key-group">
+        <label>OpenAI API Key (Whisper voice-to-text)</label>
+        <div class="api-key-input">
+          <input type="password" id="openai_api_key" data-section="api_keys" placeholder="sk-xxxxxxxxx...">
+          <button class="btn btn-sm btn-outline" onclick="togglePasswordVisibility('openai_api_key')">Show</button>
+        </div>
+      </div>
+
+      <div class="settings-group-title" style="margin-top:20px;">Google Services</div>
+      <div class="api-key-group">
+        <label>Google Maps API Key (Geocoding)</label>
+        <div class="api-key-input">
+          <input type="password" id="google_maps_api_key" data-section="api_keys" placeholder="AIzaxxxxxxxxx...">
+          <button class="btn btn-sm btn-outline" onclick="togglePasswordVisibility('google_maps_api_key')">Show</button>
+        </div>
+      </div>
+      <div class="api-key-group">
+        <label>Google Sheets Endpoint URL</label>
+        <div class="api-key-input">
+          <input type="text" id="google_sheets_url" data-section="api_keys" placeholder="https://script.google.com/macros/s/xxxxx/exec">
+        </div>
+      </div>
+
+      <div class="settings-group-title" style="margin-top:20px;">Innovexa Portal</div>
+      <div class="api-key-group">
+        <label>Portal Webhook URL</label>
+        <div class="api-key-input">
+          <input type="text" id="portal_webhook_url" data-section="api_keys" placeholder="https://ecom-portal.theinnovexa.com/public/webhook-simple.php?token=xxx">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" data-save="api_keys" onclick="saveSettings('api_keys')" style="margin-top:16px;">Save API Keys</button>
+    </div>
+
+    <!-- CSV Upload -->
+    <div class="settings-section">
+      <h3 class="settings-section-title">CSV Upload (Pre-Activation)</h3>
+      <p style="color:#667781;font-size:13px;margin-bottom:12px;">Purane customer phone numbers upload karein — bot in ko reply nahi karega</p>
+      <p style="color:#667781;font-size:12px;margin-bottom:12px;">Format: Ek column — 03001234567 (ek number per row)</p>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <input type="file" id="csvFile" accept=".csv,.txt" style="font-size:14px;">
+        <button class="btn btn-primary" onclick="uploadCSV()">Upload</button>
+      </div>
+      <div id="csvStatus" style="margin-top:8px;font-size:13px;color:#667781;"></div>
+    </div>
+
+    <!-- Follow-Up Timing -->
+    <div class="settings-section">
+      <h3 class="settings-section-title">Follow-Up Timing</h3>
+      <div class="settings-row">
+        <label>Reminder 1 after (hours, no customer reply):</label>
+        <input type="number" id="followup_r1_hours" data-section="timing" value="5" min="1" max="23" style="width:80px;">
+      </div>
+      <div class="settings-row">
+        <label>Reminder 2 after (hours, after R1):</label>
+        <input type="number" id="followup_r2_hours" data-section="timing" value="7" min="1" max="23" style="width:80px;">
+      </div>
+      <div class="settings-row">
+        <label>Final reminder (hours before 24hr window close):</label>
+        <input type="number" id="followup_r3_before_close" data-section="timing" value="2" min="1" max="12" style="width:80px;">
+      </div>
+      <button class="btn btn-primary" data-save="timing" onclick="saveSettings('timing')" style="margin-top:12px;">Save Timing</button>
+    </div>
+
+    <!-- Haggling Limits -->
+    <div class="settings-section">
+      <h3 class="settings-section-title">Haggling / Price Negotiation</h3>
+      <div class="settings-row">
+        <label>First discount offer (%):</label>
+        <input type="number" id="haggle_first_discount" data-section="haggling" value="5" min="0" max="50" style="width:80px;">
+      </div>
+      <div class="settings-row">
+        <label>Max discount allowed (%):</label>
+        <input type="number" id="haggle_max_discount" data-section="haggling" value="10" min="0" max="50" style="width:80px;">
+      </div>
+      <div class="settings-row">
+        <label>Max negotiation rounds:</label>
+        <input type="number" id="haggle_max_rounds" data-section="haggling" value="2" min="1" max="5" style="width:80px;">
+      </div>
+      <button class="btn btn-primary" data-save="haggling" onclick="saveSettings('haggling')" style="margin-top:12px;">Save Haggling</button>
+    </div>
+
+    <!-- Upsell Config -->
+    <div class="settings-section">
+      <h3 class="settings-section-title">Upsell Settings</h3>
+      <div class="settings-row">
+        <label>Upsell hook discount % (shown in message):</label>
+        <input type="number" id="upsell_discount_percent" data-section="upsell" value="75" min="0" max="99" style="width:80px;">
+      </div>
+      <p style="color:#667781;font-size:12px;margin-top:4px;">Bot bolega: "hamare pas X% discount wali deals hain..."</p>
+      <button class="btn btn-primary" data-save="upsell" onclick="saveSettings('upsell')" style="margin-top:12px;">Save Upsell</button>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="settings-section" style="border-color:#FF3B30;">
+      <h3 class="settings-section-title" style="color:#FF3B30;">Danger Zone</h3>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn btn-sm" style="background:#FF3B30;color:#fff;border:none;" onclick="if(confirm('Sab conversations clear ho jayen gi. Confirm?')) alert('Would clear — DB integration pending')">Clear All Conversations</button>
+        <button class="btn btn-sm" style="background:#FF3B30;color:#fff;border:none;" onclick="if(confirm('Bot state reset ho jayega. Confirm?')) alert('Would reset — DB integration pending')">Reset Bot State</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="/admin/app.js"></script>
+  <script>
+    // Sync the big bot status toggle on settings page
+    const origUpdateBotUI = updateBotUI;
+    updateBotUI = function(enabled) {
+      origUpdateBotUI(enabled);
+      const bigEl = document.getElementById('botStatusBig');
+      const bigTxt = document.getElementById('botStatusTextBig');
+      if (bigEl) {
+        bigEl.className = 'bot-status ' + (enabled ? 'on' : 'off');
+        bigTxt.textContent = enabled ? 'BOT ON' : 'BOT OFF';
+      }
+    };
+
+    // CSV upload
+    function uploadCSV() {
+      const fileInput = document.getElementById('csvFile');
+      const statusEl = document.getElementById('csvStatus');
+      if (!fileInput.files.length) {
+        statusEl.textContent = 'Pehle file select karein';
+        statusEl.style.color = '#FF3B30';
+        return;
+      }
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const lines = e.target.result.split('\n').map(l => l.trim()).filter(l => l && /\d{10,}/.test(l));
+        statusEl.textContent = `${lines.length} phone numbers found — upload to DB pending (DB integration coming)`;
+        statusEl.style.color = '#25D366';
+      };
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>

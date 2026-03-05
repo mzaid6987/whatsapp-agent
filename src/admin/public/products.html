@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Products — WhatsApp Agent</title>
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="bot-status on" id="botStatus" onclick="toggleBot()">
+        <span class="bot-status-dot"></span>
+        <span id="botStatusText">BOT ON</span>
+      </div>
+      <span class="header-title">WhatsApp Agent</span>
+    </div>
+    <div class="header-right">
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- NAV BAR (Desktop) -->
+  <nav class="nav-bar">
+    <a href="/admin/" class="nav-item" data-page="chats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/customers.html" class="nav-item" data-page="customers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Customers
+    </a>
+    <a href="/admin/orders.html" class="nav-item" data-page="orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Orders
+    </a>
+    <a href="/admin/analytics.html" class="nav-item" data-page="analytics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H4.6c-.6 0-.6-.4-.6-1V3"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+      Analytics
+    </a>
+    <a href="/admin/stats.html" class="nav-item" data-page="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </a>
+    <a href="/admin/products.html" class="nav-item active" data-page="products">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      Products
+    </a>
+    <a href="/admin/settings.html" class="nav-item" data-page="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+    <a href="/admin/test-chat.html" class="nav-item" data-page="test-chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      Test Chat
+    </a>
+  </nav>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mobile-nav">
+    <a href="/admin/" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/orders.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      Orders
+    </a>
+    <a href="/admin/analytics.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H4.6c-.6 0-.6-.4-.6-1V3"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+      Analytics
+    </a>
+    <a href="/admin/stats.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </a>
+    <a href="/admin/test-chat.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      Test
+    </a>
+    <a href="/admin/settings.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="page-header">
+      <h2>Products</h2>
+      <button class="btn btn-primary" onclick="alert('Add Product modal — coming with DB integration')">+ Add Product</button>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="products-grid" id="productsGrid">
+      <div style="padding:40px;text-align:center;color:#667781;">Loading products...</div>
+    </div>
+
+    <!-- Follow-Up Manager -->
+    <div class="settings-section" style="margin-top:24px;">
+      <h3 class="settings-section-title">Follow-Up Manager</h3>
+      <p style="color:#667781;font-size:13px;margin-bottom:16px;">Customize follow-up messages for customers who didn't order</p>
+
+      <div class="followup-step">
+        <div class="followup-step-header">
+          <strong>Step 1 — Soft Reminder</strong>
+          <span style="color:#667781;font-size:12px;">After 5 hours (no reply)</span>
+        </div>
+        <textarea class="settings-textarea" rows="3" placeholder="Bhai waise yeh T9 Trimmer kaafi log Lahore mein use kar rahe hain, battery 90 min chalti hai — sochein to bata dein"></textarea>
+        <div class="followup-step-footer">
+          <label>Discount: <select><option>0%</option><option>5%</option><option>10%</option></select></label>
+          <button class="btn btn-sm btn-outline">Upload Images</button>
+          <button class="btn btn-sm btn-outline">Upload Video</button>
+        </div>
+      </div>
+
+      <div class="followup-step">
+        <div class="followup-step-header">
+          <strong>Step 2 — Social Proof</strong>
+          <span style="color:#667781;font-size:12px;">After 7 hours (still no reply)</span>
+        </div>
+        <textarea class="settings-textarea" rows="3" placeholder="Aaj 3 log Lahore se hi T9 order kar chuke hain — COD hai, kharab nikle to 7 din mein exchange"></textarea>
+        <div class="followup-step-footer">
+          <label>Discount: <select><option>0%</option><option>5%</option><option>10%</option></select></label>
+          <button class="btn btn-sm btn-outline">Upload Images</button>
+          <button class="btn btn-sm btn-outline">Upload Video</button>
+        </div>
+      </div>
+
+      <div class="followup-step">
+        <div class="followup-step-header">
+          <strong>Step 3 — Final (Discount Offer)</strong>
+          <span style="color:#667781;font-size:12px;">2 hours before 24hr window close</span>
+        </div>
+        <textarea class="settings-textarea" rows="3" placeholder="Bhai aapke liye special — T9 Trimmer Rs.1299 ki jagah Rs.1169. Yeh offer sirf aaj ke liye hai"></textarea>
+        <div class="followup-step-footer">
+          <label>Discount: <select><option>0%</option><option>5%</option><option selected>10%</option></select></label>
+          <button class="btn btn-sm btn-outline">Upload Images</button>
+          <button class="btn btn-sm btn-outline">Upload Video</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/admin/app.js"></script>
+</body>
+</html>

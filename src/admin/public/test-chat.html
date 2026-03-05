@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Chat — WhatsApp Agent</title>
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="bot-status on" id="botStatus" onclick="toggleBot()">
+        <span class="bot-status-dot"></span>
+        <span id="botStatusText">BOT ON</span>
+      </div>
+      <span class="header-title">WhatsApp Agent</span>
+    </div>
+    <div class="header-right">
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- NAV BAR (Desktop) -->
+  <nav class="nav-bar">
+    <a href="/admin/" class="nav-item" data-page="chats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/customers.html" class="nav-item" data-page="customers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Customers
+    </a>
+    <a href="/admin/orders.html" class="nav-item" data-page="orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Orders
+    </a>
+    <a href="/admin/analytics.html" class="nav-item" data-page="analytics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H4.6c-.6 0-.6-.4-.6-1V3"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+      Analytics
+    </a>
+    <a href="/admin/stats.html" class="nav-item" data-page="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </a>
+    <a href="/admin/products.html" class="nav-item" data-page="products">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      Products
+    </a>
+    <a href="/admin/settings.html" class="nav-item" data-page="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+    <a href="/admin/test-chat.html" class="nav-item active" data-page="test-chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      Test Chat
+    </a>
+  </nav>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mobile-nav">
+    <a href="/admin/" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/orders.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      Orders
+    </a>
+    <a href="/admin/analytics.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H4.6c-.6 0-.6-.4-.6-1V3"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+      Analytics
+    </a>
+    <a href="/admin/stats.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </a>
+    <a href="/admin/test-chat.html" class="mobile-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      Test
+    </a>
+    <a href="/admin/settings.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="test-chat-container">
+      <!-- Top Bar -->
+      <div class="test-chat-header">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span style="font-weight:600;font-size:16px;">Test Chat Simulator</span>
+          <select id="testStore" style="padding:6px 10px;border-radius:6px;border:1px solid #d1d5db;font-size:13px;">
+            <option value="nureva">Nureva</option>
+            <option value="shrine">Shrine</option>
+            <option value="na_maloom">Na Maloom</option>
+          </select>
+          <select id="testPhone" style="padding:6px 10px;border-radius:6px;border:1px solid #d1d5db;font-size:13px;">
+            <option value="923009999999">0300-9999999</option>
+            <option value="923008888888">0300-8888888</option>
+            <option value="923007777777">0300-7777777</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-outline" onclick="newTestChat()">New Chat</button>
+          <button class="btn btn-sm btn-outline" onclick="clearTestChat()">Clear</button>
+        </div>
+      </div>
+
+      <!-- Messages Area -->
+      <div class="test-chat-messages" id="testChatMessages">
+        <div style="text-align:center;color:#667781;padding:40px 20px;font-size:14px;">
+          Start typing to simulate a customer conversation.<br>
+          Bot will respond using AI (Claude Haiku) — requires API key in Settings.
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="test-chat-input-area">
+        <div class="test-chat-input-row">
+          <input type="text" class="chat-input" id="testChatInput" placeholder="Type as customer..." style="flex:1;">
+          <button class="chat-input-btn chat-send-btn" onclick="sendTestMessage()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+        <!-- Quick Messages -->
+        <div class="test-quick-messages">
+          <button class="quick-msg-btn" onclick="sendQuick('Hi Nureva')">Hi Nureva</button>
+          <button class="quick-msg-btn" onclick="sendQuick('T9 kitne ka hai?')">T9 kitne ka?</button>
+          <button class="quick-msg-btn" onclick="sendQuick('Order kardo')">Order kardo</button>
+          <button class="quick-msg-btn" onclick="sendQuick('Ahmed Ali 03001234567 House 5 Johar Town Lahore')">Full Details</button>
+          <button class="quick-msg-btn" onclick="sendQuick('Koi discount?')">Discount?</button>
+          <button class="quick-msg-btn" onclick="sendQuick('Product kharab hai')">Complaint</button>
+        </div>
+      </div>
+
+      <!-- Debug Panel -->
+      <div class="test-debug-panel" id="testDebugPanel">
+        <div class="test-debug-toggle" onclick="toggleDebugPanel()">
+          <span>Debug Panel</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="test-debug-content" id="testDebugContent" style="display:none;">
+          <div class="debug-row">
+            <span class="debug-label">Source:</span>
+            <span class="debug-value" id="debugSource" style="font-weight:bold;">-</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">Intent:</span>
+            <span class="debug-value" id="debugIntent">-</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">State:</span>
+            <span class="debug-value" id="debugState">IDLE</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">AI Tokens:</span>
+            <span class="debug-value" id="debugTokens">-</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">Response Time:</span>
+            <span class="debug-value" id="debugTime">-</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">Collected Data:</span>
+            <span class="debug-value" id="debugCollected">{}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/admin/app.js"></script>
+  <script>
+    // ============= PRODUCT CATALOG =============
+    const PRODUCTS = [
+      { id:1, name:'T9 Vintage Professional Trimmer', short:'T9 Trimmer', price:1299, kw:['t9','trimmer','shaver','hair cut','baal'] },
+      { id:2, name:'5-in-1 Blackhead Remover', short:'Blackhead Remover', price:1700, kw:['blackhead','pore','acne','face clean','black head'] },
+      { id:3, name:'Wooden Cutting Board Set', short:'Cutting Board', price:1499, kw:['cutting board','chopping','wooden board'] },
+      { id:4, name:'Oil Spray Bottle', short:'Oil Spray', price:599, kw:['oil spray','spray bottle','cooking spray'] },
+      { id:5, name:'Ear Wax Cleaning Kit', short:'Ear Wax Kit', price:899, kw:['ear','wax','ear clean','kaan'] },
+      { id:6, name:'Electric Vegetable Cutter 4-in-1', short:'Vegetable Cutter', price:2099, kw:['vegetable','cutter','chopper','slicer','sabzi'] },
+      { id:7, name:'2-in-1 Facial Hair Remover', short:'Facial Hair Remover', price:1299, kw:['facial','eyebrow','face hair','hair remover','brow'] },
+      { id:8, name:'Portable Nebulizer Machine', short:'Nebulizer', price:1999, kw:['nebulizer','inhaler','breathing','saans'] },
+      { id:9, name:'Knee Support Sleeve', short:'Knee Sleeve', price:999, kw:['knee','sleeve','support','joint','ghutna'] },
+      { id:10, name:'Grey Duster Cleaning Kit', short:'Duster Kit', price:1150, kw:['duster','cleaning kit','dust','safai'] },
+    ];
+    const UPSELL_MAP = { 1:[2,5], 2:[7,1], 3:[6,4], 4:[3,6], 5:[1,7], 6:[3,4], 7:[2], 10:[3,6] };
+    const CITIES_FAST = ['karachi','lahore','islamabad','rawalpindi'];
+    const CITIES_MED = ['faisalabad','multan','peshawar','sialkot','gujranwala','hyderabad','sahiwal','gujrat'];
+    const CITY_ABBR = { lhr:'Lahore', khi:'Karachi', isb:'Islamabad', rwp:'Rawalpindi', qta:'Quetta', fsd:'Faisalabad', mtn:'Multan', pindi:'Rawalpindi' };
+    const ALL_CITIES = ['karachi','lahore','islamabad','rawalpindi','faisalabad','multan','peshawar','quetta',
+      'sialkot','gujranwala','hyderabad','bahawalpur','sargodha','sukkur','larkana','sheikhupura',
+      'jhang','rahim yar khan','mardan','gujrat','kasur','dera ghazi khan','sahiwal','wah',
+      'mingora','okara','mirpur','chiniot','nawabshah','kamoke','hafizabad','sadiqabad','burewala',
+      'jhelum','khanewal','muzaffargarh','abbottabad','swat','gilgit','gwadar','vehari','chakwal',
+      'layyah','attock','battagram','mansehra','kohat','dera ismail khan','turbat','khuzdar',
+      'jacobabad','shikarpur','tando adam','mirpurkhas','kotri','taxila','wazirabad','mandi bahauddin'];
+
+    // ============= CONVERSATION STATE =============
+    let conv = resetConv();
+    let testMessages = [];
+
+    function resetConv() {
+      return {
+        state: 'IDLE',
+        product: null,
+        products: [],
+        name: null, phone: null, delivery_phone: null, city: null, address: null,
+        haggle_round: 0, discount_percent: 0,
+        upsell_candidates: [],
+      };
+    }
+
+    // ============= EXTRACTORS =============
+    function detectProduct(msg) {
+      const l = msg.toLowerCase();
+      for (const p of PRODUCTS) { for (const k of p.kw) { if (l.includes(k)) return p; } }
+      // Check by number if just a digit
+      const m = l.match(/^(\d{1,2})$/);
+      if (m) { const i = parseInt(m[1])-1; if (i >= 0 && i < PRODUCTS.length) return PRODUCTS[i]; }
+      return null;
+    }
+    function extractPhone(msg) {
+      const m = msg.match(/(?:\+?92|0)3\d{2}[\s\-]?\d{7}/);
+      return m ? m[0].replace(/[\s\-]/g, '') : null;
+    }
+    function extractCity(msg) {
+      const l = msg.toLowerCase();
+      for (const [a,f] of Object.entries(CITY_ABBR)) { if (l.split(/\s+/).includes(a)) return f; }
+      for (const c of ALL_CITIES) { if (l.includes(c)) return c.charAt(0).toUpperCase()+c.slice(1); }
+      return null;
+    }
+    function extractAddress(msg) {
+      const l = msg.toLowerCase();
+      const kw = ['house','ghar','gali','street','block','sector','phase','colony','town','mohalla',
+        'near','nazd','road','chowk','bazaar','market','scheme','flat','floor','plaza','nmbr','number'];
+      return kw.some(k => l.includes(k)) ? msg.trim() : null;
+    }
+    function extractNameFromFullMsg(msg) {
+      // Only when phone is also present (full-details message)
+      const ph = msg.match(/(?:\+?92|0)3\d{2}[\s\-]?\d{7}/);
+      if (!ph) return null;
+      const before = msg.substring(0, msg.indexOf(ph[0])).trim();
+      return (before && /^[A-Za-z\s]{2,40}$/.test(before)) ? before : null;
+    }
+    function deliveryTime(city) {
+      if (!city) return '3-5 din';
+      const l = city.toLowerCase();
+      if (CITIES_FAST.includes(l)) return '2-3 din';
+      if (CITIES_MED.includes(l)) return '3-4 din';
+      return '4-6 din';
+    }
+    function fmtP(n) { return 'Rs.' + n.toLocaleString(); }
+    function productList() { return PRODUCTS.map((p,i) => `${i+1}. ${p.short} — ${fmtP(p.price)}`).join('\n'); }
+
+    // ============= SMART FILL =============
+    function smartFill(msg) {
+      const p = detectProduct(msg), ph = extractPhone(msg), ci = extractCity(msg),
+            ad = extractAddress(msg), nm = extractNameFromFullMsg(msg);
+      if (p && !conv.product) conv.product = p;
+      if (ph && !conv.phone) conv.phone = ph;
+      if (ci && !conv.city) conv.city = ci;
+      if (ad && !conv.address) conv.address = ad;
+      if (nm && !conv.name) conv.name = nm;
+    }
+
+    // ============= NEXT MISSING =============
+    function nextState() {
+      if (!conv.name) return 'COLLECT_NAME';
+      if (!conv.phone) return 'COLLECT_PHONE';
+      if (conv.phone && conv.delivery_phone === null && conv.state !== 'COLLECT_DELIVERY_PHONE') return 'COLLECT_DELIVERY_PHONE';
+      if (!conv.city) return 'COLLECT_CITY';
+      if (!conv.address) return 'COLLECT_ADDRESS';
+      return 'ORDER_SUMMARY';
+    }
+    function askNext() {
+      const s = nextState();
+      conv.state = s;
+      if (s === 'COLLECT_NAME') return r('Zaroor bhai! Apna naam bata dein?', s);
+      if (s === 'COLLECT_PHONE') return r(`${conv.name} bhai, phone number bata dein?`, s);
+      if (s === 'COLLECT_DELIVERY_PHONE') return r(`Delivery bhi isi number (${conv.phone}) pe karein ya kisi aur number pe?`, s);
+      if (s === 'COLLECT_CITY') return r('City bata dein — delivery kahan karni hai?', s);
+      if (s === 'COLLECT_ADDRESS') return r(`${conv.city} mein poora address bata dein — mohalla, gali, house number?`, s);
+      return orderSummary();
+    }
+
+    // ============= ORDER SUMMARY =============
+    function orderSummary() {
+      conv.state = 'ORDER_SUMMARY';
+      const items = conv.products.length ? conv.products : (conv.product ? [conv.product] : []);
+      let total = items.reduce((s,p) => s + p.price, 0);
+      if (conv.discount_percent) total -= Math.round(total * conv.discount_percent / 100);
+      let t = 'Order Summary:\n';
+      items.forEach(p => t += `- ${p.short}: ${fmtP(p.price)}\n`);
+      if (conv.discount_percent) t += `Discount: ${conv.discount_percent}%\n`;
+      t += `Delivery: FREE\nTotal: ${fmtP(total)}\n\n`;
+      t += `Naam: ${conv.name}\nPhone: ${conv.phone}\n`;
+      if (conv.delivery_phone) t += `Delivery Phone: ${conv.delivery_phone}\n`;
+      t += `City: ${conv.city}\nAddress: ${conv.address}\n`;
+      t += `Delivery: ${deliveryTime(conv.city)}\n\n`;
+      t += 'Sab sahi hai? "Haan" bolein to confirm kar deta hun.';
+      return r(t, 'ORDER_SUMMARY');
+    }
+
+    // ============= INTENT DETECTION =============
+    function hasOrderIntent(l) {
+      const ow = ['order','mangwa','mangana','book','lena','lyna'];
+      const cw = ['kardo','kar do','karna','krna','krdo','kr do','kro','kar dein','kr dein','krdein',
+        'kardein','de do','dedo','bhej do','bhejdo','bhejo','confirm','hai','he','hae','chahiye','chaiye','chaye','mangwana','mangwao'];
+      return ow.some(w => l.includes(w)) && cw.some(w => l.includes(w));
+    }
+    function hasProductAsk(l) {
+      const pw = ['kitne','kitna','price','kya','rate','qeemat','kimat','kya price','cost'];
+      return pw.some(w => l.includes(w));
+    }
+    function isYes(l) {
+      return ['haan','han','ji','g','yes','ok','done','thik','theek','sahi','bilkul','confirm','zaroor','kr do','kardo','krdo','kar do'].some(w => l === w || (w.length > 2 && l.includes(w)));
+    }
+    function isNo(l) {
+      return ['nahi','nhi','no','cancel','nope','na','mat','band'].some(w => l === w || l.includes(w));
+    }
+    function isComplaint(l) {
+      return ['kharab','return','complaint','toot','broken','defective','refund','galat','wrong','scam','fake','fraud','dhoka','bakwas','pagal','nonsense','wtf','bas karo'].some(w => l.includes(w));
+    }
+    function isHaggle(l) {
+      return ['discount','kam','mehenga','mehnga','sasta','price kam','zyada','bohot mehenga','mahenga'].some(w => l.includes(w));
+    }
+
+    // ============= RESPONSE HELPER =============
+    function r(text, state) { return { text, state }; }
+
+    // ============= STATE MACHINE =============
+    function processMessage(msg) {
+      const l = msg.toLowerCase().trim();
+
+      // --- COMPLAINT (any state) ---
+      if (isComplaint(l)) {
+        conv.state = 'COMPLAINT';
+        return r('Bhai aapka masla samajh aata hai. Main abhi apni team se baat karta hun, woh aapse jaldi rabta karein ge. Aapka wait ka shukriya.', 'COMPLAINT (Human Assigned)');
+      }
+
+      // --- Smart fill from any message ---
+      smartFill(msg);
+      const storeName = {nureva:'Nureva',shrine:'Shrine',na_maloom:''}[document.getElementById('testStore').value] || '';
+
+      switch (conv.state) {
+
+        // ===== IDLE / GREETING =====
+        case 'IDLE':
+        case 'GREETING': {
+          // Product + order intent together: "T9 chahiye", "T9 order krdo"
+          if (conv.product && hasOrderIntent(l)) {
+            conv.state = nextState();
+            if (conv.state === 'ORDER_SUMMARY') return orderSummary();
+            return r(`${conv.product.short} — ${fmtP(conv.product.price)}. Zaroor!\n${askNext().text}`, nextState());
+          }
+          // Product + price ask: "T9 kitne ka hai"
+          if (conv.product && hasProductAsk(l)) {
+            conv.state = 'PRODUCT_INQUIRY';
+            return r(`Bhai ${conv.product.short} ${fmtP(conv.product.price)} ka hai. Battery/quality behtareen. COD hai — paisa delivery pe. 7 din exchange guarantee. Order karein?`, 'PRODUCT_INQUIRY');
+          }
+          // Just product mention: "T9", "blackhead remover"
+          if (conv.product) {
+            conv.state = 'PRODUCT_INQUIRY';
+            return r(`${conv.product.name}\n${fmtP(conv.product.price)}\n\nCOD hai — paisa delivery pe dena. Agar kharab nikle to 7 din mein replace. Delivery FREE.\nOrder karein?`, 'PRODUCT_INQUIRY');
+          }
+          // Order intent without product: "order krna he"
+          if (hasOrderIntent(l)) {
+            conv.state = 'PRODUCT_SELECTION';
+            return r('Zaroor bhai! Konsa product chahiye?\n\n' + productList(), 'PRODUCT_SELECTION');
+          }
+          // Haggle without product
+          if (isHaggle(l)) return r('Bhai pehle product select karein — yeh hain hamari items:\n\n' + productList(), 'PRODUCT_SELECTION');
+          // Products list
+          if (l.includes('product') || l.includes('item') || l.includes('dikhao') || l.includes('list') || l.includes('kya kya')) {
+            conv.state = 'PRODUCT_SELECTION';
+            return r('Yeh hain hamari items:\n\n' + productList() + '\n\nKonsa pasand aaya?', 'PRODUCT_SELECTION');
+          }
+          // Default greeting
+          conv.state = 'GREETING';
+          return r(`Walaikum Assalam bhai!${storeName ? ' '+storeName+' se hun.' : ''} Kaise madad kar sakta hun? Products dekhne hain ya order karna hai?`, 'GREETING');
+        }
+
+        // ===== PRODUCT INQUIRY =====
+        case 'PRODUCT_INQUIRY': {
+          if (isYes(l) || hasOrderIntent(l)) {
+            conv.state = nextState();
+            if (conv.state === 'ORDER_SUMMARY') return orderSummary();
+            return askNext();
+          }
+          if (isHaggle(l)) return handleHaggle();
+          // Different product
+          const newP = detectProduct(msg);
+          if (newP && newP.id !== conv.product?.id) {
+            conv.product = newP;
+            return r(`${newP.name}\n${fmtP(newP.price)}\n\nCOD hai, delivery FREE, 7 din exchange. Order karein?`, 'PRODUCT_INQUIRY');
+          }
+          if (l.includes('product') || l.includes('list') || l.includes('dikhao') || l.includes('aur kya')) {
+            conv.state = 'PRODUCT_SELECTION';
+            return r('Yeh hain hamari items:\n\n' + productList() + '\n\nKonsa pasand aaya?', 'PRODUCT_SELECTION');
+          }
+          if (isNo(l)) return r('Koi baat nahi bhai! Kuch aur dekhna ho to bata dein.', 'GREETING');
+          return r('Order karna ho to bata dein bhai. Ya koi aur product dekhna ho?', 'PRODUCT_INQUIRY');
+        }
+
+        // ===== PRODUCT SELECTION =====
+        case 'PRODUCT_SELECTION': {
+          const sel = detectProduct(msg);
+          if (sel) {
+            conv.product = sel;
+            if (hasOrderIntent(l)) {
+              conv.state = nextState();
+              if (conv.state === 'ORDER_SUMMARY') return orderSummary();
+              return r(`${sel.short} — ${fmtP(sel.price)}. Zaroor!\n${askNext().text}`, nextState());
+            }
+            conv.state = 'PRODUCT_INQUIRY';
+            return r(`${sel.name}\n${fmtP(sel.price)}\n\nCOD, delivery FREE, 7 din exchange. Order karein?`, 'PRODUCT_INQUIRY');
+          }
+          return r('Bhai number ya product ka naam bata dein:\n\n' + productList(), 'PRODUCT_SELECTION');
+        }
+
+        // ===== COLLECT NAME =====
+        case 'COLLECT_NAME': {
+          if (!conv.name) conv.name = msg.trim();
+          // Check if more fields came along
+          conv.state = nextState();
+          if (conv.state === 'ORDER_SUMMARY') return orderSummary();
+          return askNext();
+        }
+
+        // ===== COLLECT PHONE =====
+        case 'COLLECT_PHONE': {
+          if (!conv.phone) {
+            const ph = extractPhone(msg) || msg.match(/\d{10,}/)?.[0];
+            if (ph) conv.phone = ph;
+            else return r('Bhai phone number sahi format mein dein (jaise 03001234567)?', 'COLLECT_PHONE');
+          }
+          conv.state = 'COLLECT_DELIVERY_PHONE';
+          conv.delivery_phone = null; // reset
+          return r(`Shukriya ${conv.name} bhai! Delivery bhi isi number (${conv.phone}) pe karein ya kisi aur number pe?`, 'COLLECT_DELIVERY_PHONE');
+        }
+
+        // ===== DELIVERY PHONE =====
+        case 'COLLECT_DELIVERY_PHONE': {
+          if (isYes(l) || l.includes('isi') || l.includes('same') || l.includes('yehi') || l.includes('yahi')) {
+            conv.delivery_phone = undefined; // same number
+          } else {
+            const dp = extractPhone(msg) || msg.match(/\d{10,}/)?.[0];
+            if (dp) conv.delivery_phone = dp;
+            else conv.delivery_phone = undefined; // assume same
+          }
+          conv.state = nextState();
+          if (conv.state === 'ORDER_SUMMARY') return orderSummary();
+          return askNext();
+        }
+
+        // ===== COLLECT CITY =====
+        case 'COLLECT_CITY': {
+          if (!conv.city) conv.city = extractCity(msg) || msg.trim();
+          conv.state = nextState();
+          if (conv.state === 'ORDER_SUMMARY') return orderSummary();
+          return askNext();
+        }
+
+        // ===== COLLECT ADDRESS =====
+        case 'COLLECT_ADDRESS': {
+          if (!conv.address) conv.address = msg.trim();
+          return orderSummary();
+        }
+
+        // ===== ORDER SUMMARY =====
+        case 'ORDER_SUMMARY': {
+          if (isYes(l)) {
+            // Check upsell
+            const main = conv.products.length ? conv.products[0] : conv.product;
+            const uIds = UPSELL_MAP[main?.id] || [];
+            const ordered = (conv.products.length ? conv.products : [conv.product]).map(p => p.id);
+            conv.upsell_candidates = uIds.map(id => PRODUCTS.find(p => p.id === id)).filter(p => p && !ordered.includes(p.id));
+
+            if (conv.upsell_candidates.length) {
+              conv.state = 'UPSELL_HOOK';
+              return r(`Order confirm! ${conv.name} bhai, shukriya.\n\nBhai waise hamare pas 75% discount wali deals wale products bhi hain jo kaafi log mangwa rahe hain — dikhadu aapko?`, 'UPSELL_HOOK');
+            }
+            return confirmOrder();
+          }
+          if (isNo(l)) return r('Kya change karna hai bhai? Naam, phone, address ya product?', 'ORDER_SUMMARY');
+          // Handle changes
+          if (l.includes('naam') || l.includes('name')) { conv.name = null; conv.state = 'COLLECT_NAME'; return r('Naya naam bata dein?', 'COLLECT_NAME'); }
+          if (l.includes('phone') || l.includes('number')) { conv.phone = null; conv.state = 'COLLECT_PHONE'; return r('Naya phone number bata dein?', 'COLLECT_PHONE'); }
+          if (l.includes('address') || l.includes('pata')) { conv.address = null; conv.state = 'COLLECT_ADDRESS'; return r('Naya address bata dein?', 'COLLECT_ADDRESS'); }
+          if (l.includes('city') || l.includes('sheher')) { conv.city = null; conv.address = null; conv.state = 'COLLECT_CITY'; return r('City bata dein?', 'COLLECT_CITY'); }
+          return r('Bhai confirm kar dein — "haan" bolen to order place kar deta hun. Kuch change karna ho to bata dein.', 'ORDER_SUMMARY');
+        }
+
+        // ===== UPSELL HOOK =====
+        case 'UPSELL_HOOK': {
+          if (isYes(l) || l.includes('dikhao') || l.includes('dikha') || l.includes('haan')) {
+            conv.state = 'UPSELL_SHOW';
+            let t = 'Yeh dekho bhai:\n\n';
+            conv.upsell_candidates.forEach((p,i) => t += `${i+1}. ${p.short} — ${fmtP(p.price)}\n`);
+            t += '\nKoi pasand aaye to number bolo, nahi to "nahi" bol dein.';
+            return r(t, 'UPSELL_SHOW');
+          }
+          if (isNo(l)) return confirmOrder();
+          return r('Bhai dekhna chahein ge? "Haan" ya "nahi" bol dein.', 'UPSELL_HOOK');
+        }
+
+        // ===== UPSELL SHOW =====
+        case 'UPSELL_SHOW': {
+          if (isNo(l)) return confirmOrder();
+          // Select by number or name
+          const sel = detectProduct(msg);
+          const uMatch = sel ? conv.upsell_candidates.find(p => p.id === sel.id) : null;
+          if (uMatch) {
+            if (!conv.products.length) conv.products = [conv.product];
+            conv.products.push(uMatch);
+            return confirmOrder(`Zabardast! ${uMatch.short} bhi add ho gaya.\n\n`);
+          }
+          // Number pick
+          const nm = l.match(/^(\d)$/);
+          if (nm) {
+            const idx = parseInt(nm[1]) - 1;
+            if (idx >= 0 && idx < conv.upsell_candidates.length) {
+              const up = conv.upsell_candidates[idx];
+              if (!conv.products.length) conv.products = [conv.product];
+              conv.products.push(up);
+              return confirmOrder(`Zabardast! ${up.short} bhi add.\n\n`);
+            }
+          }
+          return r('Konsa pasand aaya? Number bolo ya "nahi" bol dein.', 'UPSELL_SHOW');
+        }
+
+        // ===== ORDER CONFIRMED =====
+        case 'ORDER_CONFIRMED': {
+          if (['kab','kitne din','tracking','dispatch','ship','parcel'].some(w => l.includes(w))) {
+            return r('Bhai aapka order process ho raha hai. Delivery team aapko update degi. Koi sawal ho to team jaldi rabta karegi.', 'ORDER_CONFIRMED (Delivery Query)');
+          }
+          return r('Bhai aapka order already confirm hai. Kuch aur chahiye to bata dein!', 'ORDER_CONFIRMED');
+        }
+
+        // ===== HAGGLING =====
+        case 'HAGGLING': {
+          if (isYes(l) || hasOrderIntent(l)) {
+            conv.state = nextState();
+            if (conv.state === 'ORDER_SUMMARY') return orderSummary();
+            return askNext();
+          }
+          if (isHaggle(l) || l.includes('aur kam')) return handleHaggle();
+          if (isNo(l)) return r('Koi baat nahi bhai! Jab chahein wapas aa jayein.', 'IDLE');
+          return r('Sochein aur bata dein bhai. COD hai, delivery pe check kar sakte hain. Order karna ho to bol dein.', 'HAGGLING');
+        }
+
+        // ===== COMPLAINT =====
+        case 'COMPLAINT':
+          return r('Bhai team ko message pahunch gaya hai, jaldi aapse contact karein ge. Kuch aur ho to bata dein.', 'COMPLAINT (Waiting for Human)');
+
+        default:
+          conv.state = 'IDLE';
+          return processMessage(msg);
+      }
+    }
+
+    // ============= CONFIRM ORDER =============
+    function confirmOrder(prefix = '') {
+      conv.state = 'ORDER_CONFIRMED';
+      const items = conv.products.length ? conv.products : [conv.product];
+      let total = items.reduce((s,p) => s + p.price, 0);
+      if (conv.discount_percent) total -= Math.round(total * conv.discount_percent / 100);
+      const oid = 'NRV-WA-' + String(Math.floor(10000 + Math.random()*90000));
+      let t = prefix;
+      t += `Order confirm ho gaya! Order ID: ${oid}\n`;
+      items.forEach(p => t += `${p.short}: ${fmtP(p.price)}\n`);
+      if (conv.discount_percent) t += `Discount: ${conv.discount_percent}%\n`;
+      t += `Total: ${fmtP(total)} | Delivery: FREE\n`;
+      t += `${conv.name}, ${conv.city} — ${deliveryTime(conv.city)}\nShukriya bhai!`;
+      return r(t, 'ORDER_CONFIRMED');
+    }
+
+    // ============= HAGGLING =============
+    function handleHaggle() {
+      if (!conv.product) return r('Bhai pehle product select karein:\n\n' + productList(), 'PRODUCT_SELECTION');
+      conv.haggle_round++;
+      conv.state = 'HAGGLING';
+      const p = conv.product;
+      if (conv.haggle_round === 1) {
+        return r(`Bhai COD hai — paisa delivery pe dena hai. Kharab nikle to 7 din mein replace. Delivery FREE. ${p.short} ${fmtP(p.price)} mein acha deal hai.`, 'HAGGLING');
+      }
+      if (conv.haggle_round === 2) {
+        conv.discount_percent = 5;
+        return r(`Bhai aapke liye Rs.${Math.round(p.price*0.05)} adjust kar deta hun — ${fmtP(Math.round(p.price*0.95))} final. Order karein?`, 'HAGGLING');
+      }
+      if (conv.haggle_round === 3) {
+        conv.discount_percent = 10;
+        return r(`Bhai yeh bilkul last price hai — ${fmtP(Math.round(p.price*0.90))}. Isse kam mein nahi ho sakta.`, 'HAGGLING');
+      }
+      return r('Bhai samajh aata hai, lekin yeh already kam price hai. Budget mein aaye to bata dena, hum hain.', 'HAGGLING');
+    }
+
+    // ============= UI FUNCTIONS =============
+    function addTestMessage(sender, text) {
+      const msgsEl = document.getElementById('testChatMessages');
+      const time = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:true });
+      if (testMessages.length === 0) msgsEl.innerHTML = '';
+      testMessages.push({ sender, text, time });
+      const bubble = document.createElement('div');
+      bubble.className = `msg-bubble ${sender === 'customer' ? 'msg-incoming' : 'msg-outgoing'}`;
+      // Preserve newlines in bot messages
+      const displayText = sender === 'bot' ? text.replace(/\n/g, '<br>') : text;
+      bubble.innerHTML = `${sender !== 'customer' ? '<div class="msg-sender bot-sender">Bot</div>' : ''}<div>${displayText}</div><div class="msg-time">${time}</div>`;
+      msgsEl.appendChild(bubble);
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+    }
+
+    async function simulateBotReply(customerMsg) {
+      const msgsEl = document.getElementById('testChatMessages');
+      const typing = document.createElement('div');
+      typing.className = 'msg-bubble msg-outgoing';
+      typing.id = 'typingIndicator';
+      typing.innerHTML = '<div class="msg-sender bot-sender">Bot</div><div style="color:#667781;">typing...</div>';
+      msgsEl.appendChild(typing);
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+
+      const startTime = Date.now();
+      const store = document.getElementById('testStore').value;
+      const phone = document.getElementById('testPhone').value;
+
+      try {
+        // Try Claude AI API call
+        const resp = await fetch('/api/test-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: customerMsg, store, phone })
+        });
+        const data = await resp.json();
+
+        const ind = document.getElementById('typingIndicator');
+        if (ind) ind.remove();
+
+        if (!resp.ok) {
+          // API error — show warning and fallback to local
+          if (data.error && data.error.includes('API key')) {
+            addTestMessage('bot', '⚙ Claude API key Settings mein dal dein for AI responses. Abhi demo mode chal raha hai.');
+          }
+          // Fallback to local state machine
+          const fallback = processMessage(customerMsg);
+          addTestMessage('bot', fallback.text);
+          updateDebug(fallback.state, '- (demo)', (Date.now()-startTime)+'ms', fallback.state === 'COMPLAINT' ? {complaint:true} : {}, 'DEMO MODE', '#FF9500', '-');
+          return;
+        }
+
+        // Hybrid response (template or AI)
+        addTestMessage('bot', data.reply);
+        const src = data.source === 'template' ? 'TEMPLATE (0 tokens)' :
+                    data.source === 'ai' ? 'AI FALLBACK' :
+                    data.source === 'fallback' ? 'LOCAL FALLBACK' : data.source;
+        const srcColor = data.source === 'template' ? '#34C759' :
+                         data.source === 'ai' ? '#FF9500' : '#667781';
+        updateDebug(
+          data.state,
+          data.source === 'template' ? '0 (template)' : `${data.tokens_in} in, ${data.tokens_out} out`,
+          data.response_ms + 'ms',
+          data.collected || {},
+          src,
+          srcColor,
+          data.intent || '-'
+        );
+      } catch (err) {
+        // Network error — fallback to local
+        const ind = document.getElementById('typingIndicator');
+        if (ind) ind.remove();
+        const fallback = processMessage(customerMsg);
+        addTestMessage('bot', fallback.text);
+        updateDebug(fallback.state, '- (offline)', (Date.now()-startTime)+'ms', {}, 'OFFLINE DEMO', '#FF3B30', '-');
+      }
+    }
+
+    function updateDebug(state, tokens, time, collected, source, sourceColor, intent) {
+      document.getElementById('debugState').textContent = state;
+      document.getElementById('debugTokens').textContent = tokens;
+      document.getElementById('debugTime').textContent = time;
+      document.getElementById('debugCollected').textContent = JSON.stringify(collected);
+      const srcEl = document.getElementById('debugSource');
+      srcEl.textContent = source || '-';
+      srcEl.style.color = sourceColor || '#667781';
+      document.getElementById('debugIntent').textContent = intent || '-';
+    }
+
+    function sendTestMessage() {
+      const input = document.getElementById('testChatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      addTestMessage('customer', text);
+      simulateBotReply(text);
+    }
+    function sendQuick(text) { addTestMessage('customer', text); simulateBotReply(text); }
+
+    function toggleDebugPanel() {
+      const c = document.getElementById('testDebugContent');
+      c.style.display = c.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function newTestChat() {
+      conv = resetConv();
+      testMessages = [];
+      // Clear server-side history too
+      const phone = document.getElementById('testPhone').value;
+      fetch('/api/test-chat/history?phone=' + phone, { method: 'DELETE' }).catch(() => {});
+      document.getElementById('testChatMessages').innerHTML = '<div style="text-align:center;color:#667781;padding:40px 20px;font-size:14px;">New chat started. Type a message to begin.</div>';
+      updateDebug('IDLE', '-', '-', {}, '-', '#667781', '-');
+    }
+    function clearTestChat() { newTestChat(); }
+
+    document.getElementById('testChatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendTestMessage(); });
+  </script>
+</body>
+</html>

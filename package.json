@@ -1,0 +1,21 @@
+{
+  "name": "whatsapp-agent",
+  "version": "1.0.0",
+  "description": "WhatsApp AI Sales Agent - Pakistani COD Ecommerce",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "better-sqlite3": "^12.6.2",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^17.3.1",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "openai": "^6.25.0",
+    "sharp": "^0.34.5",
+    "ws": "^8.16.0"
+  }
+}
