@@ -125,6 +125,21 @@ class DatabaseWrapper {
     } catch (e) { /* ignore pragma errors */ }
   }
 
+  transaction(fn) {
+    return (...args) => {
+      this.sqlDb.run('BEGIN TRANSACTION');
+      try {
+        const result = fn(...args);
+        this.sqlDb.run('COMMIT');
+        scheduleSave();
+        return result;
+      } catch (e) {
+        this.sqlDb.run('ROLLBACK');
+        throw e;
+      }
+    };
+  }
+
   close() {
     saveNow();
     this.sqlDb.close();
