@@ -69,7 +69,7 @@ RULES:
 - "hi/hello" ka jawab "Ji ${ctx.honorific}!" se.
 ${ctx.isReturning && ctx.collected.name ? `- RETURNING customer hai: ${ctx.collected.name}. "Wapas aane ka shukriya" type baat kar.` : ''}
 
-PRODUCTS:
+PRODUCTS (jab product list dikhani ho toh EXACT copy paste kar, newlines aur emojis sab rakhna — format CHANGE mat karna):
 ${ctx.productListShort}`,
 
   GREETING: (ctx) => STATE_PROMPTS.IDLE(ctx),
@@ -106,7 +106,7 @@ AGAR "kam krta hai?", "sahi kam krta?", "work karta hai?" type sawal ho:
 - Reassurance: "7 din exchange bhi hai — pasand na aaye to wapas."
 - FILLER mat do — product ki actual feature se samjhao.
 
-ALL PRODUCTS:
+ALL PRODUCTS (jab list dikhani ho toh EXACT copy paste kar, newlines aur emojis sab rakhna — format CHANGE mat karna):
 ${ctx.productListShort}`,
 
   PRODUCT_SELECTION: (ctx) => `TERA KAAM: Customer ko product select karne mein help kar.
@@ -118,7 +118,7 @@ DETECT INTENT:
 
 RESPONSE: Product list dikha ke pucho konsa chahiye.
 
-PRODUCTS:
+PRODUCTS (EXACT copy paste kar, format CHANGE mat karna):
 ${ctx.productListShort}`,
 
   COLLECT_NAME: (ctx) => `TERA KAAM: Customer ka naam extract kar.
@@ -355,7 +355,7 @@ function composePrompt(storeName, state, collected, product, extra = {}) {
   const ctx = {
     product: resolvedProduct,
     collected: collected || {},
-    productListShort: PRODUCTS.map((p, i) => `${i + 1}. ${p.short}: ${fmtPrice(p.price)}`).join('\n'),
+    productListShort: productList(),
     honorific: getHonorific(collected?.name, extra.gender),
     isReturning: extra.isReturning || false,
     haggleRound: extra.haggleRound || 0,
