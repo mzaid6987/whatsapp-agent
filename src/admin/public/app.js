@@ -555,33 +555,56 @@ async function loadSettings() {
   if (settings) updateBotUI(settings.bot_enabled === true || settings.bot_enabled === 'true' || settings.bot_enabled === '1');
 }
 
-// ---- WEBSOCKET ----
+// ---- WEBSOCKET + POLLING FALLBACK ----
+let _wsConnected = false;
 function connectWebSocket() {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-  ws.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    if (data.type === 'bot_status') updateBotUI(data.enabled);
-    if (data.type === 'new_message') {
-      loadChats();
+  try {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    ws.onopen = () => { _wsConnected = true; };
+    ws.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.type === 'bot_status') updateBotUI(data.enabled);
+      if (data.type === 'new_message') {
+        loadChats();
+        if (currentChatId) openChat(currentChatId);
+      }
+      if (data.type === 'msg_status') {
+        const bubble = document.querySelector(`.msg-bubble[data-wa-id="${data.wa_message_id}"]`);
+        if (bubble) {
+          const oldTick = bubble.querySelector('.msg-ticks');
+          if (oldTick) oldTick.remove();
+          const tick = document.createElement('span');
+          tick.className = `msg-ticks ${data.status}`;
+          tick.title = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+          tick.innerHTML = data.status === 'sent' ? '&#10003;' : '&#10003;&#10003;';
+          bubble.appendChild(tick);
+        }
+      }
+    };
+    ws.onclose = () => { _wsConnected = false; setTimeout(connectWebSocket, 5000); };
+    ws.onerror = () => { _wsConnected = false; };
+  } catch (e) { _wsConnected = false; }
+}
+
+// Polling fallback — runs every 5s when WebSocket is not connected
+let _lastPollHash = '';
+setInterval(async () => {
+  if (_wsConnected) return; // WebSocket working, no need to poll
+  const path = window.location.pathname;
+  if (path !== '/admin/' && path !== '/admin/index.html') return;
+  try {
+    const convos = await api('/api/conversations');
+    if (!convos) return;
+    const hash = convos.map(c => c.id + ':' + c.message_count + ':' + (c.last_message_at || '')).join('|');
+    if (hash !== _lastPollHash) {
+      _lastPollHash = hash;
+      conversations = convos;
+      renderChatList(conversations);
       if (currentChatId) openChat(currentChatId);
     }
-    if (data.type === 'msg_status') {
-      // Update tick marks in real-time
-      const bubble = document.querySelector(`.msg-bubble[data-wa-id="${data.wa_message_id}"]`);
-      if (bubble) {
-        const oldTick = bubble.querySelector('.msg-ticks');
-        if (oldTick) oldTick.remove();
-        const tick = document.createElement('span');
-        tick.className = `msg-ticks ${data.status}`;
-        tick.title = data.status.charAt(0).toUpperCase() + data.status.slice(1);
-        tick.innerHTML = data.status === 'sent' ? '&#10003;' : '&#10003;&#10003;';
-        bubble.appendChild(tick);
-      }
-    }
-  };
-  ws.onclose = () => setTimeout(connectWebSocket, 3000);
-}
+  } catch (e) { /* silent */ }
+}, 5000);
 
 // ---- INIT ----
 document.addEventListener('DOMContentLoaded', () => {
