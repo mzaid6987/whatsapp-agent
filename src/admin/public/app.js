@@ -489,17 +489,24 @@ async function resumeBot() {
 }
 
 async function markComplaint() {
-  if (!currentChatId) return;
+  if (!currentChatId) return alert('No chat selected');
   const conv = conversations.find(c => c.id === currentChatId);
-  if (!conv) return;
-  if (conv.complaint_flag) return; // already complaint
-  const res = await api('/api/conversations/' + currentChatId + '/complaint', { method: 'POST' });
-  if (res?.success) {
-    conv.complaint_flag = 1;
-    conv.needs_human = true;
-    conv.state = 'COMPLAINT';
-    openChat(currentChatId);
-    renderChatList(conversations);
+  if (!conv) return alert('Conversation not found');
+  if (conv.complaint_flag) return alert('Already marked as complaint');
+  if (!confirm('Mark this chat as Complaint?')) return;
+  try {
+    const res = await api('/api/conversations/' + currentChatId + '/complaint', { method: 'POST' });
+    if (res?.success) {
+      conv.complaint_flag = 1;
+      conv.needs_human = true;
+      conv.state = 'COMPLAINT';
+      openChat(currentChatId);
+      renderChatList(conversations);
+    } else {
+      alert('Failed: ' + JSON.stringify(res));
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
   }
 }
 
