@@ -510,6 +510,25 @@ async function markComplaint() {
   }
 }
 
+async function deleteChat() {
+  if (!currentChatId) return;
+  if (!confirm('Chat delete karein? Messages delete ho jayenge, orders aur learnings safe rahenge.')) return;
+  try {
+    const res = await api('/api/conversations/' + currentChatId, { method: 'DELETE' });
+    if (res?.success) {
+      conversations = conversations.filter(c => c.id !== currentChatId);
+      currentChatId = null;
+      renderChatList(conversations);
+      document.getElementById('chatViewEmpty').style.display = 'flex';
+      document.getElementById('chatViewContent').style.display = 'none';
+    } else {
+      alert('Failed: ' + JSON.stringify(res));
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
 async function sendManualReply() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();

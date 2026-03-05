@@ -624,6 +624,19 @@ app.post('/api/conversations/:id/complaint', requireAuth, (req, res) => {
   }
 });
 
+// Delete conversation (keeps orders + auto_templates/learnings)
+app.delete('/api/conversations/:id', requireAuth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const db = getDb();
+    db.prepare('DELETE FROM messages WHERE conversation_id = ?').run(id);
+    db.prepare('DELETE FROM conversations WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Toggle customer bot/human
 app.post('/api/customers/:id/toggle', requireAuth, (req, res) => {
   try {
