@@ -745,7 +745,7 @@ async function loadSettingsPage() {
     'followup_r1_hours', 'followup_r2_hours', 'followup_r3_before_close',
     'upsell_discount_percent',
     'meta_whatsapp_token', 'meta_phone_number_id', 'meta_verify_token', 'meta_app_secret',
-    'claude_api_key', 'openai_api_key', 'google_maps_api_key',
+    'ai_chat_model', 'claude_api_key', 'openai_api_key', 'google_maps_api_key',
     'google_sheets_url', 'portal_webhook_url'
   ];
 

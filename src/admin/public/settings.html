@@ -138,6 +138,17 @@
 
       <div class="settings-group-title" style="margin-top:20px;">AI Services</div>
       <div class="api-key-group">
+        <label>Chat Model</label>
+        <div class="api-key-input">
+          <select id="ai_chat_model" data-section="api_keys" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+            <option value="gpt-4o-mini">GPT-4o mini — $0.15/$0.60 per M tokens (cheapest)</option>
+            <option value="gpt-4.1-nano">GPT-4.1 nano — $0.10/$0.40 per M tokens (fastest)</option>
+            <option value="gpt-4.1-mini">GPT-4.1 mini — $0.40/$1.60 per M tokens (balanced)</option>
+            <option value="gpt-4o">GPT-4o — $2.50/$10.00 per M tokens (smartest)</option>
+          </select>
+        </div>
+      </div>
+      <div class="api-key-group">
         <label>Claude API Key (Anthropic)</label>
         <div class="api-key-input">
           <input type="password" id="claude_api_key" data-section="api_keys" placeholder="sk-ant-xxxxxxxxx...">

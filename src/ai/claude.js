@@ -2,11 +2,34 @@ const OpenAI = require('openai');
 
 let client = null;
 
-// ---- SINGLE SOURCE OF TRUTH for AI model ----
-const AI_MODEL = 'gpt-4o-mini';
-const AI_MODEL_NAME = 'GPT-4o mini';
-// Pricing per million tokens (USD)
-const AI_PRICING = { input: 0.15, output: 0.60 };
+// ---- MODEL OPTIONS ----
+const MODEL_OPTIONS = {
+  'gpt-4o-mini':   { name: 'GPT-4o mini',   input: 0.15,  output: 0.60 },
+  'gpt-4o':        { name: 'GPT-4o',         input: 2.50,  output: 10.00 },
+  'gpt-4.1-mini':  { name: 'GPT-4.1 mini',  input: 0.40,  output: 1.60 },
+  'gpt-4.1-nano':  { name: 'GPT-4.1 nano',  input: 0.10,  output: 0.40 },
+};
+
+const DEFAULT_MODEL = 'gpt-4o-mini';
+
+function getActiveModel() {
+  try {
+    const settingsModel = require('../db/models/settings');
+    const saved = settingsModel.get('ai_chat_model', DEFAULT_MODEL);
+    if (MODEL_OPTIONS[saved]) return saved;
+  } catch (e) {}
+  return DEFAULT_MODEL;
+}
+
+function getModelInfo(modelId) {
+  const info = MODEL_OPTIONS[modelId] || MODEL_OPTIONS[DEFAULT_MODEL];
+  return info;
+}
+
+// Export dynamic getters
+const AI_MODEL = DEFAULT_MODEL;
+const AI_MODEL_NAME = MODEL_OPTIONS[DEFAULT_MODEL].name;
+const AI_PRICING = { input: MODEL_OPTIONS[DEFAULT_MODEL].input, output: MODEL_OPTIONS[DEFAULT_MODEL].output };
 
 function getClient(apiKey) {
   if (!apiKey) throw new Error('OpenAI API key not set. .env mein OPENAI_API_KEY daal dein.');
@@ -23,6 +46,8 @@ function getClient(apiKey) {
 async function chat(apiKey, systemPrompt, messages, options = {}) {
   const openai = getClient(apiKey);
   const startTime = Date.now();
+  const activeModel = getActiveModel();
+  const modelInfo = getModelInfo(activeModel);
 
   // Convert messages to OpenAI format (add system prompt as first message)
   const openaiMessages = [
@@ -31,7 +56,7 @@ async function chat(apiKey, systemPrompt, messages, options = {}) {
   ];
 
   const response = await openai.chat.completions.create({
-    model: AI_MODEL,
+    model: activeModel,
     max_tokens: options.max_tokens || 400,
     messages: openaiMessages,
     response_format: { type: 'json_object' },
@@ -87,4 +112,4 @@ async function chatWithRetry(apiKey, systemPrompt, messages, options = {}) {
   }
 }
 
-module.exports = { chat: chatWithRetry, AI_MODEL, AI_MODEL_NAME, AI_PRICING };
+module.exports = { chat: chatWithRetry, AI_MODEL, AI_MODEL_NAME, AI_PRICING, MODEL_OPTIONS, getActiveModel, getModelInfo };

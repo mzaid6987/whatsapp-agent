@@ -84,8 +84,10 @@ app.get('/api/auth/check', (req, res) => {
 
 // Current AI model info
 app.get('/api/model', requireAuth, (req, res) => {
-  const { AI_MODEL, AI_MODEL_NAME, AI_PRICING } = require('./ai/claude');
-  res.json({ model: AI_MODEL, name: AI_MODEL_NAME, pricing: AI_PRICING });
+  const { getActiveModel, getModelInfo, MODEL_OPTIONS } = require('./ai/claude');
+  const active = getActiveModel();
+  const info = getModelInfo(active);
+  res.json({ model: active, name: info.name, pricing: { input: info.input, output: info.output }, options: MODEL_OPTIONS });
 });
 
 // Stats
