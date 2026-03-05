@@ -554,8 +554,9 @@ function normalizeAddressText(text) {
 }
 
 function buildAddressString(parts) {
+  const skip = v => !v || v === 'nahi_pata' || ['null', 'undefined', 'none', 'n/a', 'missing'].includes(String(v).toLowerCase().trim());
   const pieces = [];
-  if (parts.house && parts.house !== 'nahi_pata') {
+  if (parts.house && !skip(parts.house)) {
     // Normalize and clean house text
     let h = normalizeAddressText(parts.house.toString());
     // Remove duplicate block info if street already has it
@@ -568,7 +569,7 @@ function buildAddressString(parts) {
       pieces.push('House ' + h);
     }
   }
-  if (parts.street && !/^(nahi?|nhi|no|none|nope)([_\s]*(he|hai|h|pata))?$/i.test(parts.street.trim())) {
+  if (parts.street && !skip(parts.street) && !/^(nahi?|nhi|no|none|nope)([_\s]*(he|hai|h|pata))?$/i.test(parts.street.trim())) {
     const st = parts.street.toString();
     // If street is just a number, prefix with "Gali" (Pakistan convention)
     if (/^\d+$/.test(st.trim())) {
@@ -582,7 +583,7 @@ function buildAddressString(parts) {
   // Landmark: delivery points (Dak Khana/TCS) go FIRST, then area; urban landmarks go after area
   let landmarkText = null;
   let isDeliveryPoint = false;
-  if (parts.landmark && parts.landmark !== 'nahi_pata') {
+  if (parts.landmark && !skip(parts.landmark)) {
     const lm = parts.landmark.toString();
     isDeliveryPoint = /\b(dak\s*khana|post\s*office|tcs|leopard|call\s*courier)\b/i.test(lm);
     if (isDeliveryPoint) {

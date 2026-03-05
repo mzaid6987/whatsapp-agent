@@ -1330,7 +1330,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const ap = state.collected.address_parts;
       const newParts = addrParts;
       // Filter out "MISSING" / null / empty / "nahi" — AI may echo prompt placeholders or customer refusals
-      const valid = (v) => v && typeof v === 'string' && v.toLowerCase() !== 'missing' && v.trim() !== '';
+      const valid = (v) => v && typeof v === 'string' && !['missing', 'null', 'undefined', 'none', 'n/a', '-', '—'].includes(v.toLowerCase().trim()) && v.trim() !== '';
       const isRefusal = (v) => v && /^(nahi?|nhi|no|none|nope)([_\s]*(he|hai|h|pata))?$/i.test(v.trim());
       if (valid(newParts.area) && !isRefusal(newParts.area)) ap.area = newParts.area;
       if (valid(newParts.street) && !isRefusal(newParts.street)) ap.street = newParts.street;
