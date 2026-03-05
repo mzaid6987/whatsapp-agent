@@ -630,6 +630,7 @@ app.delete('/api/conversations/:id', requireAuth, (req, res) => {
     const id = parseInt(req.params.id);
     const db = getDb();
     db.prepare('DELETE FROM messages WHERE conversation_id = ?').run(id);
+    db.prepare('DELETE FROM orders WHERE conversation_id = ?').run(id);
     db.prepare('DELETE FROM conversations WHERE id = ?').run(id);
     res.json({ success: true });
   } catch (e) {
