@@ -41,6 +41,11 @@ body {
   min-height: 100vh;
 }
 
+body:has(.chats-container) {
+  height: 100vh;
+  overflow: hidden;
+}
+
 /* ---- SCROLLBAR ---- */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
