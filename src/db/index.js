@@ -2,7 +2,8 @@
  * SQLite database via sql.js (pure JS — no native modules needed)
  * Wraps sql.js to provide better-sqlite3-compatible API
  */
-const initSqlJs = require('sql.js');
+// Use ASM.js (pure JS) instead of WASM to avoid Out-of-memory on shared hosting restarts
+const initSqlJs = require('sql.js/dist/sql-asm.js');
 const fs = require('fs');
 const path = require('path');
 const { SCHEMA } = require('./schema');
