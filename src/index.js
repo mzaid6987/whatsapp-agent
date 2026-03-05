@@ -1,3 +1,5 @@
+// Force Pakistan Standard Time (UTC+5) — server may be in US timezone
+process.env.TZ = 'Asia/Karachi';
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
