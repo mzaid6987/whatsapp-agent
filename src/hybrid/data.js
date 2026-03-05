@@ -153,8 +153,14 @@ function deliveryTime(city) {
 // ============= HELPERS =============
 function fmtPrice(n) { return 'Rs.' + n.toLocaleString(); }
 
+const PRODUCT_EMOJIS = ['💇', '✨', '🔪', '🫒', '👂', '🥬', '💆', '💨', '🦵', '🧹'];
+
 function productList() {
-  return PRODUCTS.map((p, i) => `${i + 1}. ${p.short} — ${fmtPrice(p.price)}`).join('\n');
+  return PRODUCTS.map((p, i) => {
+    const num = `${i + 1}.`;
+    const emoji = PRODUCT_EMOJIS[i] || '📦';
+    return `${num} ${emoji} ${p.short} — ${fmtPrice(p.price)}`;
+  }).join('\n');
 }
 
 module.exports = {
