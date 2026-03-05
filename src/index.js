@@ -20,11 +20,6 @@ const productModel = require('./db/models/product');
 const settingsModel = require('./db/models/settings');
 const cacheModel = require('./db/models/cache');
 
-// Initialize DB + seed
-initDb();
-seedAll();
-console.log('[DB] Ready');
-
 const app = express();
 const server = http.createServer(app);
 
@@ -734,8 +729,20 @@ app.use('/admin', express.static(path.join(__dirname, 'admin/public')));
 // Root redirect
 app.get('/', (req, res) => res.redirect('/admin/'));
 
-const PORT = process.env.PORT || 3010;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`WhatsApp Agent Dashboard running on http://localhost:${PORT}/admin/`);
-  console.log(`Mobile: http://192.168.0.237:${PORT}/admin/`);
-});
+// Initialize DB (async) then start server
+(async () => {
+  try {
+    await initDb();
+    seedAll();
+    console.log('[DB] Ready');
+
+    const PORT = process.env.PORT || 3010;
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`WhatsApp Agent Dashboard running on http://localhost:${PORT}/admin/`);
+      console.log(`Mobile: http://192.168.0.237:${PORT}/admin/`);
+    });
+  } catch (err) {
+    console.error('[FATAL] Failed to start:', err);
+    process.exit(1);
+  }
+})();
