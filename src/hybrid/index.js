@@ -487,12 +487,17 @@ function dbSave(fn) {
 
 // Module-level media cost — set per handleMessage call, consumed on first saveMessages
 let _pendingMediaCost = null;
+let _pendingWaMessageId = null;
 
 function saveMessages(dbConv, message, reply, intent, source, state, extra = {}) {
   if (!dbConv) return;
   dbSave(() => {
-    // Save incoming message — include media cost if present
+    // Save incoming message — include media cost + WA message ID if present
     const incomingExtra = { intent, source };
+    if (_pendingWaMessageId) {
+      incomingExtra.wa_message_id = _pendingWaMessageId;
+      _pendingWaMessageId = null; // Consume
+    }
     if (_pendingMediaCost) {
       incomingExtra.debug_json = JSON.stringify({
         _media_type: _pendingMediaCost.type,
@@ -619,8 +624,9 @@ function intentToNextState(intent, currentState, extracted, state) {
 async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   const startTime = Date.now();
 
-  // Set pending media cost for saveMessages to pick up
+  // Set pending media cost + WA message ID for saveMessages to pick up
   _pendingMediaCost = options.mediaCost || null;
+  _pendingWaMessageId = options.wa_message_id || null;
 
   // Guard: non-text messages (image, voice, sticker, location, contact) → polite reply
   if (!message || typeof message !== 'string' || !message.trim()) {

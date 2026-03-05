@@ -191,8 +191,8 @@ async function webhookHandler(req, res) {
       return;
     }
 
-    // Mark as read (blue ticks) — non-blocking
-    markAsRead(messageId, phoneNumberId, accessToken);
+    // NOTE: markAsRead moved to AFTER processing — only mark read when bot actively replies
+    // Don't mark read when: bot OFF, complaint, human-assigned (customer sees grey ticks = unread)
 
     // Extract message text
     let messageText = '';
@@ -291,7 +291,7 @@ async function webhookHandler(req, res) {
       const customer = customerModel.findOrCreate(fromPhone);
       if (contactName && !customer.name) customerModel.update(customer.id, { name: contactName });
       const convo = conversationModel.getOrCreateActive(customer.id, 'nureva');
-      messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp' });
+      messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
       conversationModel.updateLastMessage(convo.id, messageText);
       console.log('[WA Webhook] Bot disabled, message saved:', fromPhone);
       _broadcast({
@@ -325,7 +325,7 @@ async function webhookHandler(req, res) {
       const convo = conversationModel.getOrCreateActive(customer.id, storeName.toLowerCase());
       if (convo && convo.needs_human) {
         // Save message but don't reply — human agent will handle
-        messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp' });
+        messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
         conversationModel.updateLastMessage(convo.id, messageText);
         console.log(`[WA] ${fromPhone}: "${messageText}" — needs_human, skipping bot reply`);
         _broadcast({
@@ -340,7 +340,7 @@ async function webhookHandler(req, res) {
     }
 
     // Process message through the hybrid engine
-    const result = await hybrid.handleMessage(messageText, fromPhone, storeName, apiKey || undefined, { mediaCost });
+    const result = await hybrid.handleMessage(messageText, fromPhone, storeName, apiKey || undefined, { mediaCost, wa_message_id: messageId });
 
     // Add media processing cost to result (so dashboard shows it)
     if (mediaCost) {
@@ -355,6 +355,13 @@ async function webhookHandler(req, res) {
       const sendResult = await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
       if (sendResult.success) {
         console.log(`[WA] → ${fromPhone}: "${result.reply.substring(0, 80)}..."`);
+
+        // Mark as read (blue ticks) only when bot replies AND not a complaint/human-assigned
+        // Complaints stay unread so customer sees admin hasn't read yet
+        if (!result.needs_human) {
+          markAsRead(messageId, phoneNumberId, accessToken);
+        }
+
         // Store wa_message_id on the last outgoing message for read receipt tracking
         if (sendResult.messageId && result.db_conversation_id) {
           try {

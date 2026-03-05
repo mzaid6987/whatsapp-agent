@@ -562,6 +562,17 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
       return res.status(500).json({ error: 'Failed to send: ' + sendResult.error });
     }
 
+    // Mark customer's last message as read in WhatsApp (blue ticks)
+    try {
+      const lastIncoming = getDb().prepare(
+        "SELECT wa_message_id FROM messages WHERE conversation_id = ? AND direction = 'incoming' ORDER BY created_at DESC LIMIT 1"
+      ).get(convId);
+      if (lastIncoming?.wa_message_id) {
+        const { markAsRead } = require('./whatsapp/sender');
+        markAsRead(lastIncoming.wa_message_id, phoneNumberId, accessToken);
+      }
+    } catch (e) { /* non-critical */ }
+
     // Save to DB + mark as human-handled
     const msgId = messageModel.create(convId, 'outgoing', 'human', text.trim(), { source: 'admin' });
     // Store wa_message_id for read receipt tracking

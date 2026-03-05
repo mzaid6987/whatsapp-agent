@@ -527,7 +527,7 @@ document.addEventListener('keydown', (e) => {
 // ---- LOAD SETTINGS (for bot status) ----
 async function loadSettings() {
   const settings = await api('/api/settings');
-  if (settings) updateBotUI(settings.bot_enabled);
+  if (settings) updateBotUI(settings.bot_enabled === true || settings.bot_enabled === 'true' || settings.bot_enabled === '1');
 }
 
 // ---- WEBSOCKET ----
