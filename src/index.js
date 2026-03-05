@@ -731,6 +731,34 @@ app.use('/admin', express.static(path.join(__dirname, 'admin/public')));
 // Root redirect
 app.get('/', (req, res) => res.redirect('/admin/'));
 
+// ---- AUTO-DEPLOY ENDPOINT ----
+const { execSync } = require('child_process');
+const DEPLOY_SECRET = process.env.DEPLOY_SECRET || 'nuvenza-deploy-2026';
+
+app.post('/deploy', (req, res) => {
+  const token = req.query.token || req.headers['x-deploy-token'];
+  if (token !== DEPLOY_SECRET) {
+    return res.status(403).json({ error: 'Invalid token' });
+  }
+  try {
+    const appRoot = path.join(__dirname, '..');
+    const pullResult = execSync('git pull origin main', { cwd: appRoot, timeout: 30000 }).toString();
+    console.log('[DEPLOY] git pull:', pullResult);
+
+    // Touch tmp/restart.txt to trigger Passenger restart
+    const fs = require('fs');
+    const tmpDir = path.join(appRoot, 'tmp');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'restart.txt'), Date.now().toString());
+    console.log('[DEPLOY] Restart triggered');
+
+    res.json({ success: true, output: pullResult });
+  } catch (err) {
+    console.error('[DEPLOY] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Initialize DB (async) then start server
 (async () => {
   try {
