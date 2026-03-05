@@ -547,7 +547,8 @@ async function sendManualReply() {
 
     if (result?.success) {
       input.value = '';
-      // Reload messages to show saved message from DB
+      // Reload messages + chat list to show updated last message
+      loadChats();
       openChat(currentChatId);
     } else {
       alert('Failed to send: ' + (result?.error || 'Unknown error'));
