@@ -233,6 +233,7 @@ async function webhookHandler(req, res) {
       } catch (err) {
         console.error('[WA] Voice transcription failed:', err.message, err.stack);
         messageText = '[voice message]';
+        mediaNote = ` [voice FAILED: ${err.message}]`;
       } finally {
         endMediaLock(fromPhone);
       }

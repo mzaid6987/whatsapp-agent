@@ -713,6 +713,49 @@ app.post('/api/settings', requireAuth, (req, res) => {
   }
 });
 
+// Diagnostic: test voice/OpenAI setup
+app.get('/api/test-voice', requireAuth, (req, res) => {
+  try {
+    const checks = {};
+    // 1. Check OpenAI key
+    const envKey = process.env.OPENAI_API_KEY;
+    const dbKey = settingsModel.get('openai_api_key', '');
+    checks.env_key = envKey ? `set (${envKey.slice(0,8)}...${envKey.slice(-4)})` : 'NOT SET';
+    checks.db_key = dbKey ? `set (${dbKey.slice(0,8)}...${dbKey.slice(-4)})` : 'NOT SET';
+    checks.active_key = dbKey || envKey ? 'YES' : 'NO KEY FOUND';
+    // 2. Check temp dir
+    const fs = require('fs');
+    const tempDir = path.join(__dirname, '../temp');
+    checks.temp_dir = fs.existsSync(tempDir) ? 'exists' : 'MISSING';
+    // 3. Check openai module
+    try {
+      const OpenAI = require('openai');
+      checks.openai_module = 'loaded OK';
+      // Try creating client
+      const key = dbKey || envKey;
+      if (key) {
+        const client = new OpenAI({ apiKey: key });
+        checks.openai_client = 'created OK';
+      }
+    } catch (e) {
+      checks.openai_module = `ERROR: ${e.message}`;
+    }
+    // 4. Check sharp module
+    try {
+      require('sharp');
+      checks.sharp_module = 'loaded OK';
+    } catch (e) {
+      checks.sharp_module = `ERROR: ${e.message}`;
+    }
+    // 5. Check Meta token
+    const metaToken = settingsModel.get('meta_whatsapp_token', '');
+    checks.meta_token = metaToken ? `set (${metaToken.slice(0,8)}...)` : 'NOT SET';
+    res.json(checks);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Bot toggle
 app.post('/api/bot/toggle', requireAuth, (req, res) => {
   try {
