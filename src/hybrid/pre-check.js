@@ -241,6 +241,17 @@ function preCheck(message, currentState, collected) {
       return { intent: 'multiple_cities', extracted: { cities: allCities } };
     }
     if (allCities.length === 1) {
+      // Check if message also has area info (e.g. "Karachi ke andar Jinnah Square")
+      const { matchArea } = require('./city-areas');
+      // Remove city name and common filler, then check remaining text for known areas
+      const cityLower = allCities[0].toLowerCase();
+      const remaining = l.replace(new RegExp('\\b' + cityLower + '\\b', 'i'), '').replace(/\b(ke|ka|ki|mein|me|mai|andar|dena|hai|he|h|pe|par|wahan|yahan|delivery|bhejo|bhej|do|karni|krni)\b/gi, '').trim();
+      if (remaining.length >= 3) {
+        const areaInCity = matchArea(remaining, allCities[0]);
+        if (areaInCity) {
+          return { intent: 'city_given', extracted: { city: allCities[0], area: areaInCity } };
+        }
+      }
       return { intent: 'city_given', extracted: { city: allCities[0] } };
     }
     // Check if input is a known area (not a city) — e.g., "Malir" is an area in Karachi
