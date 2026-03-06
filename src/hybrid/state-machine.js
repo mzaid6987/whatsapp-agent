@@ -319,7 +319,8 @@ function handleTemplateState(message, state, storeName, preIntent) {
       if (nm) {
         const idx = parseInt(nm[1]) - 1;
         if (idx >= 0 && idx < state.upsell_candidates.length) {
-          const up = state.upsell_candidates[idx];
+          const up = { ...state.upsell_candidates[idx] };
+          up.price = Math.max((up.upsell_price || up.price) - 500, 499); // use upsell discounted price
           if (!(state.products || []).length) state.products = [state.product];
           state.products.push(up);
           return confirmOrder(state, storeName, `Done! ${up.short} bhi add ho gaya.\n\n`);
@@ -337,10 +338,12 @@ function handleTemplateState(message, state, storeName, preIntent) {
         // Check if customer EXPLICITLY wants to add (vs just mentioning product name)
         const isExplicitAdd = /\b(add|bhi|daal|dal|laga|order|chahiye|chaiye|chahea|le\s*lo|le\s*lena|mangwa|yeh\s*bhi)\b/i.test(l);
         if (isExplicitAdd) {
-          // Explicit add intent — add directly
+          // Explicit add intent — add directly with upsell discounted price
+          const addUp = { ...uMatch };
+          addUp.price = Math.max((addUp.upsell_price || addUp.price) - 500, 499);
           if (!(state.products || []).length) state.products = [state.product];
-          state.products.push(uMatch);
-          return confirmOrder(state, storeName, `Done! ${uMatch.short} bhi add ho gaya.\n\n`);
+          state.products.push(addUp);
+          return confirmOrder(state, storeName, `Done! ${addUp.short} bhi add ho gaya.\n\n`);
         }
         // Just product name or inquiry — show info first with upsell discounted price, ask to add
         const upsellPrice = Math.max((uMatch.upsell_price || uMatch.price) - 500, 499);
@@ -364,8 +367,13 @@ function handleTemplateState(message, state, storeName, preIntent) {
       }
       // Pending upsell — customer said yes after seeing product info
       if (state._pending_upsell && yes) {
-        const up = state._pending_upsell;
+        const up = { ...state._pending_upsell };
+        // Use haggled price if negotiated, else standard upsell price
+        const baseUpsellP = Math.max((up.upsell_price || up.price) - 500, 499);
+        const extraOff = (state._upsell_haggle >= 2) ? 100 : 0;
+        up.price = Math.max(baseUpsellP - extraOff, 399);
         delete state._pending_upsell;
+        delete state._upsell_haggle;
         if (!(state.products || []).length) state.products = [state.product];
         state.products.push(up);
         return confirmOrder(state, storeName, `Done! ${up.short} bhi add ho gaya.\n\n`);
@@ -376,7 +384,8 @@ function handleTemplateState(message, state, storeName, preIntent) {
       }
       // YES = if only 1 candidate, auto-select. If 2+, ask to pick
       if (yes && state.upsell_candidates.length === 1) {
-        const up = state.upsell_candidates[0];
+        const up = { ...state.upsell_candidates[0] };
+        up.price = Math.max((up.upsell_price || up.price) - 500, 499);
         if (!(state.products || []).length) state.products = [state.product];
         state.products.push(up);
         return confirmOrder(state, storeName, `Done! ${up.short} bhi add ho gaya.\n\n`);

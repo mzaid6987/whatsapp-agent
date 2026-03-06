@@ -224,7 +224,7 @@ const T = {
   // ORDER CONFIRMED
   // ==========================================
   ORDER_CONFIRMED: [
-    "🎉 Order confirm ho gaya! Order ID: {order_id}\n{items_list}\n💰 Total: Rs.{total} | 🚚 Delivery: FREE\n{name} | {phone}\n📍 {address}, {city} — {delivery_time}\nPaisa delivery ke waqt dena hai. Shukriya {honorific}! 😊",
+    "🎉 Order confirm ho gaya! Order ID: {order_id}\n{items_list}\n💰 Total: Rs.{total} | 🚚 Delivery: FREE\n{name} | {phone}\n📍 {address} — {delivery_time}\nPaisa delivery ke waqt dena hai. Shukriya {honorific}! 😊",
   ],
 
   // ==========================================

@@ -125,6 +125,7 @@ Common Whisper mistakes for this store's context:
 - "Wa Alaikum Assalam" at START of message → "Assalamu Alaikum" (Whisper sometimes reverses the greeting — customer is initiating, not responding)
 - "beech/beach" + number near address context → "B" + number (e.g. "beech 38" → "B 36"). Customer saying house/block letter in Urdu pronunciation.
 - "Ginna/Gina/Jinna" near "Square/colony/road" → "Jinnah" (Jinnah Square, Jinnah Colony etc.)
+- "Griyaanay/Giriyanay/Griana/Gariyana" near "shop/dukan/store" → "kiryana" (kiryana = grocery store in Urdu)
 - IMPORTANT: Urdu number words MUST be converted to digits in address/gali/street/house context:
   ek=1, do=2, teen=3, char=4, panch=5, che/chhe=6, saat=7, aath=8, nau=9, das=10,
   gyarah=11, barah=12, terah=13, chaudah/chauda=14, pandrah/pandra=15, solah=16,
