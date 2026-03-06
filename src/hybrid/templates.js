@@ -162,30 +162,30 @@ const T = {
     "{name} {honorific}, {city} mein konsa area hai? 📍 {area_suggestions}",
   ],
   ASK_ADDRESS_AREA: [
-    "{city} mein konsa area ya mohalla hai? {area_suggestions}",
-    "{name} {honorific}, {city} mein konsa area hai? {area_suggestions}",
+    "{city} mein konsa area ya mohalla hai? 📍 {area_suggestions}",
+    "{name} {honorific}, {city} mein konsa area hai? 📍 {area_suggestions}",
   ],
   ASK_ADDRESS_STREET: [
-    "{area} mein block aur gali/street number bata dein?",
-    "{area} mein konsa block hai aur gali/street number?",
+    "{area} mein block aur gali/street number bata dein? 🏘️",
+    "{area} mein konsa block hai aur gali/street number? 🏘️",
   ],
   ASK_ADDRESS_HOUSE: [
-    "House number ya flat number?",
-    "House number bata dein?",
+    "House number ya flat number? 🏠",
+    "House number bata dein? 🏠",
   ],
   ASK_ADDRESS_LANDMARK: [
-    "Qareeb koi landmark/mashoor jagah hai? Masjid, school ya dukaan ka naam bata dein taake rider ko aasan ho.",
-    "Rider ke liye reference — qareeb koi landmark/mashoor jagah (masjid, hospital, school ya market) ka naam bata dein.",
+    "Qareeb koi landmark/mashoor jagah hai? 📍 Masjid, school ya dukaan ka naam bata dein taake rider ko aasan ho.",
+    "Rider ke liye reference — qareeb koi landmark/mashoor jagah (masjid, hospital, school ya market) ka naam bata dein 📍",
   ],
   ASK_ADDRESS_LANDMARK_NAME: [
-    "Konsi {landmark_type}? Naam bata dein.",
+    "Konsi {landmark_type}? Naam bata dein 📍",
   ],
   ASK_ADDRESS_HOUSE_OR_LANDMARK: [
-    "Koi baat nahi — qareeb koi landmark/mashoor jagah (masjid, school ya dukaan) hai? Naam bata dein.",
+    "Koi baat nahi — qareeb koi landmark/mashoor jagah (masjid, school ya dukaan) hai? Naam bata dein 📍",
   ],
   CONFIRM_ADDRESS: [
-    "Aapka address: {full_address}. Sahi hai?",
-    "Yeh address sahi hai? {full_address}",
+    "📍 Aapka address: {full_address}. Sahi hai? ✅",
+    "📍 Yeh address sahi hai? {full_address} ✅",
   ],
 
   // ==========================================

@@ -320,6 +320,12 @@ async function webhookHandler(req, res) {
       return;
     }
 
+    // Reactions — silently ignore (thumbs up, heart, etc. are not text messages)
+    if (msg.type === 'reaction') {
+      console.log(`[WA] ${fromPhone}: reaction ${msg.reaction?.emoji || '?'} — ignored`);
+      return;
+    }
+
     // Unsupported media types (sticker, video, document, location, contacts)
     if (['sticker', 'video', 'document', 'location', 'contacts'].includes(msg.type)) {
       const replyText = msg.type === 'video'

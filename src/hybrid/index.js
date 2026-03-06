@@ -770,7 +770,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   if (state.current === 'COLLECT_ADDRESS' && state.address_confirming) {
     const l = message.toLowerCase().trim();
     // Flexible yes: "haan", "haan sahi hai", "ji bilkul", "confirm", "yes", "jee", "je", "yess", "g"
-    const flexYes = /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|done|theek|thik|thk|tik|hn|hm+|g)\b/i.test(l) && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
+    const flexYes = /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|done|theek|thik|thk|tik|hn|hm+|g+|acha|accha|achha|bhej\s*d[oae]|bhejd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|kr\s*d[oae]|kard[oae]|krd[oae])\b/i.test(l) && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
     const flexNo = /\b(nahi|nhi|no|galat|nope|na+h|mat|cancel)\b/i.test(l);
 
     if (flexYes) {

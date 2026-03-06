@@ -35,7 +35,8 @@ function buildVars(state, storeName) {
   const honorific = getHonorific(c.name, state.gender);
   const items = (state.products || []).length ? state.products : (product ? [product] : []);
   let total = items.reduce((s, p) => s + p.price, 0);
-  if (state.discount_percent) total -= Math.round(total * state.discount_percent / 100);
+  // Haggle discount applies ONLY to main product, not upsell items
+  if (state.discount_percent && product) total -= Math.round(product.price * state.discount_percent / 100);
 
   // Alt phone: if delivery_phone is a different number (not "same"), include it
   const altPhone = (c.delivery_phone && c.delivery_phone !== 'same' && c.delivery_phone !== c.phone) ? c.delivery_phone : '';
@@ -59,7 +60,12 @@ function buildVars(state, storeName) {
     f2: product ? product.f2 : '',
     desc: product ? (product.desc || '') : '',
     product_list: productList(),
-    items_list: items.map(p => `- ${p.short}: ${fmtPrice(p.price)}`).join('\n'),
+    items_list: items.map(p => {
+      // Show discounted price for main product if haggle discount exists
+      const isMainProduct = state.product && p.short === state.product.short && p.price === state.product.price;
+      const dp = isMainProduct && state.discount_percent ? Math.round(p.price * (1 - state.discount_percent / 100)) : p.price;
+      return `- ${p.short}: ${fmtPrice(dp)}`;
+    }).join('\n'),
     total: total.toLocaleString(),
     discount_percent: state.discount_percent || 0,
     discounted_price: product ? Math.round(product.price * (1 - (state.discount_percent || 0) / 100)).toLocaleString() : '',
@@ -82,7 +88,9 @@ function confirmOrder(state, storeName, prefix = '') {
   state._thanked = false; // reset for post-order thanks tracking
   const items = (state.products || []).length ? state.products : [state.product];
   let subtotal = items.reduce((s, p) => s + p.price, 0);
-  const discountTotal = state.discount_percent ? Math.round(subtotal * state.discount_percent / 100) : 0;
+  // Haggle discount applies ONLY to main product, not upsell items (they already have adjusted prices)
+  const mainProductPrice = state.product ? state.product.price : subtotal;
+  const discountTotal = state.discount_percent ? Math.round(mainProductPrice * state.discount_percent / 100) : 0;
   const grandTotal = subtotal - discountTotal;
 
   // If order already saved (from ORDER_SUMMARY yes), update it; otherwise create new
@@ -300,9 +308,9 @@ function handleTemplateState(message, state, storeName, preIntent) {
           const finalPrice = Math.max(baseUpsellPrice - extraOff, 399);
           state._pending_upsell = up; // keep pending
           if (extraOff > 0) {
-            return { reply: `Chalo ${getHonorific(state.collected.name)}, aapke liye Rs.${finalPrice.toLocaleString()} final — original Rs.${up.price.toLocaleString()} tha. Add kar dun order mein?`, state: 'UPSELL_SHOW' };
+            return { reply: `Chalo ${getHonorific(state.collected.name)}, aapke liye Rs.${finalPrice.toLocaleString()} final — original Rs.${up.price.toLocaleString()} tha 🏷️ Add kar dun order mein? 😊`, state: 'UPSELL_SHOW' };
           }
-          return { reply: `${up.short} already discounted price Rs.${finalPrice.toLocaleString()} pe mil raha hai — original Rs.${up.price.toLocaleString()} tha. Add karna hai order mein?`, state: 'UPSELL_SHOW' };
+          return { reply: `${up.short} already discounted price Rs.${finalPrice.toLocaleString()} pe mil raha hai — original Rs.${up.price.toLocaleString()} tha 🏷️ Add karna hai order mein? 😊`, state: 'UPSELL_SHOW' };
         }
         // Give 5% discount on main product if not already given
         if (!state.discount_percent) state.discount_percent = 5;
@@ -347,7 +355,7 @@ function handleTemplateState(message, state, storeName, preIntent) {
         }
         // Just product name or inquiry — show info first with upsell discounted price, ask to add
         const upsellPrice = Math.max((uMatch.upsell_price || uMatch.price) - 500, 499);
-        const infoReply = `${uMatch.name} — Rs.${upsellPrice.toLocaleString()}. ${uMatch.f1} aur ${uMatch.f2}. Add karna hai order mein?`;
+        const infoReply = `${uMatch.name} — Rs.${upsellPrice.toLocaleString()} 🏷️ ${uMatch.f1} aur ${uMatch.f2}. Add karna hai order mein? 😊`;
         state._pending_upsell = uMatch;
         return { reply: infoReply, state: 'UPSELL_SHOW' };
       }
@@ -438,7 +446,7 @@ function handleTemplateState(message, state, storeName, preIntent) {
         return { reply: null, state: 'ORDER_CONFIRMED' };
       }
       // Simple acknowledgments (ok, acha, theek, g, ji) — always silent, no response needed
-      const isJustAck = /^(ik|ok+|okay|theek|thik|thk|tik|acha+|accha+|done|g|ji|jee|hn|great|nice|good|nahi?|nhi|ni|no|nope|nai|bas|rehne\s*do)\s*[.!]?\s*$/i.test(l);
+      const isJustAck = /^(ik|ok+|okay|theek|thik|thk|tik|acha+|accha+|done|g+|ji|jee|hn|great|nice|good|nahi?|nhi|ni|no|nope|nai|bas|rehne\s*do)(\s*(he|hai|ha|h|bhai|sir))?\s*[.!]?\s*$/i.test(l);
       if (isJustAck) {
         return { reply: null, state: 'ORDER_CONFIRMED' };
       }

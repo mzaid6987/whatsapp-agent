@@ -579,7 +579,7 @@ function preCheck(message, currentState, collected) {
     const hasPhone = extractPhone(msg) !== null;
     const bulkByContent = hasPhone && hasCityInMsg && msg.length > 30;
 
-    if ((fieldsMentioned >= 2 || hasColonLabels || bulkByContent) && msg.length > 30) {
+    if ((fieldsMentioned >= 2 || hasColonLabels || bulkByContent) && msg.length > 30 && currentState !== 'COLLECT_ADDRESS') {
       const extracted = {};
 
       // Name — parenthesized name like (sultan) OR "name:eman" / "name: eman" colon format
@@ -606,8 +606,8 @@ function preCheck(message, currentState, collected) {
       const bulkCity = extractCity(msg);
       if (bulkCity) extracted.city = bulkCity;
 
-      // Address text — "address:", "mohallah:", "gali:", etc.
-      const addrMatch = msg.match(/\baddress\s*[:\.\-=]?\s*(.+)/i);
+      // Address text — "address:", "mohallah:", "gali:", etc. (separator REQUIRED to avoid matching "address pe bhi call")
+      const addrMatch = msg.match(/\baddress\s*[:\.\-=]\s*(.+)/i);
       if (addrMatch) extracted.address_text = addrMatch[1].trim().split(/\n/)[0].trim();
 
       // Mohallah/area — build address from labeled fields
