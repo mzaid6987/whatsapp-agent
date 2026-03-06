@@ -1224,7 +1224,8 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     }
 
     // Delivery phone
-    if (extracted.same_phone) {
+    // AI intent "yes" in COLLECT_DELIVERY_PHONE = same phone (even if extracted.same_phone missing)
+    if (extracted.same_phone || (state.current === 'COLLECT_DELIVERY_PHONE' && aiIntent === 'yes' && !extracted.delivery_phone)) {
       state.collected.delivery_phone = 'same'; // same as main
     }
     if (extracted.delivery_phone) {

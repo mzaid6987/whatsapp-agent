@@ -100,7 +100,9 @@ function preCheck(message, currentState, collected) {
     const startsWithYes = /^(ha+n|ji+|jee|g|yes|yup|ok|haan|hn)\b/i.test(l.trim());
     const hasYesWord = /\b(ha+n|ji|yes|yup|ik|ok[zgky]?|haan|hn|g|k|shi|sahi|sa[ih]i?|theek|thik|thk|tik|bilkul|done)\b/i.test(l);
     const hasNoWord = /\b(nahi|nhi|no|nope|na+h|mat|cancel)\b/i.test(l);
-    if (/\b(isi|same|yehi|yahi|wohi)\b/i.test(l) || isYes(l) || /^k+$/i.test(l.trim()) || (hasYesWord && !hasNoWord) || (startsWithYes && hasNoWord)) {
+    // "krlungi/karlunga/karlungi/krlnga" = "I'll do it" = YES (receive kar lungi/lunga)
+    const hasWillDo = /\b(kr\s*lun?g[ia]|kar\s*lun?g[ia]|receive\s*kr|receive\s*kar)\b/i.test(l);
+    if (/\b(isi|same|yehi|yahi|wohi)\b/i.test(l) || isYes(l) || /^k+$/i.test(l.trim()) || (hasYesWord && !hasNoWord) || (startsWithYes && hasNoWord) || hasWillDo) {
       return { intent: 'same_phone', extracted: { same_phone: true } };
     }
     if (isNo(l) || (hasNoWord && !hasYesWord && !startsWithYes)) {
