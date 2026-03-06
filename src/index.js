@@ -935,29 +935,6 @@ app.get('/', (req, res) => res.redirect('/admin/'));
 
 // ---- AUTO-DEPLOY ENDPOINT ----
 const { execSync } = require('child_process');
-// ---- ONE-TIME DATA FIX: Insert Mushtaq's missing order ----
-app.get('/fix-mushtaq-order', (req, res) => {
-  if (req.query.token !== 'nuvenza-deploy-2026') return res.status(403).json({ error: 'bad token' });
-  const db = getDb();
-  // Check if already inserted
-  const existing = db.prepare("SELECT id FROM orders WHERE order_id = 'NRV-WA-79080'").get();
-  if (existing) return res.json({ status: 'already exists', id: existing.id });
-  // Find customer and conversation
-  const cust = db.prepare("SELECT id FROM customers WHERE phone LIKE '%03002299044%' OR phone LIKE '%923002299044%'").get();
-  const conv = db.prepare("SELECT id FROM conversations WHERE customer_id = ? ORDER BY created_at DESC LIMIT 1").get(cust?.id);
-  db.prepare(`
-    INSERT INTO orders (order_id, conversation_id, customer_id, store_name, customer_name, customer_phone, delivery_phone, customer_city, customer_address, items_json, subtotal, delivery_fee, discount_percent, discount_total, grand_total, source)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    'NRV-WA-79080', conv?.id || null, cust?.id || null, 'nureva',
-    'Mushtaq', '03452190008', '03212670987', 'Lahore',
-    'House 425, Wapda Town, near Gol Chakkar, Lahore',
-    JSON.stringify([{name:"T9 Trimmer",price:1399,quantity:1},{name:"Facial Hair Remover",price:799,quantity:1}]),
-    2198, 0, 10, 220, 1978, 'bot'
-  );
-  res.json({ status: 'inserted', customer_id: cust?.id, conversation_id: conv?.id });
-});
-
 const DEPLOY_SECRET = process.env.DEPLOY_SECRET || 'nuvenza-deploy-2026';
 
 // Support both GET and POST for deploy (LiteSpeed blocks POST on some setups)
