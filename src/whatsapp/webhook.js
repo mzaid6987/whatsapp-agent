@@ -235,8 +235,7 @@ async function webhookHandler(req, res) {
         }
       } catch (err) {
         console.error('[WA] Voice transcription FAILED:', err.message, err.stack);
-        // Show error in chat so admin can see what went wrong
-        messageText = `[voice message - ERROR: ${err.message.slice(0, 100)}]`;
+        messageText = '[voice message]';
         mediaNote = ` [voice FAILED: ${err.message}]`;
       } finally {
         endMediaLock(fromPhone);
