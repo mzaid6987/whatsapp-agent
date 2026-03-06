@@ -838,10 +838,13 @@ function preCheck(message, currentState, collected) {
 
     if (isCollectionState) {
       // During collection: only detect if message is CLEARLY a product mention
-      // (short message = just product name, or has order/want words)
-      const isShortProductMsg = msg.trim().split(/\s+/).length <= 6;
-      if (isShortProductMsg || hasWantWord) {
-        return { intent: 'product_with_order', extracted: { product } };
+      // (short message = just product name, or has order/want words, or price question, or image description)
+      // Strip [Image: ...] from word count — image descriptions inflate length
+      const msgNoImage = msg.replace(/\[Image:[^\]]*\]\s*/g, '').trim();
+      const isShortProductMsg = msgNoImage.split(/\s+/).length <= 6;
+      const hasPriceWord = /\b(price|rate|qeemat|qimat|kitne\s*ka|kitny\s*ka|kitni|kitne|kimat)\b/i.test(l);
+      if (isShortProductMsg || hasWantWord || hasPriceWord) {
+        return { intent: hasPriceWord ? 'product_inquiry' : 'product_with_order', extracted: { product } };
       }
       // Long message with product name during collection → likely address info, skip
     } else {
