@@ -704,7 +704,6 @@ app.get('/api/orders', requireAuth, (req, res) => {
         c.ai_tokens_used,
         (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.source = 'template') as template_count,
         (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.source IN ('ai','gpt-4o-mini','gpt-4o')) as ai_count,
-        (SELECT COALESCE(SUM(m.tokens_in + m.tokens_out), 0) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.direction = 'outgoing') as total_tokens,
         (SELECT GROUP_CONCAT(DISTINCT m.source) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.direction = 'outgoing') as sources_used
       FROM orders o
       LEFT JOIN conversations c ON c.id = o.conversation_id
@@ -713,8 +712,20 @@ app.get('/api/orders', requireAuth, (req, res) => {
     res.json(orders.map(o => {
       const items = o.items_json ? JSON.parse(o.items_json) : [];
       const hasUpsell = items.length > 1;
-      // Estimate AI cost from tokens (GPT-4o mini: ~Rs.0.05 per 1000 tokens)
-      const aiCostRs = Math.round((o.total_tokens || 0) / 1000 * 0.05 * 100) / 100;
+      // Calculate AI cost from actual stored costs in messages (same as dashboard)
+      let aiCostRs = 0;
+      if (o.conversation_id) {
+        const msgs = db.prepare('SELECT debug_json FROM messages WHERE conversation_id = ?').all(o.conversation_id);
+        msgs.forEach(m => {
+          if (!m.debug_json) return;
+          try {
+            const d = JSON.parse(m.debug_json);
+            if (d._cost_rs) aiCostRs += d._cost_rs;
+            if (d._media_cost_rs) aiCostRs += d._media_cost_rs;
+          } catch (e) { /* ignore */ }
+        });
+      }
+      aiCostRs = Math.round(aiCostRs * 100) / 100;
       return {
         ...o, items, has_upsell: hasUpsell, ai_cost_rs: aiCostRs,
         template_count: o.template_count || 0, ai_count: o.ai_count || 0,
