@@ -713,47 +713,68 @@ app.post('/api/settings', requireAuth, (req, res) => {
   }
 });
 
-// Diagnostic: test voice/OpenAI setup
-app.get('/api/test-voice', requireAuth, (req, res) => {
+// Diagnostic: LIVE test of Whisper API + media download
+app.get('/api/test-voice', requireAuth, async (req, res) => {
+  const results = { version: 'v3', steps: {} };
   try {
-    const checks = {};
-    // 1. Check OpenAI key
-    const envKey = process.env.OPENAI_API_KEY;
+    const OpenAI = require('openai');
+    const { toFile } = require('openai');
     const dbKey = settingsModel.get('openai_api_key', '');
-    checks.env_key = envKey ? `set (${envKey.slice(0,8)}...${envKey.slice(-4)})` : 'NOT SET';
-    checks.db_key = dbKey ? `set (${dbKey.slice(0,8)}...${dbKey.slice(-4)})` : 'NOT SET';
-    checks.active_key = dbKey || envKey ? 'YES' : 'NO KEY FOUND';
-    // 2. Check temp dir
-    const fs = require('fs');
-    const tempDir = path.join(__dirname, '../temp');
-    checks.temp_dir = fs.existsSync(tempDir) ? 'exists' : 'MISSING';
-    // 3. Check openai module
+    const envKey = process.env.OPENAI_API_KEY;
+    const key = dbKey || envKey;
+    results.steps.key = key ? `${key.slice(0,8)}...` : 'MISSING';
+
+    // Step 1: Create OpenAI client
+    const client = new OpenAI({ apiKey: key });
+    results.steps.client = 'OK';
+
+    // Step 2: Create a tiny WAV file (1 sec silence) and send to Whisper
+    const header = Buffer.alloc(44);
+    header.write('RIFF', 0);
+    header.writeUInt32LE(36 + 8000, 4);
+    header.write('WAVE', 8);
+    header.write('fmt ', 12);
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20);
+    header.writeUInt16LE(1, 22);
+    header.writeUInt32LE(8000, 24);
+    header.writeUInt32LE(8000, 28);
+    header.writeUInt16LE(1, 32);
+    header.writeUInt16LE(8, 34);
+    header.write('data', 36);
+    header.writeUInt32LE(8000, 40);
+    const silence = Buffer.alloc(8000, 128);
+    const wavBuffer = Buffer.concat([header, silence]);
+    results.steps.wav_created = `${wavBuffer.length} bytes`;
+
+    // Step 3: toFile
+    const file = await toFile(wavBuffer, 'test.wav', { type: 'audio/wav' });
+    results.steps.toFile = 'OK';
+
+    // Step 4: Call Whisper
+    const startMs = Date.now();
+    const transcription = await client.audio.transcriptions.create({
+      file,
+      model: 'whisper-1',
+    });
+    results.steps.whisper = `OK (${Date.now() - startMs}ms) — "${transcription.text}"`;
+    results.success = true;
+
+    // Step 5: Test media download (use last voice message from DB)
     try {
-      const OpenAI = require('openai');
-      checks.openai_module = 'loaded OK';
-      // Try creating client
-      const key = dbKey || envKey;
-      if (key) {
-        const client = new OpenAI({ apiKey: key });
-        checks.openai_client = 'created OK';
-      }
+      const { getDb } = require('./db');
+      const lastVoice = getDb().prepare("SELECT body FROM messages WHERE body LIKE '%voice message%' AND role='user' ORDER BY id DESC LIMIT 1").get();
+      results.steps.last_voice_in_db = lastVoice ? lastVoice.body.slice(0, 80) : 'none found';
     } catch (e) {
-      checks.openai_module = `ERROR: ${e.message}`;
+      results.steps.db_check = e.message;
     }
-    // 4. Check sharp module
-    try {
-      require('sharp');
-      checks.sharp_module = 'loaded OK';
-    } catch (e) {
-      checks.sharp_module = `ERROR: ${e.message}`;
-    }
-    // 5. Check Meta token
-    const metaToken = settingsModel.get('meta_whatsapp_token', '');
-    checks.meta_token = metaToken ? `set (${metaToken.slice(0,8)}...)` : 'NOT SET';
-    res.json(checks);
+
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    results.success = false;
+    results.error = e.message;
+    results.stack = e.stack?.split('\n').slice(0, 5);
   }
+  res.json(results);
 });
 
 // Bot toggle
