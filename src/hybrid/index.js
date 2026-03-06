@@ -1392,7 +1392,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       }
 
       // LETTER+NUMBER in street but house empty → swap to house (G78, R68, E-45, B/13 etc.)
-      if (ap.street && !ap.house && /^[A-Za-z][\-\/]?\d+$/i.test(ap.street.trim())) {
+      if (ap.street && !ap.house && /^[A-Za-z]\s*[\-\/]?\s*\d+$/i.test(ap.street.trim())) {
         console.log(`[Address] Swapping street→house: "${ap.street}" (letter+number pattern)`);
         ap.house = ap.street;
         ap.street = null;

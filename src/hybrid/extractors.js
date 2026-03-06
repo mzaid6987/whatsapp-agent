@@ -220,7 +220,10 @@ function extractAllCities(msg) {
     const norm = l.replace(/\s+/g, '').replace(/a{2,}/g, 'a').replace(/e{2,}/g, 'e').replace(/i{2,}/g, 'i').replace(/o{2,}/g, 'o').replace(/u{2,}/g, 'u');
     for (const c of ALL_CITIES) {
       const normCity = c.replace(/\s+/g, '');
-      if ((norm === normCity || (norm.length >= 4 && norm.includes(normCity)) || (norm.length >= 4 && normCity.includes(norm))) && !seen.has(c)) {
+      // Short city names (< 5 chars like "wah", "hub") must NOT use substring match on full message
+      // — "wahan" (meaning "there") would false-positive match "wah" city
+      const isShortCity = normCity.length < 5;
+      if ((norm === normCity || (!isShortCity && norm.length >= 4 && norm.includes(normCity)) || (norm.length >= 4 && normCity.includes(norm))) && !seen.has(c)) {
         found.push(c.charAt(0).toUpperCase() + c.slice(1));
         seen.add(c);
         break;

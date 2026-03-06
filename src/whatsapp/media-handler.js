@@ -123,6 +123,7 @@ Common Whisper mistakes for this store's context:
 - "even/Ivan/heaven" near "cheez/product/quality" → "A1" (meaning good quality)
 - "receive car/receive car" → "receive kar" (will receive)
 - "Wa Alaikum Assalam" at START of message → "Assalamu Alaikum" (Whisper sometimes reverses the greeting — customer is initiating, not responding)
+- "beech/beach" + number near address context → "B" + number (e.g. "beech 38" → "B 36"). Customer saying house/block letter in Urdu pronunciation.
 - Any English-sounding word that doesn't make sense in Pakistani shopping context → find the closest Roman Urdu/product match
 - IMPORTANT: If customer mentions a color + random English word near "order" → likely a product name. Match to closest product.
 - IMPORTANT: "A1" or "number 1" means excellent quality in Pakistani slang. Keep as-is.
