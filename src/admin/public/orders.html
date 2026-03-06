@@ -5,6 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Orders — WhatsApp Agent</title>
   <link rel="stylesheet" href="/admin/style.css">
+  <style>
+    .order-card { background: #fff; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden; border-left: 4px solid #38a169; }
+    .order-card.status-cancelled { border-left-color: #e53e3e; }
+    .order-card.status-shipped { border-left-color: #3182ce; }
+    .order-card.status-delivered { border-left-color: #805ad5; }
+    .order-card.status-returned { border-left-color: #dd6b20; }
+    .order-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; gap: 8px; flex-wrap: wrap; }
+    .order-header:hover { background: #f7f7f7; }
+    .order-id { font-weight: 700; font-size: 14px; color: #1a1a1a; }
+    .order-customer { font-size: 14px; color: #333; flex: 1; min-width: 120px; }
+    .order-total { font-weight: 700; font-size: 15px; color: #1a1a1a; white-space: nowrap; }
+    .order-total small { font-weight: 400; color: #999; font-size: 11px; }
+    .order-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .order-badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .badge-confirmed { background: #c6f6d5; color: #276749; }
+    .badge-shipped { background: #bee3f8; color: #2a4365; }
+    .badge-delivered { background: #e9d8fd; color: #553c9a; }
+    .badge-cancelled { background: #fed7d7; color: #9b2c2c; }
+    .badge-returned { background: #feebc8; color: #9c4221; }
+    .badge-upsell { background: #fefcbf; color: #975a16; font-size: 10px; }
+    .badge-source { background: #e2e8f0; color: #4a5568; font-size: 10px; }
+    .order-time { font-size: 11px; color: #999; white-space: nowrap; }
+    .order-details { display: none; padding: 0 16px 16px; border-top: 1px solid #f0f0f0; }
+    .order-details.open { display: block; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    @media (max-width: 600px) { .detail-grid { grid-template-columns: 1fr; } }
+    .detail-box { background: #f8f9fa; border-radius: 8px; padding: 10px 12px; }
+    .detail-box h4 { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: .5px; margin: 0 0 6px; }
+    .detail-box p { margin: 0; font-size: 13px; color: #333; line-height: 1.5; }
+    .detail-box .phone-link { color: #3182ce; text-decoration: none; }
+    .items-list { margin-top: 8px; }
+    .items-list .item-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+    .items-list .item-row .item-name { color: #333; }
+    .items-list .item-row .item-price { color: #666; font-weight: 600; }
+    .stats-row { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+    .stat-chip { background: #f0f0f0; border-radius: 6px; padding: 4px 10px; font-size: 11px; color: #555; }
+    .stat-chip strong { color: #333; }
+    .order-summary-bar { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    .summary-card { background: #fff; border-radius: 8px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); text-align: center; flex: 1; min-width: 100px; }
+    .summary-card .num { font-size: 22px; font-weight: 700; color: #1a1a1a; }
+    .summary-card .label { font-size: 11px; color: #999; text-transform: uppercase; }
+    .order-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  </style>
 </head>
 <body>
   <!-- HEADER -->
@@ -59,30 +102,11 @@
 
   <!-- MOBILE BOTTOM NAV -->
   <nav class="mobile-nav">
-    <a href="/admin/" class="mobile-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      Chats
-    </a>
-    <a href="/admin/orders.html" class="mobile-nav-item active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
-      Orders
-    </a>
-    <a href="/admin/analytics.html" class="mobile-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H4.6c-.6 0-.6-.4-.6-1V3"/><path d="M7 14l4-4 4 4 6-6"/></svg>
-      Analytics
-    </a>
-    <a href="/admin/stats.html" class="mobile-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      Stats
-    </a>
-    <a href="/admin/test-chat.html" class="mobile-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
-      Test
-    </a>
-    <a href="/admin/settings.html" class="mobile-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      Settings
-    </a>
+    <a href="/admin/" class="mobile-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Chats</a>
+    <a href="/admin/orders.html" class="mobile-nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>Orders</a>
+    <a href="/admin/analytics.html" class="mobile-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H4.6c-.6 0-.6-.4-.6-1V3"/><path d="M7 14l4-4 4 4 6-6"/></svg>Analytics</a>
+    <a href="/admin/stats.html" class="mobile-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Stats</a>
+    <a href="/admin/settings.html" class="mobile-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
   </nav>
 
   <!-- MAIN -->
@@ -102,46 +126,144 @@
           <option value="bot">Bot</option>
           <option value="human">Human</option>
         </select>
-        <input type="text" class="chat-search" placeholder="Search order ID, name..." id="orderSearch" style="max-width:220px" oninput="filterOrders()">
+        <input type="text" class="chat-search" placeholder="Search..." id="orderSearch" style="max-width:180px" oninput="filterOrders()">
       </div>
     </div>
 
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Order ID</th>
-            <th>Customer</th>
-            <th>Products</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Sync</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody id="ordersBody">
-          <tr><td colspan="7" style="text-align:center;padding:40px;color:#667781;">Loading...</td></tr>
-        </tbody>
-      </table>
+    <!-- Summary Cards -->
+    <div class="order-summary-bar" id="summaryBar"></div>
+
+    <!-- Orders List -->
+    <div id="ordersList">
+      <div style="text-align:center;padding:40px;color:#667781;">Loading...</div>
     </div>
-    <div class="table-footer" id="ordersSummary">0 orders | Rs.0 revenue</div>
   </main>
 
   <script src="/admin/app.js"></script>
   <script>
+    let allOrders = [];
+
+    function fmtTime(ts) {
+      if (!ts) return '-';
+      const d = new Date(ts.replace(' ', 'T'));
+      const day = d.getDate().toString().padStart(2,'0');
+      const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+      const h = d.getHours(), m = d.getMinutes().toString().padStart(2,'0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      return `${day} ${mon} ${h%12||12}:${m} ${ampm}`;
+    }
+
+    function fmtPrice(n) { return 'Rs.' + (n || 0).toLocaleString(); }
+
+    function renderOrders(orders) {
+      const container = document.getElementById('ordersList');
+      if (!orders.length) {
+        container.innerHTML = '<div style="text-align:center;padding:60px;color:#999;">No orders yet</div>';
+        return;
+      }
+
+      container.innerHTML = orders.map((o, idx) => {
+        const products = o.items.map(i => i.name).join(' + ');
+        const badgeClass = 'badge-' + o.status;
+        const statusText = o.status.charAt(0).toUpperCase() + o.status.slice(1);
+        const phones = o.delivery_phone && o.delivery_phone !== o.customer_phone
+          ? `<a href="tel:${o.customer_phone}" class="phone-link">${o.customer_phone}</a> / <a href="tel:${o.delivery_phone}" class="phone-link">${o.delivery_phone}</a>`
+          : `<a href="tel:${o.customer_phone}" class="phone-link">${o.customer_phone}</a>`;
+
+        return `
+        <div class="order-card status-${o.status}" data-status="${o.status}" data-source="${o.source}" data-text="${(o.order_id + ' ' + o.customer_name + ' ' + o.customer_city + ' ' + products).toLowerCase()}">
+          <div class="order-header" onclick="toggleOrder(${idx})">
+            <div>
+              <span class="order-id">${o.order_id}</span>
+              <span class="order-time">${fmtTime(o.created_at)}</span>
+            </div>
+            <span class="order-customer">${o.customer_name} — ${o.customer_city}</span>
+            <div class="order-meta">
+              ${o.has_upsell ? '<span class="order-badge badge-upsell">UPSELL</span>' : ''}
+              <span class="order-badge badge-source">${o.source === 'bot' ? 'Bot' : 'Human'}</span>
+              <span class="order-badge ${badgeClass}">${statusText}</span>
+            </div>
+            <span class="order-total">${fmtPrice(o.grand_total)}${o.discount_total > 0 ? ' <small>-' + o.discount_percent + '%</small>' : ''}</span>
+          </div>
+          <div class="order-details" id="orderDetail${idx}">
+            <div class="detail-grid">
+              <div class="detail-box">
+                <h4>Customer</h4>
+                <p><strong>${o.customer_name}</strong><br>
+                ${phones}<br>
+                ${o.customer_city}</p>
+              </div>
+              <div class="detail-box">
+                <h4>Address</h4>
+                <p>${o.customer_address || '-'}</p>
+              </div>
+              <div class="detail-box">
+                <h4>Products</h4>
+                <div class="items-list">
+                  ${o.items.map(i => `<div class="item-row"><span class="item-name">${i.name}</span><span class="item-price">${fmtPrice(i.price)}</span></div>`).join('')}
+                  ${o.discount_total > 0 ? `<div class="item-row"><span class="item-name" style="color:#e53e3e">Discount (${o.discount_percent}%)</span><span class="item-price" style="color:#e53e3e">-${fmtPrice(o.discount_total)}</span></div>` : ''}
+                  <div class="item-row" style="border-top:1px solid #ddd;padding-top:4px;margin-top:4px;font-weight:700"><span>Total</span><span>${fmtPrice(o.grand_total)}</span></div>
+                </div>
+              </div>
+              <div class="detail-box">
+                <h4>Timeline</h4>
+                <p>Chat started: ${fmtTime(o.chat_started_at)}<br>
+                Order confirmed: ${fmtTime(o.created_at)}<br>
+                Messages: ${o.message_count || '-'}</p>
+              </div>
+            </div>
+            <div class="stats-row">
+              <span class="stat-chip">AI: <strong>${o.ai_count || 0}</strong> calls</span>
+              <span class="stat-chip">Templates: <strong>${o.template_count || 0}</strong></span>
+              <span class="stat-chip">AI Cost: <strong>${fmtPrice(o.ai_cost_rs || 0)}</strong></span>
+              <span class="stat-chip">Sync: ${o.portal_synced ? '<strong style="color:#38a169">Synced</strong>' : '<strong style="color:#e53e3e">Not synced</strong>'}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function toggleOrder(idx) {
+      const el = document.getElementById('orderDetail' + idx);
+      if (el) el.classList.toggle('open');
+    }
+
+    function updateSummary(orders) {
+      const total = orders.length;
+      const revenue = orders.reduce((s, o) => s + o.grand_total, 0);
+      const upsells = orders.filter(o => o.has_upsell).length;
+      const aiCost = orders.reduce((s, o) => s + (o.ai_cost_rs || 0), 0);
+
+      document.getElementById('summaryBar').innerHTML = `
+        <div class="summary-card"><div class="num">${total}</div><div class="label">Orders</div></div>
+        <div class="summary-card"><div class="num">${fmtPrice(revenue)}</div><div class="label">Revenue</div></div>
+        <div class="summary-card"><div class="num">${upsells}</div><div class="label">Upsells</div></div>
+        <div class="summary-card"><div class="num">${fmtPrice(Math.round(aiCost * 100) / 100)}</div><div class="label">AI Cost</div></div>
+      `;
+    }
+
     function filterOrders() {
       const status = document.getElementById('orderStatusFilter').value;
       const source = document.getElementById('orderSourceFilter').value;
       const search = (document.getElementById('orderSearch').value || '').toLowerCase();
 
-      document.querySelectorAll('#ordersBody tr').forEach(row => {
-        const text = row.textContent.toLowerCase();
-        const matchStatus = status === 'all' || text.includes(status);
-        const matchSource = source === 'all' || text.includes(source);
-        const matchSearch = !search || text.includes(search);
-        row.style.display = (matchStatus && matchSource && matchSearch) ? '' : 'none';
+      document.querySelectorAll('.order-card').forEach(card => {
+        const matchStatus = status === 'all' || card.dataset.status === status;
+        const matchSource = source === 'all' || card.dataset.source === source;
+        const matchSearch = !search || card.dataset.text.includes(search);
+        card.style.display = (matchStatus && matchSource && matchSearch) ? '' : 'none';
       });
     }
+
+    // Override loadOrders from app.js
+    window._origLoadOrders = window.loadOrders;
+    window.loadOrders = async function() {
+      allOrders = await api('/api/orders') || [];
+      renderOrders(allOrders);
+      updateSummary(allOrders);
+    };
+    // Auto-load
+    if (document.getElementById('ordersList')) loadOrders();
   </script>
 </body>
 </html>

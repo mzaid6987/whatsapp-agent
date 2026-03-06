@@ -677,12 +677,31 @@ app.post('/api/customers/:id/toggle', requireAuth, (req, res) => {
 // Orders
 app.get('/api/orders', requireAuth, (req, res) => {
   try {
-    const orders = orderModel.getAll();
-    // Parse items_json for frontend
-    res.json(orders.map(o => ({
-      ...o,
-      items: o.items_json ? JSON.parse(o.items_json) : [],
-    })));
+    const db = getDb();
+    // Enhanced query: join conversations for AI cost, template count, timestamps
+    const orders = db.prepare(`
+      SELECT o.*,
+        c.created_at as chat_started_at,
+        c.message_count,
+        c.ai_tokens_used,
+        (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.source = 'template') as template_count,
+        (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.source IN ('ai','gpt-4o-mini','gpt-4o')) as ai_count,
+        (SELECT COALESCE(SUM(m.tokens_in + m.tokens_out), 0) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.direction = 'outgoing') as total_tokens,
+        (SELECT GROUP_CONCAT(DISTINCT m.source) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.direction = 'outgoing') as sources_used
+      FROM orders o
+      LEFT JOIN conversations c ON c.id = o.conversation_id
+      ORDER BY o.created_at DESC LIMIT 200
+    `).all();
+    res.json(orders.map(o => {
+      const items = o.items_json ? JSON.parse(o.items_json) : [];
+      const hasUpsell = items.length > 1;
+      // Estimate AI cost from tokens (GPT-4o mini: ~Rs.0.05 per 1000 tokens)
+      const aiCostRs = Math.round((o.total_tokens || 0) / 1000 * 0.05 * 100) / 100;
+      return {
+        ...o, items, has_upsell: hasUpsell, ai_cost_rs: aiCostRs,
+        template_count: o.template_count || 0, ai_count: o.ai_count || 0,
+      };
+    }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
