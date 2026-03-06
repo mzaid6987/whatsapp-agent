@@ -133,9 +133,11 @@ function preCheck(message, currentState, collected) {
 
   // 1a-x. GREETING FAST-PATH — "kya haal", "kaise ho", "salam" + filler like "theek hai"
   // Must check BEFORE quality_question so "kya haal hain theek hai" isn't caught as quality
+  // BUT: if message ALSO contains product/price content, skip greeting → let product detection handle
   const isGreetingPhrase = /\b(kya\s*ha+l|kia\s*ha+l|kesy\s*ho|kaise\s*ho|kaisy\s*ho|kese\s*ho)\b/i.test(l) ||
     (/\b(salam|slaam|salamu|aoa|assalam|walaikum|asalam|aslam)\b/i.test(l) && /\b(theek|thik|thk|tik)\s*(hai|he|h|hain)\b/i.test(l));
-  if (isGreetingPhrase && ['IDLE', 'GREETING', 'PRODUCT_SELECTION'].includes(currentState)) {
+  const hasProductOrPriceContent = /\b(price|rate|qeemat|qimat|kitne\s*ka|kitny\s*ka|trimmer|trimer|order|chahiye|chahea|manga|lena)\b/i.test(l) || detectProduct(msg);
+  if (isGreetingPhrase && ['IDLE', 'GREETING', 'PRODUCT_SELECTION'].includes(currentState) && !hasProductOrPriceContent) {
     if (/\b(salam|slaam|salamu|aoa|assalam|walaikum|asalam|aslam)\b/i.test(l)) return { intent: 'greeting_salam' };
     return { intent: 'greeting_howru' };
   }
@@ -145,9 +147,11 @@ function preCheck(message, currentState, collected) {
   // EXCEPTION: "kam krti he achi" — has BOTH functionality + quality words → quality question wins
   // SKIP: "acha mujy order dena he" — "acha" at start is acknowledgment, not quality question
   // SKIP: In COLLECT_ADDRESS state — "achha yaar idhar block nahi hai" = address info, NOT quality
+  // SKIP: If message also has product mention + price question → product_inquiry is better (has features+price)
   const achaAtStart = /^(acha+|accha+|ach+a+|ik|ok|okay)\s+/i.test(l);
   const isAddressState = currentState === 'COLLECT_ADDRESS';
-  if (QUALITY_ASK.test(l) && !achaAtStart && !isAddressState) {
+  const qualityHasProduct = detectProduct(msg) && /\b(price|rate|qeemat|qimat|kitne\s*ka|kitny\s*ka)\b/i.test(l);
+  if (QUALITY_ASK.test(l) && !achaAtStart && !isAddressState && !qualityHasProduct) {
     if (!IS_FUNCTIONALITY_Q.test(l)) {
       return { intent: 'quality_question' };
     }
@@ -537,7 +541,9 @@ function preCheck(message, currentState, collected) {
       /\b(quality|qlty)\s*(kais[ie]|kesi|kaisi)\s*(he|hai|ha|h)?\b/i.test(l) ||
       /\b(original|asli|real|naqli|fake|copy)\s*(he|hai|ha|h|to|toh?)?\b/i.test(l) ||
       /\b(wark|wrk|work)\s*(krt[ie]|karti|karta)\s*(he|hai|h)?\b/i.test(l);
-    if (isProductReassurance) {
+    // Skip if message also has product + price content → product_inquiry is more useful
+    const reassHasProduct = detectProduct(msg) && /\b(price|rate|qeemat|qimat|kitne\s*ka|kitny\s*ka)\b/i.test(l);
+    if (isProductReassurance && !reassHasProduct) {
       return { intent: 'product_reassurance' };
     }
   }
@@ -714,9 +720,14 @@ function preCheck(message, currentState, collected) {
     if (currentState === 'PRODUCT_SELECTION' && (isSalam || isCasual || isHowRU || isCombined)) {
       return { intent: 'greeting_in_selection' };
     }
-    if (isSalam) return { intent: 'greeting_salam' };
-    if (isHowRU) return { intent: 'greeting_howru' };
-    if (isCasual) return { intent: 'greeting_casual' };
+    // Skip greeting if message also has product/price content — let product detection handle
+    const greetHasProduct = /\b(price|rate|qeemat|qimat|kitne\s*ka|kitny\s*ka|trimmer|trimer|order|chahiye|chahea|manga|lena)\b/i.test(l) || detectProduct(msg);
+    if (!greetHasProduct) {
+      if (isSalam) return { intent: 'greeting_salam' };
+      if (isHowRU) return { intent: 'greeting_howru' };
+      if (isCasual) return { intent: 'greeting_casual' };
+    }
+    // Has product/price content → fall through to product detection
   }
 
   // 8b. YES in GREETING → show product list (greeting asks "products dekhna hai?")
