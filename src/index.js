@@ -713,22 +713,23 @@ app.post('/api/settings', requireAuth, (req, res) => {
   }
 });
 
-// Diagnostic: LIVE test of Whisper API + media download
+// Diagnostic: LIVE test of Whisper API using temp file (Node < 20 compatible)
 app.get('/api/test-voice', requireAuth, async (req, res) => {
-  const results = { version: 'v3', steps: {} };
+  const results = { version: 'v4-tempfile', steps: {} };
+  const fs = require('fs');
+  const tempFile = path.join(__dirname, '..', 'temp', `test_${Date.now()}.wav`);
   try {
     const OpenAI = require('openai');
-    const { toFile } = require('openai');
     const dbKey = settingsModel.get('openai_api_key', '');
     const envKey = process.env.OPENAI_API_KEY;
     const key = dbKey || envKey;
     results.steps.key = key ? `${key.slice(0,8)}...` : 'MISSING';
+    results.steps.node_version = process.version;
 
-    // Step 1: Create OpenAI client
     const client = new OpenAI({ apiKey: key });
     results.steps.client = 'OK';
 
-    // Step 2: Create a tiny WAV file (1 sec silence) and send to Whisper
+    // Create tiny WAV (1 sec silence)
     const header = Buffer.alloc(44);
     header.write('RIFF', 0);
     header.writeUInt32LE(36 + 8000, 4);
@@ -743,36 +744,29 @@ app.get('/api/test-voice', requireAuth, async (req, res) => {
     header.writeUInt16LE(8, 34);
     header.write('data', 36);
     header.writeUInt32LE(8000, 40);
-    const silence = Buffer.alloc(8000, 128);
-    const wavBuffer = Buffer.concat([header, silence]);
-    results.steps.wav_created = `${wavBuffer.length} bytes`;
+    const wavBuffer = Buffer.concat([header, Buffer.alloc(8000, 128)]);
 
-    // Step 3: toFile
-    const file = await toFile(wavBuffer, 'test.wav', { type: 'audio/wav' });
-    results.steps.toFile = 'OK';
+    // Write to temp file
+    const tempDir = path.join(__dirname, '..', 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    fs.writeFileSync(tempFile, wavBuffer);
+    results.steps.temp_file = `written ${wavBuffer.length} bytes`;
 
-    // Step 4: Call Whisper
+    // Call Whisper with createReadStream
     const startMs = Date.now();
     const transcription = await client.audio.transcriptions.create({
-      file,
+      file: fs.createReadStream(tempFile),
       model: 'whisper-1',
     });
     results.steps.whisper = `OK (${Date.now() - startMs}ms) — "${transcription.text}"`;
     results.success = true;
 
-    // Step 5: Test media download (use last voice message from DB)
-    try {
-      const { getDb } = require('./db');
-      const lastVoice = getDb().prepare("SELECT body FROM messages WHERE body LIKE '%voice message%' AND role='user' ORDER BY id DESC LIMIT 1").get();
-      results.steps.last_voice_in_db = lastVoice ? lastVoice.body.slice(0, 80) : 'none found';
-    } catch (e) {
-      results.steps.db_check = e.message;
-    }
-
   } catch (e) {
     results.success = false;
     results.error = e.message;
     results.stack = e.stack?.split('\n').slice(0, 5);
+  } finally {
+    try { fs.unlinkSync(tempFile); } catch (e) { /* ignore */ }
   }
   res.json(results);
 });

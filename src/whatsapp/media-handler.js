@@ -8,10 +8,13 @@
 const fs = require('fs');
 const path = require('path');
 const OpenAI = require('openai');
-const { toFile } = require('openai');
 const sharp = require('sharp');
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0';
+
+// Temp directory for media files
+const TEMP_DIR = path.join(__dirname, '../../temp');
+if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
 // Shared OpenAI client
 let _openai = null;
@@ -67,24 +70,26 @@ async function transcribeVoice(mediaId, accessToken, openaiApiKey) {
   const extMap = { 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/amr': 'amr', 'audio/aac': 'aac' };
   const ext = extMap[baseMime] || 'ogg';
 
-  // Use OpenAI toFile helper — avoids temp file system issues on shared hosting
-  const file = await toFile(buffer, `voice.${ext}`, { type: baseMime });
+  // Save to temp file (Node < 20 doesn't have global File, so we use createReadStream)
+  const tempFile = path.join(TEMP_DIR, `voice_${Date.now()}.${ext}`);
+  fs.writeFileSync(tempFile, buffer);
 
-  const startTime = Date.now();
-  console.log(`[Media] Voice: calling Whisper API...`);
-  const transcription = await openai.audio.transcriptions.create({
-    file,
-    model: 'whisper-1',
-    prompt: 'Roman Urdu transcript in English letters. Pakistani customer ordering products. haan ji nahi order krna chahiye delivery kab address name phone number ghar mohalla gali COD cash on delivery kitne ka hai price sasta mehenga theek hai bhej do confirm Lahore Karachi Islamabad Rawalpindi Faisalabad Peshawar trimmer remover nebulizer',
-  });
-  let whisperMs = Date.now() - startTime;
-  console.log(`[Media] Voice: Whisper returned in ${whisperMs}ms`);
+  try {
+    const startTime = Date.now();
+    console.log(`[Media] Voice: calling Whisper API with ${tempFile}...`);
+    const transcription = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(tempFile),
+      model: 'whisper-1',
+      prompt: 'Roman Urdu transcript in English letters. Pakistani customer ordering products. haan ji nahi order krna chahiye delivery kab address name phone number ghar mohalla gali COD cash on delivery kitne ka hai price sasta mehenga theek hai bhej do confirm Lahore Karachi Islamabad Rawalpindi Faisalabad Peshawar trimmer remover nebulizer',
+    });
+    let whisperMs = Date.now() - startTime;
+    console.log(`[Media] Voice: Whisper returned in ${whisperMs}ms`);
 
-  // Whisper cost: $0.006 per minute of audio
-  const estimatedSec = Math.max(1, buffer.length / 12000);
-  let costUsd = (estimatedSec / 60) * 0.006;
+    // Whisper cost: $0.006 per minute of audio
+    const estimatedSec = Math.max(1, buffer.length / 12000);
+    let costUsd = (estimatedSec / 60) * 0.006;
 
-  let text = transcription.text;
+    let text = transcription.text;
 
   // Post-process: If Whisper returned non-Latin script, transliterate to Roman Urdu
   const hasNonLatin = /[\u0600-\u06FF\u0900-\u097F\u0980-\u09FF]/.test(text);
@@ -114,15 +119,18 @@ async function transcribeVoice(mediaId, accessToken, openaiApiKey) {
     }
   }
 
-  const costRs = costUsd * 300;
-  console.log(`[Media] Voice transcribed (${estimatedSec.toFixed(0)}s, Rs.${costRs.toFixed(2)}): "${text}"`);
-  return {
-    text,
-    cost_rs: costRs,
-    duration_sec: estimatedSec,
-    response_ms: whisperMs,
-    model: 'Whisper',
-  };
+    const costRs = costUsd * 300;
+    console.log(`[Media] Voice transcribed (${estimatedSec.toFixed(0)}s, Rs.${costRs.toFixed(2)}): "${text}"`);
+    return {
+      text,
+      cost_rs: costRs,
+      duration_sec: estimatedSec,
+      response_ms: whisperMs,
+      model: 'Whisper',
+    };
+  } finally {
+    try { fs.unlinkSync(tempFile); } catch (e) { /* ignore */ }
+  }
 }
 
 /**
