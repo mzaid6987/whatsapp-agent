@@ -936,6 +936,16 @@ app.delete('/api/test-chat/history', requireAuth, (req, res) => {
 app.get('/webhook', webhookVerify);
 app.post('/webhook', webhookHandler);
 
+// One-time fix: update Mushtaq's order address
+app.get('/fix-address', (req, res) => {
+  if (req.query.token !== 'nuvenza-deploy-2026') return res.status(403).json({ error: 'bad token' });
+  const db = getDb();
+  db.prepare("UPDATE orders SET customer_address = ? WHERE order_id = 'NRV-WA-79080'").run(
+    'House 425, Wapda Town, near Gol Chakkar, Lahore (agar call na lug rahi ho ya signal issue ho to 03212670987 pr bhi call krlena)'
+  );
+  res.json({ status: 'updated' });
+});
+
 // Inject broadcast function into webhook module
 setBroadcast(broadcast);
 
