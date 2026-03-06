@@ -18,11 +18,14 @@ if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
 // Shared OpenAI client
 let _openai = null;
-function getOpenAI() {
-  if (!_openai) {
-    const key = process.env.OPENAI_API_KEY;
-    if (!key) throw new Error('OPENAI_API_KEY not set in .env');
+let _lastKey = null;
+function getOpenAI(apiKey) {
+  const key = apiKey || process.env.OPENAI_API_KEY;
+  if (!key) throw new Error('OPENAI_API_KEY not set — check Settings or .env');
+  // Recreate client if key changed
+  if (!_openai || key !== _lastKey) {
     _openai = new OpenAI({ apiKey: key });
+    _lastKey = key;
   }
   return _openai;
 }
@@ -56,8 +59,8 @@ async function downloadMedia(mediaId, accessToken) {
  * Transcribe voice message using OpenAI Whisper
  * Returns the transcribed text
  */
-async function transcribeVoice(mediaId, accessToken) {
-  const openai = getOpenAI();
+async function transcribeVoice(mediaId, accessToken, openaiApiKey) {
+  const openai = getOpenAI(openaiApiKey);
   const { buffer, mimeType } = await downloadMedia(mediaId, accessToken);
 
   // Determine file extension from mime type
@@ -132,8 +135,8 @@ async function transcribeVoice(mediaId, accessToken) {
  * Analyze image using GPT-4o mini Vision
  * Returns description of what's in the image
  */
-async function analyzeImage(mediaId, accessToken) {
-  const openai = getOpenAI();
+async function analyzeImage(mediaId, accessToken, openaiApiKey) {
+  const openai = getOpenAI(openaiApiKey);
   const { buffer, mimeType } = await downloadMedia(mediaId, accessToken);
 
   // Resize image to max 512px — keeps cost low (~Rs.0.03-0.05) while recognizing products

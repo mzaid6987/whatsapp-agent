@@ -222,7 +222,7 @@ async function webhookHandler(req, res) {
         const mediaId = voiceData.id;
         if (!mediaId) { messageText = '[voice message]'; }
         else {
-          const result = await transcribeVoice(mediaId, accessToken);
+          const result = await transcribeVoice(mediaId, accessToken, apiKey);
           messageText = result.text;
           mediaNote = ' [voice→text]';
           mediaCost = { model: result.model, cost_rs: result.cost_rs, response_ms: result.response_ms, type: 'voice' };
@@ -231,7 +231,7 @@ async function webhookHandler(req, res) {
           }
         }
       } catch (err) {
-        console.error('[WA] Voice transcription failed:', err.message);
+        console.error('[WA] Voice transcription failed:', err.message, err.stack);
         messageText = '[voice message]';
       } finally {
         endMediaLock(fromPhone);
@@ -245,7 +245,7 @@ async function webhookHandler(req, res) {
         const caption = msg.image?.caption || '';
         if (!mediaId) { messageText = caption || '[image]'; }
         else {
-          const result = await analyzeImage(mediaId, accessToken);
+          const result = await analyzeImage(mediaId, accessToken, apiKey);
           messageText = caption ? `${caption} [Image: ${result.text}]` : `[Image: ${result.text}]`;
           mediaNote = ' [image→text]';
           mediaCost = { model: result.model, cost_rs: result.cost_rs, tokens_in: result.tokens_in, tokens_out: result.tokens_out, response_ms: result.response_ms, type: 'image' };
