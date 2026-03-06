@@ -628,15 +628,6 @@ app.post('/api/conversations/:id/complaint', requireAuth, (req, res) => {
     const id = parseInt(req.params.id);
     const db = getDb();
     db.prepare('UPDATE conversations SET complaint_flag = 1, needs_human = 1, state = ? WHERE id = ?').run('COMPLAINT', id);
-    // Also update state_json to reflect COMPLAINT
-    const convo = db.prepare('SELECT state_json FROM conversations WHERE id = ?').get(id);
-    if (convo?.state_json) {
-      try {
-        const sj = JSON.parse(convo.state_json);
-        sj.current = 'COMPLAINT';
-        db.prepare('UPDATE conversations SET state_json = ? WHERE id = ?').run(JSON.stringify(sj), id);
-      } catch (e) { /* ignore parse errors */ }
-    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
