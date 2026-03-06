@@ -205,11 +205,11 @@ async function webhookHandler(req, res) {
       await waitForMediaLock(fromPhone);
       messageText = msg.text?.body || '';
     } else if (msg.type === 'audio' || msg.type === 'voice') {
-      // Voice message — check duration limit (2 min = 120 sec)
+      // Voice message — log raw payload for debugging
       const voiceData = msg.audio || msg.voice || {};
+      console.log(`[WA] Voice payload: type=${msg.type}, audio=${JSON.stringify(msg.audio)}, voice=${JSON.stringify(msg.voice)}, keys=${Object.keys(msg).join(',')}`);
       const MAX_VOICE_SEC = 120;
       if (voiceData.duration && voiceData.duration > MAX_VOICE_SEC) {
-        // Too long — skip transcription, ask for text
         const replyText = 'Voice load nahi ho rahi. Ap apna message likh ke bhej dein.';
         await sendMessage(fromPhone, replyText, phoneNumberId, accessToken);
         console.log(`[WA] Voice too long (${voiceData.duration}s) from ${fromPhone} — skipped`);
@@ -220,8 +220,11 @@ async function webhookHandler(req, res) {
       // Transcribe with Whisper
       try {
         const mediaId = voiceData.id;
-        if (!mediaId) { messageText = '[voice message]'; }
-        else {
+        console.log(`[WA] Voice mediaId: ${mediaId}, apiKey: ${apiKey ? 'set' : 'NOT SET'}`);
+        if (!mediaId) {
+          messageText = '[voice message - no mediaId found]';
+          console.error(`[WA] Voice: no mediaId! voiceData=${JSON.stringify(voiceData)}`);
+        } else {
           const result = await transcribeVoice(mediaId, accessToken, apiKey);
           messageText = result.text;
           mediaNote = ' [voice→text]';
@@ -231,8 +234,9 @@ async function webhookHandler(req, res) {
           }
         }
       } catch (err) {
-        console.error('[WA] Voice transcription failed:', err.message, err.stack);
-        messageText = '[voice message]';
+        console.error('[WA] Voice transcription FAILED:', err.message, err.stack);
+        // Show error in chat so admin can see what went wrong
+        messageText = `[voice message - ERROR: ${err.message.slice(0, 100)}]`;
         mediaNote = ` [voice FAILED: ${err.message}]`;
       } finally {
         endMediaLock(fromPhone);
