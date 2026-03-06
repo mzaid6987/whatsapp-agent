@@ -720,6 +720,9 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   dbSave(() => {
     dbCustomer = customerModel.findOrCreate(phone);
     dbConv = conversationModel.getOrCreateActive(dbCustomer.id, storeName);
+    // Attach DB IDs to state so confirmOrder can use them
+    if (dbConv) state._db_conversation_id = dbConv.id;
+    if (dbCustomer) state._db_customer_id = dbCustomer.id;
   });
 
   // ============================================

@@ -108,9 +108,14 @@ function confirmOrder(state, storeName, prefix = '') {
   } else {
     oid = orderModel.generateOrderId('NRV');
     try {
-      const customer = state.collected.phone ? customerModel.findByPhone(state.collected.phone) : null;
+      // Use pre-attached DB IDs (set in index.js), fallback to phone lookup
+      const customer = state._db_customer_id ? { id: state._db_customer_id } : (state.collected.phone ? customerModel.findByPhone(state.collected.phone) : null);
+      if (!customer) {
+        console.error('[Order] SKIP save — no customer found for phone:', state.collected.phone);
+      }
       orderModel.create({
         order_id: oid,
+        conversation_id: state._db_conversation_id || null,
         customer_id: customer?.id || null,
         store_name: storeName || 'nureva',
         customer_name: state.collected.name,
@@ -166,9 +171,10 @@ function handleTemplateState(message, state, storeName, preIntent) {
         const grandTotal = subtotal - discountTotal;
         const oid = orderModel.generateOrderId('NRV');
         try {
-          const customer = state.collected.phone ? customerModel.findByPhone(state.collected.phone) : null;
+          const customer = state._db_customer_id ? { id: state._db_customer_id } : (state.collected.phone ? customerModel.findByPhone(state.collected.phone) : null);
           orderModel.create({
             order_id: oid,
+            conversation_id: state._db_conversation_id || null,
             customer_id: customer?.id || null,
             store_name: storeName || 'nureva',
             customer_name: state.collected.name,
