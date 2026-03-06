@@ -685,6 +685,18 @@ async function _smartAppendMessages(chatId) {
       const html = _renderMessageBubble(m, _m);
       msgsEl.insertAdjacentHTML('beforeend', html);
     });
+    // Recalculate total AI cost from ALL messages
+    const totalAiCost = msgs.reduce((sum, m) => {
+      let d = null;
+      try { d = m.debug_json ? JSON.parse(m.debug_json) : null; } catch(e) {}
+      if (m.direction === 'incoming' && d?._media_cost_rs) sum += d._media_cost_rs;
+      if (m.source === 'ai' && (m.tokens_in || m.tokens_out)) {
+        sum += d?._cost_rs != null ? d._cost_rs : ((m.tokens_in || 0) * _m.pricing.input + (m.tokens_out || 0) * _m.pricing.output) / 1000000 * 300;
+      }
+      return sum;
+    }, 0);
+    const costEl = document.getElementById('chatAiCost');
+    if (costEl) costEl.textContent = totalAiCost > 0 ? `AI Cost: Rs.${totalAiCost.toFixed(2)}` : '';
     // Scroll to bottom
     msgsEl.scrollTop = msgsEl.scrollHeight;
   } catch (e) { /* silent */ }
