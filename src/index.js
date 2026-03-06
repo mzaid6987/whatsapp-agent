@@ -918,7 +918,8 @@ app.get('/', (req, res) => res.redirect('/admin/'));
 const { execSync } = require('child_process');
 const DEPLOY_SECRET = process.env.DEPLOY_SECRET || 'nuvenza-deploy-2026';
 
-app.post('/deploy', (req, res) => {
+// Support both GET and POST for deploy (LiteSpeed blocks POST on some setups)
+app.all('/deploy', (req, res) => {
   const token = req.query.token || req.headers['x-deploy-token'];
   if (token !== DEPLOY_SECRET) {
     return res.status(403).json({ error: 'Invalid token' });
