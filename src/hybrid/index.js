@@ -436,41 +436,95 @@ const conversations = {};
 
 function getOrCreateConv(phone) {
   if (!conversations[phone]) {
-    let prefill = null;
-    try { prefill = getSmartFill(phone); } catch (e) { /* ignore */ }
+    // Try to restore state from DB (survives server restart / memory loss)
+    let restored = false;
+    try {
+      const customer = customerModel.findByPhone(phone);
+      if (customer) {
+        const dbConv = conversationModel.findActive(customer.id);
+        if (dbConv && dbConv.state && dbConv.state !== 'IDLE' && dbConv.collected_json) {
+          const collected = JSON.parse(dbConv.collected_json || '{}');
+          let product = null;
+          try { product = dbConv.product_json ? JSON.parse(dbConv.product_json) : null; } catch (e) { /* ignore */ }
+          let products = [];
+          try { products = dbConv.products_json ? JSON.parse(dbConv.products_json) : []; } catch (e) { /* ignore */ }
+          let upsellCandidates = [];
+          try { upsellCandidates = dbConv.upsell_json ? JSON.parse(dbConv.upsell_json) : []; } catch (e) { /* ignore */ }
 
-    // Validate prefill name — reject sentence-like names ("Main same order", "I want product")
-    let prefillName = prefill?.name || null;
-    if (prefillName) {
-      const nLower = prefillName.toLowerCase();
-      const isSentence = /\b(main|mein|i\s+want|order|product|same|delivery|chahiye|chahti|chahta|karna|krna|send|bhejo)\b/i.test(nLower);
-      const tooManyWords = prefillName.trim().split(/\s+/).length > 3;
-      if (isSentence || tooManyWords) prefillName = null;
+          // Restore recent messages from DB for AI context
+          const recentMsgs = messageModel.getRecent(dbConv.id, 10) || [];
+          const messages = recentMsgs.map(m => ({
+            role: m.direction === 'incoming' ? 'user' : 'assistant',
+            content: m.content || '',
+          }));
+
+          conversations[phone] = {
+            current: dbConv.state,
+            product,
+            products,
+            collected: {
+              product: collected.product || null,
+              name: collected.name || null,
+              phone: collected.phone || null,
+              delivery_phone: collected.delivery_phone || null,
+              city: collected.city || null,
+              address: collected.address || null,
+              address_parts: collected.address_parts || { area: null, street: null, house: null, landmark: null },
+            },
+            address_step: null,
+            address_confirming: false,
+            haggle_round: dbConv.haggle_round || 0,
+            discount_percent: dbConv.discount_percent || 0,
+            upsell_candidates: upsellCandidates,
+            unknown_count: dbConv.unknown_count || 0,
+            messages,
+            isReturning: true,
+          };
+          restored = true;
+          console.log(`[State] Restored from DB for ${phone}: state=${dbConv.state}, product=${product?.short || 'N/A'}, name=${collected.name || 'N/A'}`);
+        }
+      }
+    } catch (e) {
+      console.error('[State] DB restore error:', e.message);
     }
 
-    conversations[phone] = {
-      current: 'IDLE',
-      product: null,
-      products: [],
-      collected: {
+    if (!restored) {
+      let prefill = null;
+      try { prefill = getSmartFill(phone); } catch (e) { /* ignore */ }
+
+      // Validate prefill name — reject sentence-like names ("Main same order", "I want product")
+      let prefillName = prefill?.name || null;
+      if (prefillName) {
+        const nLower = prefillName.toLowerCase();
+        const isSentence = /\b(main|mein|i\s+want|order|product|same|delivery|chahiye|chahti|chahta|karna|krna|send|bhejo)\b/i.test(nLower);
+        const tooManyWords = prefillName.trim().split(/\s+/).length > 3;
+        if (isSentence || tooManyWords) prefillName = null;
+      }
+
+      conversations[phone] = {
+        current: 'IDLE',
         product: null,
-        name: prefillName,
-        phone: null,
-        delivery_phone: null,
-        city: prefill?.city || null,
-        address: null,
-        address_parts: { area: null, street: null, house: null, landmark: null },
-      },
-      address_step: null,
-      address_confirming: false,
-      haggle_round: 0,
-      discount_percent: 0,
-      upsell_candidates: [],
-      unknown_count: 0,
-      messages: [],
-      isReturning: !!prefill,
-      _prefill_city: prefill?.city || null,
-    };
+        products: [],
+        collected: {
+          product: null,
+          name: prefillName,
+          phone: null,
+          delivery_phone: null,
+          city: prefill?.city || null,
+          address: null,
+          address_parts: { area: null, street: null, house: null, landmark: null },
+        },
+        address_step: null,
+        address_confirming: false,
+        haggle_round: 0,
+        discount_percent: 0,
+        upsell_candidates: [],
+        unknown_count: 0,
+        messages: [],
+        isReturning: !!prefill,
+        _prefill_city: prefill?.city || null,
+      };
+    }
   }
   return conversations[phone];
 }
@@ -1346,7 +1400,16 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       // Filter out "MISSING" / null / empty / "nahi" — AI may echo prompt placeholders or customer refusals
       const valid = (v) => v && typeof v === 'string' && !['missing', 'null', 'undefined', 'none', 'n/a', '-', '—'].includes(v.toLowerCase().trim()) && v.trim() !== '';
       const isRefusal = (v) => v && /^(nahi?|nhi|no|none|nope)([_\s]*(he|hai|h|pata))?$/i.test(v.trim());
-      if (valid(newParts.area) && !isRefusal(newParts.area)) ap.area = newParts.area;
+      if (valid(newParts.area) && !isRefusal(newParts.area)) {
+        // Don't store a city name as area (AI sometimes extracts city typo as area)
+        const areaAsCity = extractAllCities(newParts.area);
+        if (areaAsCity.length > 0) {
+          if (!state.collected.city) state.collected.city = areaAsCity[0];
+          console.log(`[Address] AI area "${newParts.area}" is a city (${areaAsCity[0]}) — skipping as area`);
+        } else {
+          ap.area = newParts.area;
+        }
+      }
       if (valid(newParts.street) && !isRefusal(newParts.street)) ap.street = newParts.street;
       if (valid(newParts.house)) {
         // "nahi" for house → set nahi_pata (not null — means customer said they don't know)
@@ -1387,9 +1450,17 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const GENERIC_LANDMARKS = /^(near\s+)?(ek\s+)?(masjid|mosque|bakery|school|college|hospital|clinic|park|dukaan|shop|store|hotel|pharmacy|dawakhana|kiryana|general\s*store|petrol\s*pump|bank|atm|market|bazaar|chowk|naka|stop|bus\s*stop)(\s+ke?\s*paas)?$/i;
       const isGenericLandmark = ap.landmark && GENERIC_LANDMARKS.test(ap.landmark.trim());
       if (isGenericLandmark) {
+        const genericType = ap.landmark.trim();
         // Save what they said for context (rural: will ask nearby reference)
-        if (state._is_rural) state._generic_landmark = ap.landmark.trim();
+        if (state._is_rural) state._generic_landmark = genericType;
         ap.landmark = null;
+        // Non-rural: ask for specific name — "bank" → "Konsa bank? Naam bata dein"
+        if (!state._is_rural && state.current === 'COLLECT_ADDRESS') {
+          const typeLabel = genericType.replace(/^(near\s+|ek\s+)/i, '').replace(/\s+ke?\s*paas$/i, '').trim();
+          const honorific = getHonorific(state);
+          aiResult = { reply: `${honorific}, konsa ${typeLabel}? Naam bata dein taake rider ko direction mil sake 😊`, intent: 'ask_specific_landmark' };
+          console.log(`[Address] Generic landmark "${genericType}" → asking for specific name`);
+        }
       }
 
       // LETTER+NUMBER in street but house empty → swap to house (G78, R68, E-45, B/13 etc.)

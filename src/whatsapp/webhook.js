@@ -335,10 +335,24 @@ async function webhookHandler(req, res) {
     const store = stores[0];
     const storeName = store?.brand_name || 'Nureva';
 
-    // Check if conversation is assigned to human — don't auto-reply
+    // Check if conversation is blocked (spam_flag) or assigned to human — don't auto-reply
     const customer = customerModel.findByPhone(fromPhone);
     if (customer) {
       const convo = conversationModel.getOrCreateActive(customer.id, storeName.toLowerCase());
+      // Blocked conversation — save message silently, no bot response
+      if (convo && convo.spam_flag) {
+        messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
+        conversationModel.updateLastMessage(convo.id, messageText);
+        console.log(`[WA] ${fromPhone}: "${messageText}" — blocked (spam_flag), skipping bot reply`);
+        _broadcast({
+          type: 'new_message',
+          phone: fromPhone,
+          source: 'whatsapp',
+          contactName,
+          result: { reply: null, incoming: messageText },
+        });
+        return;
+      }
       if (convo && convo.needs_human) {
         // Save message but don't reply — human agent will handle
         messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });

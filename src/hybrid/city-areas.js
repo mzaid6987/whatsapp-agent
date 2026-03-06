@@ -2506,7 +2506,7 @@ const CITY_ALIASES = {
   'psh': 'peshawar', 'peshawr': 'peshawar', 'peshawer': 'peshawar', 'peshwar': 'peshawar',
   'pehsawar': 'peshawar',
   'qta': 'quetta', 'queta': 'quetta',
-  'hyd': 'hyderabad', 'hydrabad': 'hyderabad',
+  'hyd': 'hyderabad', 'hydrabad': 'hyderabad', 'hydetabad': 'hyderabad', 'hydreabad': 'hyderabad', 'hyderabd': 'hyderabad', 'haiderabad': 'hyderabad',
   'jamsoro': 'jamshoro', 'jamshro': 'jamshoro',
   'grw': 'gujranwala', 'gujrawala': 'gujranwala', 'gujarnwala': 'gujranwala',
   'gojranwala': 'gujranwala', 'gujarwala': 'gujranwala',

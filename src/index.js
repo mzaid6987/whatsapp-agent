@@ -607,6 +607,21 @@ app.get('/api/customers', requireAuth, (req, res) => {
   }
 });
 
+// Toggle block (spam_flag) on conversation — bot stops responding but number not blocked
+app.post('/api/conversations/:id/block', requireAuth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const db = getDb();
+    const convo = db.prepare('SELECT spam_flag FROM conversations WHERE id = ?').get(id);
+    if (!convo) return res.status(404).json({ error: 'Not found' });
+    const newVal = convo.spam_flag ? 0 : 1;
+    db.prepare('UPDATE conversations SET spam_flag = ? WHERE id = ?').run(newVal, id);
+    res.json({ success: true, spam_flag: newVal });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Mark conversation as complaint (manual)
 app.post('/api/conversations/:id/complaint', requireAuth, (req, res) => {
   try {

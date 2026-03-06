@@ -264,11 +264,16 @@ async function openChat(chatId) {
     (conv.needs_human ? 'Human Assigned' : 'Bot Handling') +
     ' - ' + (conv.state === 'CANCEL_AFTER_CONFIRM' ? 'CANCEL AFTER CONFIRMATION' : conv.state);
 
-  // Complaint / Take over / Resume buttons
+  // Block / Complaint / Take over / Resume buttons
+  const btnBlock = document.getElementById('btnBlockChat');
   const btnComplaint = document.getElementById('btnMarkComplaint');
   const btnTakeOver = document.getElementById('btnTakeOver');
   const btnResumeBot = document.getElementById('btnResumeBot');
   const isComplaint = !!(conv.complaint_flag || conv.state === 'COMPLAINT');
+  // Block button — toggle text
+  btnBlock.textContent = conv.spam_flag ? 'Unblock' : 'Block';
+  btnBlock.style.color = conv.spam_flag ? '#38a169' : '#e53e3e';
+  btnBlock.style.borderColor = conv.spam_flag ? '#38a169' : '#e53e3e';
   btnComplaint.classList.toggle('hidden', isComplaint);
   if (conv.needs_human) {
     btnTakeOver.classList.add('hidden');
@@ -465,6 +470,24 @@ async function saveFeedback(msgId) {
     }
   } catch (e) {
     console.error('Save feedback error:', e);
+  }
+}
+
+async function toggleBlockChat() {
+  if (!currentChatId) return;
+  const conv = conversations.find(c => c.id === currentChatId);
+  if (!conv) return;
+  const action = conv.spam_flag ? 'Unblock' : 'Block';
+  if (!confirm(`${action} this chat? Bot will ${conv.spam_flag ? 'resume responding' : 'stop responding'}.`)) return;
+  try {
+    const res = await api('/api/conversations/' + currentChatId + '/block', { method: 'POST' });
+    if (res?.success) {
+      conv.spam_flag = res.spam_flag;
+      openChat(currentChatId);
+      renderChatList(conversations);
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
   }
 }
 
