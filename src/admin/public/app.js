@@ -598,22 +598,22 @@ async function loadSettings() {
   if (settings) updateBotUI(settings.bot_enabled === true || settings.bot_enabled === 'true' || settings.bot_enabled === '1');
 }
 
-// ---- WEBSOCKET + POLLING FALLBACK ----
-let _wsConnected = false;
-let _lastMsgCount = {}; // track message counts per conversation
+// ---- WEBSOCKET + POLLING (always poll — WS is bonus, not replacement) ----
+let _wsAlive = false; // true only if WS actually received a message
+let _lastWsMessage = 0;
 
 function connectWebSocket() {
   try {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-    ws.onopen = () => { _wsConnected = true; console.log('[WS] Connected'); };
+    ws.onopen = () => { console.log('[WS] Connected'); };
     ws.onmessage = (e) => {
+      _wsAlive = true;
+      _lastWsMessage = Date.now();
       const data = JSON.parse(e.data);
       if (data.type === 'bot_status') updateBotUI(data.enabled);
       if (data.type === 'new_message') {
-        // Smart update: refresh chat list without full DOM re-render
         _smartRefreshChatList();
-        // If this chat is open, append new messages only
         if (currentChatId) _smartAppendMessages(currentChatId);
       }
       if (data.type === 'msg_status') {
@@ -629,9 +629,9 @@ function connectWebSocket() {
         }
       }
     };
-    ws.onclose = () => { _wsConnected = false; console.log('[WS] Disconnected, reconnecting...'); setTimeout(connectWebSocket, 3000); };
-    ws.onerror = () => { _wsConnected = false; };
-  } catch (e) { _wsConnected = false; }
+    ws.onclose = () => { _wsAlive = false; setTimeout(connectWebSocket, 5000); };
+    ws.onerror = () => { _wsAlive = false; };
+  } catch (e) { /* WS not available */ }
 }
 
 // Smart chat list refresh — only updates changed items, no full re-render
@@ -748,10 +748,12 @@ function _renderMessageBubble(m, _m) {
   `;
 }
 
-// Polling fallback — runs every 10s when WebSocket is not connected
+// Polling — always runs every 5s (WS may not work on shared hosting)
+// Skip only if WS delivered a real message in last 15s
 let _lastPollHash = '';
 setInterval(async () => {
-  if (_wsConnected) return;
+  // If WS is actively working (got msg in last 15s), skip polling
+  if (_wsAlive && (Date.now() - _lastWsMessage < 15000)) return;
   const path = window.location.pathname;
   if (path !== '/admin/' && path !== '/admin/index.html') return;
   try {
@@ -765,7 +767,7 @@ setInterval(async () => {
       if (currentChatId) _smartAppendMessages(currentChatId);
     }
   } catch (e) { /* silent */ }
-}, 10000);
+}, 5000);
 
 // ---- INIT ----
 document.addEventListener('DOMContentLoaded', () => {
