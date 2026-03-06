@@ -90,34 +90,50 @@ async function transcribeVoice(mediaId, accessToken, openaiApiKey) {
     let costUsd = (estimatedSec / 60) * 0.006;
 
     let text = transcription.text;
+    console.log(`[Media] Whisper raw: "${text}"`);
 
-  // Post-process: If Whisper returned non-Latin script, transliterate to Roman Urdu
-  const hasNonLatin = /[\u0600-\u06FF\u0900-\u097F\u0980-\u09FF]/.test(text);
-  if (hasNonLatin) {
-    console.log(`[Media] Whisper returned non-Latin script, transliterating: "${text}"`);
+    // Post-process: Clean up Whisper output with GPT-4o mini
+    // Whisper often garbles Roman Urdu (e.g. "telemetry" instead of "trimmer")
+    // Also handles non-Latin script (Urdu/Arabic) → Roman Urdu conversion
     try {
-      const tlStart = Date.now();
-      const tlResponse = await openai.chat.completions.create({
+      const cleanStart = Date.now();
+      const cleanResponse = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
-        max_tokens: 200,
+        max_tokens: 300,
         messages: [
-          { role: 'system', content: 'Convert the following text to Roman Urdu (English letters). Keep the meaning exactly same. Output ONLY the transliterated text, nothing else.' },
+          { role: 'system', content: `You are a Pakistani WhatsApp voice message interpreter. The text below is a Whisper transcription of a Pakistani customer speaking Roman Urdu (or Urdu). Whisper often mishears Roman Urdu words.
+
+TASK: Fix the transcription to what the customer ACTUALLY said. Convert to Roman Urdu (English letters).
+
+Common Whisper mistakes for this store's context:
+- "telemetry/telemetery" → "trimmer"
+- "grade star" → "order karna"
+- "black hat" → "blackhead"
+- "nebula/nebulae" → "nebulizer"
+- "vegetable Qatar" → "vegetable cutter"
+- "facial hair mover" → "facial hair remover"
+- Any English-sounding word that doesn't make sense → find the closest Roman Urdu/product match
+
+Products sold: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Ear Wax Kit, Vegetable Cutter, Facial Hair Remover, Nebulizer, Knee Sleeve, Duster Kit
+
+Cities: Lahore, Karachi, Islamabad, Rawalpindi, Faisalabad, Peshawar, Sukkur, Multan, Hyderabad, Quetta, Sialkot, Gujranwala
+
+Output ONLY the corrected Roman Urdu text. Nothing else. If the text is already correct, return it as-is.` },
           { role: 'user', content: text }
         ],
       });
-      const tlText = tlResponse.choices[0]?.message?.content?.trim();
-      if (tlText && tlText.length > 0) {
-        console.log(`[Media] Transliterated: "${text}" → "${tlText}"`);
-        text = tlText;
+      const cleanText = cleanResponse.choices[0]?.message?.content?.trim();
+      if (cleanText && cleanText.length > 0 && cleanText !== text) {
+        console.log(`[Media] Cleaned: "${text}" → "${cleanText}"`);
+        text = cleanText;
       }
-      const tlTokensIn = tlResponse.usage?.prompt_tokens || 0;
-      const tlTokensOut = tlResponse.usage?.completion_tokens || 0;
-      costUsd += (tlTokensIn * 0.15 + tlTokensOut * 0.60) / 1000000;
-      whisperMs += (Date.now() - tlStart);
+      const cleanTokensIn = cleanResponse.usage?.prompt_tokens || 0;
+      const cleanTokensOut = cleanResponse.usage?.completion_tokens || 0;
+      costUsd += (cleanTokensIn * 0.15 + cleanTokensOut * 0.60) / 1000000;
+      whisperMs += (Date.now() - cleanStart);
     } catch (e) {
-      console.warn('[Media] Transliteration failed, using original:', e.message);
+      console.warn('[Media] Voice cleanup failed, using raw:', e.message);
     }
-  }
 
     const costRs = costUsd * 300;
     console.log(`[Media] Voice transcribed (${estimatedSec.toFixed(0)}s, Rs.${costRs.toFixed(2)}): "${text}"`);
