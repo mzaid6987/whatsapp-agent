@@ -335,7 +335,7 @@ RULES:
 ${round === 0 ? `Round 1: Value justify kar. COD hai, 7 din exchange, free delivery mention kar. Koi discount NAHI.` : ''}
 ${round === 1 ? `Round 2: 5% off de. "Aapke liye 5% adjust — Rs.${Math.round(price * 0.95)} final. Order karna hai?"` : ''}
 ${round === 2 ? `Round 3: 10% max. "Bilkul last price — Rs.${Math.round(price * 0.90)}. Isse kam possible nahi."` : ''}
-${round >= 3 ? `Round 4+: Firm reh. "Yeh already adjusted price hai. Budget mein aaye to bata dein."` : ''}`;
+${round >= 3 ? `Round 4+: Firm reh. "Sir, yeh last price hai — isse kam nahi ho sakti 😊 Jab order karna ho to bata dein, hum ready hain!" Polite aur friendly raho, customer ko bura na lage. KABHI "budget" word mat use kar.` : ''}`;
   },
 };
 

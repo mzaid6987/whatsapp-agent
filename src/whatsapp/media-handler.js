@@ -131,6 +131,7 @@ Common Whisper mistakes for this store's context:
   gyarah=11, barah=12, terah=13, chaudah/chauda=14, pandrah/pandra=15, solah=16,
   satrah=17, atharah=18, unees=19, bees=20, ikkees=21, bais=22, tees=30, chalis=40, pachas=50
   Example: "gali number chaudah" → "gali number 14", "house number aath" → "house number 8"
+- When customer says a price/number that gets split by Whisper (e.g. "13 199" or "1 399") → combine into single number if near price/rupay/rs context (e.g. "13 199" → "1399", "1 399" → "1399")
 - Any English-sounding word that doesn't make sense in Pakistani shopping context → find the closest Roman Urdu/product match
 - IMPORTANT: If customer mentions a color + random English word near "order" → likely a product name. Match to closest product.
 - IMPORTANT: "A1" or "number 1" means excellent quality in Pakistani slang. Keep as-is.

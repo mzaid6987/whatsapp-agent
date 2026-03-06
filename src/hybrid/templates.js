@@ -243,7 +243,7 @@ const T = {
     "Rs.{discounted_price} se kam nahi ho sakta {honorific} 🙏 Yeh already adjusted price hai.",
   ],
   HAGGLE_FINAL: [
-    "Yeh already kam price hai {honorific} 🙏 Budget mein aaye to bata dena.",
+    "{honorific}, yeh last price hai — isse kam nahi ho sakti 😊 Jab order karna ho to bata dein!",
     "{honorific}, samajh aata hai. Lekin yeh final price hai. Jab chahein order kar sakte hain 😊",
   ],
   HAGGLE_NO_PRODUCT: [

@@ -1824,7 +1824,19 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     console.error('[AI] Error:', err.message);
     console.error('[AI] Stack:', err.stack);
     console.error('[AI] State:', state.current, '| Msg:', message.substring(0, 80), '| Product:', typeof state.product, state.product?.short || state.product);
-    const errReply = 'Ji, kuch samajh nahi aaya. Dobara bata dein?';
+    // State-aware error fallback — don't give generic "samajh nahi aaya" everywhere
+    let errReply;
+    if (state.current === 'HAGGLING' && state.product) {
+      const dp = state.discount_percent || 0;
+      const discPrice = dp ? Math.round(state.product.price * (1 - dp / 100)) : state.product.price;
+      errReply = dp
+        ? `${getHonorific(state.collected.name, state.gender)}, yeh last price hai Rs.${discPrice.toLocaleString()} — isse kam nahi ho sakti 😊 Jab order karna ho to bata dein!`
+        : `${getHonorific(state.collected.name, state.gender)}, ${state.product.short} Rs.${state.product.price.toLocaleString()} mein hai. Order karna hai? 😊`;
+    } else if (state.current === 'PRODUCT_INQUIRY' && state.product) {
+      errReply = `${state.product.short} Rs.${state.product.price.toLocaleString()} mein hai. Order karna hai ${getHonorific(state.collected.name, state.gender)}? 😊`;
+    } else {
+      errReply = 'Ji, kuch samajh nahi aaya. Dobara bata dein?';
+    }
     saveMessages(dbConv, message, errReply, 'error', 'error', state, { debug: { error: err.message, stack: err.stack?.split('\n').slice(0, 5).join(' | '), state_current: state.current, product_type: typeof state.product } });
     return {
       reply: errReply, state: state.current, collected: { ...state.collected },

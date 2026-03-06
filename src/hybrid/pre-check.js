@@ -463,6 +463,7 @@ function preCheck(message, currentState, collected) {
     // "sirf 5%", "bas itna", "1000 ki de do", "km kro", "aur km", "itna kam"
     const isPriceNegotiation = /\b(sirf|bas|itna)\s*\d/i.test(l) ||
       /\d+\s*(ki|me|mein|mey|mai|ka|rupay?|rs)\s*(de|do|dedo|de\s*do|kr|kro)/i.test(l) ||
+      /\d+\s*(krdo|kr\s*do|kardo|kar\s*do|de\s*do|dedo|ka\s*krdo|ka\s*kardo)\b/i.test(l) ||
       /\b(aur|or|thora|thoda|mazeed)\s*(km|kam|discount|off)\b/i.test(l) ||
       /\b(itna\s*(km|kam|hi)|bohot?\s*(km|kam)|zya+da\s*(km|kam))\b/i.test(l);
     if (isPriceNegotiation && currentState === 'HAGGLING') {
@@ -470,8 +471,8 @@ function preCheck(message, currentState, collected) {
     }
 
     const hasOrderAction = /\b(order|mangwa|mangana|book|chahiye|chaiye|chaye|chahea|chahye|chaea|chahe)\b/i.test(l);
-    const hasOrderConfirm = /\b(kardo|kar\s*do|karna|krna|krdo|kr\s*do|kro|karo|kar|de\s*do|dedo|bhej\s*do|bhejdo|confirm|mangwao|mangwana)\b/i.test(l);
-    const hasYesWord = /\b(ha+n|ji|yes|yup|theek|thik|thk|tik|ik|ok|done|bilkul|sahi)\b/i.test(l);
+    const hasOrderConfirm = /\b(kardo|kar\s*do|karna|krna|krdo|kr\s*do|kro|karo|kar|de\s*do|dedo|bhej\s*do|bhejdo|bhejwa\s*do|bhijwa\s*do|bhejwao|confirm|mangwao|mangwana)\b/i.test(l);
+    const hasYesWord = /\b(ha+n|ji|yes|yup|theek|thik|thk|tik|ik|ok|done|bilkul|sahi|acha|accha|achha)\b/i.test(l);
     if ((hasOrderAction && hasOrderConfirm) || (hasYesWord && hasOrderConfirm)) {
       // Extract product + city from same message so we don't lose them
       const oiProduct = detectProduct(msg);
