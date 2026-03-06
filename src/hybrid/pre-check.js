@@ -18,6 +18,9 @@ const COMPLAINT_WORDS = [
   'damage','damaged','replacement','replace','kharab hai','kharab he',
   'receive nhi','receive ni','receive nahi','nhi mila','ni mila','nahi mila',
   'kam ni krta','kam nhi krta','kam nahi krta',
+  'kaam ka nahi','kaam ka nhi','kaam ka ni','kam ka nahi','kam ka nhi','kam ka ni',
+  'ek bhi kaam','kisi kaam','kisi bhi kaam','kaat nahi','kaat nhi','kaat ni','kaat saka',
+  'nuqsan','paise wapas','paisa wapas','paisay wapas',
   'chalta nahi','chalta nhi','chalta ni','chalta hi nahi','chalta hi nhi','chalta hi ni',
   'chalti nahi','chalti nhi','chalti ni','chalti hi nahi','chalti hi nhi','chalti hi ni',
   // Mixed Urdu-English complaint phrases (voice transcription patterns)
@@ -36,7 +39,8 @@ const COMPLAINT_WORDS = [
   'not turning on','not turn on','not switching on','issue with'
 ];
 
-const TRUST_WORDS = /\b(fake|asli|original|cod|cash\s*on|return\s*policy|exchange\s*policy|warranty|guarantee|quality|bharosa|trust|kaisi?\s*quality)\b/i;
+const TRUST_WORDS = /\b(asli|original|cod|cash\s*on|return\s*policy|exchange\s*policy|warranty|guarantee|quality|bharosa|trust|kaisi?\s*quality)\b/i;
+// Note: "fake" removed from TRUST_WORDS — it's almost always a complaint, not a trust question
 // "achi he na", "theek hogi na ye", "chalegi na", "kaisi hai", "quality kesi he" — quality reassurance questions
 // BUT NOT "kam krta he" / "sahi kam krta he" / "works?" — those are product functionality questions (AI handles)
 const QUALITY_ASK = /(\b(ach+[ia]|theek|thik|thk|chale\s*g[ia])\b.*\b(hai|he|h|na|hogi|hoga|hain)\b|\bkais[ie]\s*h[ae]i?\b|\bkes[ie]\s*h[ae]i?\b|\bquality\s*(kais[ie]|kes[ie]|kaisi|kesi)\s*(h[ae]i?|he)?\b)/i;
@@ -82,9 +86,9 @@ function preCheck(message, currentState, collected) {
 
   // 0c. PAST ORDER REFERENCE — "maine magayi thi", "maine order kiya tha", "aap se li thi"
   // Past tense = already ordered. If combined with negative words = complaint about existing order
-  const isPastOrder = /\b(maine|mene|mne|mny|humne)\s*(aap\s*se\s*|apny|ap\s*sy\s*)?(order|manga|mangi|magayi?|magaya?|magwa[iy]?|li[iy]?|lea?|kharid[ia]?|liya?|kia)\s*(th[aie]|tha|thi)\b/i.test(l) ||
-    /\b(aap\s*se|ap\s*sy|tumse)\s*(order|manga|mangi|magayi?|magaya?|li[iy]?|lea?|kharid[ia]?)\s*(th[aie]|tha|thi|hai|he)?\b/i.test(l) ||
-    /\b(pehle|pehly|pahle|pahly|last\s*time)\s*(order|manga|magayi?|magaya?|li[iy]?|lea?|kharid[ia]?)\s*(th[aie]|tha|thi|hai|he)?\b/i.test(l) ||
+  const isPastOrder = /\b(maine|mene|mne|mny|humne)\s*(aap\s*se\s*|apny|ap\s*sy\s*)?(order|manga|mangi|magayi?|magaya?|magwa[iy]?a?|mangwa[iy]?a?|li[iy]?|lea?|kharid[ia]?|liya?|kia)\s*(th[aie]|tha|thi|hai|he|h)?\b/i.test(l) ||
+    /\b(aap\s*se|ap\s*sy|tumse)\s*(order|manga|mangi|magayi?|magaya?|mangwa[iy]?a?|li[iy]?|lea?|kharid[ia]?)\s*(th[aie]|tha|thi|hai|he)?\b/i.test(l) ||
+    /\b(pehle|pehly|pahle|pahly|last\s*time)\s*(order|manga|magayi?|magaya?|mangwa[iy]?a?|li[iy]?|lea?|kharid[ia]?)\s*(th[aie]|tha|thi|hai|he)?\b/i.test(l) ||
     /\b(receive|mil[ia]?|mila|aa\s*gaya|agaya|aa\s*gai|agyi|pohch\s*ga[iy]a?)\s*(th[aie]|tha|thi|hai|he|h)\b/i.test(l);
 
   // Past order + negative/problem context = definitely a complaint
@@ -118,7 +122,7 @@ function preCheck(message, currentState, collected) {
   // Strong complaint = clearly reporting an issue (past tense, active problem)
   // "sending damage", "not work", "broken hai", "kharab mila", "charger issue" etc.
   // "receive" alone is NOT a complaint — "call receive kar lunga" is normal. Only "receive nhi/nahi" is complaint.
-  const strongComplaint = complaint && /\b(sending|sent|mila|receive[d]?\s*(nahi|nhi|ni|nai)|not work|not fit|broken|damage[d]?\s*product|issue|problem|stopped|charger|band ho|chal nahi|chal nhi|chalt[ai]\s*(hi\s*)?(nahi|nhi|ni)|work\s*nahi|work\s*nhi|working\s*nahi|working\s*nhi|sahi\s*work|sahi\s*kam|sahi\s*nahi|hilta|missing|toota|tuta)\b/i.test(l);
+  const strongComplaint = complaint && (/\b(sending|sent|mila|receive[d]?\s*(nahi|nhi|ni|nai)|not work|not fit|broken|damage[d]?\s*product|issue|problem|stopped|charger|band ho|chal nahi|chal nhi|chalt[ai]\s*(hi\s*)?(nahi|nhi|ni)|work\s*nahi|work\s*nhi|working\s*nahi|working\s*nhi|sahi\s*work|sahi\s*kam|sahi\s*nahi|hilta|missing|toota|tuta|kaam\s*ka\s*nahi|kaam\s*ka\s*nhi|kaat\s*nahi|kaat\s*nhi|kaat\s*saka|nuqsan|paise?\s*wapas|paisay?\s*wapas|ek\s*bhi\s*kaam|kisi\s*bhi?\s*kaam)\b/i.test(l) || isPastOrder);
   if (isQualityQuestion && !strongComplaint) {
     return { intent: 'trust_question' };
   }
