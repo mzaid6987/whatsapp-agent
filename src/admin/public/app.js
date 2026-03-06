@@ -316,72 +316,7 @@ async function openChat(chatId) {
     // Race condition guard: if user clicked another chat while loading, discard
     if (seq !== _openChatSeq) return;
 
-    msgsEl.innerHTML = msgs.map(m => {
-      const isOut = m.direction === 'outgoing';
-      const senderLabel = m.sender === 'bot' ? 'Bot' : m.sender === 'human' ? 'Human Agent' : '';
-      const senderClass = m.sender === 'bot' ? 'bot-sender' : m.sender === 'human' ? 'human-sender' : 'customer-sender';
-      const bubbleClass = isOut ? `msg-outgoing${m.sender === 'human' ? ' human' : ''}` : 'msg-incoming';
-
-      // Source badge: T = template, A = AI (only for bot outgoing messages)
-      // Pure AI = 'ai' only. Everything else (template, pre-check, ai→template, ai→confirm, smart-fill) = T
-      const isAiSource = m.source === 'ai';
-      // Use stored cost from debug_json if available, else calculate dynamically
-      let debugObj = null;
-      try { debugObj = m.debug_json ? JSON.parse(m.debug_json) : null; } catch(e) {}
-      const storedCost = debugObj?._cost_rs;
-      const aiCostPkr = isAiSource && (m.tokens_in || m.tokens_out)
-        ? (storedCost != null ? storedCost : ((m.tokens_in || 0) * _m.pricing.input + (m.tokens_out || 0) * _m.pricing.output) / 1000000 * 300).toFixed(2)
-        : null;
-      const storedModel = debugObj?._model;
-      const costLabel = aiCostPkr ? ` <span class="ai-cost-badge">Rs.${aiCostPkr}</span>` : '';
-      const modelLabel = storedModel || (isAiSource ? _m.name : 'T');
-      const srcBadge = (isOut && m.sender === 'bot' && m.source)
-        ? `<span class="msg-source-badge ${isAiSource ? 'src-ai' : 'src-tpl'}">${modelLabel}</span>${costLabel}`
-        : '';
-      // Media cost badge for incoming messages (image/voice)
-      const mediaCostRs = debugObj?._media_cost_rs;
-      const mediaType = debugObj?._media_type;
-      const mediaModel = debugObj?._media_model;
-      const mediaBadge = (!isOut && mediaCostRs != null)
-        ? `<span class="msg-source-badge src-ai" style="font-size:10px;">${mediaType === 'voice' ? '🎤' : '🖼️'} ${mediaModel || 'Media'}</span> <span class="ai-cost-badge">Rs.${mediaCostRs.toFixed(2)}</span>`
-        : '';
-
-      // Feedback button + display (all messages — bot + customer)
-      const feedbackHtml = `
-        ${m.admin_feedback ? `<div class="msg-feedback-text" id="fb-text-${m.id}">${escHtml(m.admin_feedback)}</div>` : ''}
-        <div class="msg-feedback-row">
-          <div class="msg-time">${formatTime(m.created_at)}</div>
-          <button class="msg-feedback-btn${m.admin_feedback ? ' has-feedback' : ''}" onclick="toggleFeedback(${m.id})" title="${m.admin_feedback ? 'Edit feedback' : 'Add feedback'}">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
-        </div>
-        <div class="msg-feedback-form" id="fb-form-${m.id}" style="display:none">
-          <textarea id="fb-input-${m.id}" placeholder="Feedback likho...">${m.admin_feedback ? escHtml(m.admin_feedback) : ''}</textarea>
-          <div class="msg-feedback-actions">
-            <button class="fb-save-btn" onclick="saveFeedback(${m.id})">Save</button>
-            <button class="fb-cancel-btn" onclick="toggleFeedback(${m.id})">Cancel</button>
-          </div>
-        </div>
-      `;
-
-      // WhatsApp-style ticks for outgoing messages
-      const tickHtml = isOut ? (() => {
-        const st = m.wa_status || 'sent';
-        if (st === 'read') return '<span class="msg-ticks read" title="Read">&#10003;&#10003;</span>';
-        if (st === 'delivered') return '<span class="msg-ticks delivered" title="Delivered">&#10003;&#10003;</span>';
-        return '<span class="msg-ticks sent" title="Sent">&#10003;</span>';
-      })() : '';
-
-      return `
-        <div class="msg-bubble ${bubbleClass}" data-msg-id="${m.id}" data-wa-id="${m.wa_message_id || ''}">
-          ${senderLabel ? `<div class="msg-sender ${senderClass}">${senderLabel}${srcBadge}</div>` : ''}
-          ${mediaBadge ? `<div style="margin-bottom:4px">${mediaBadge}</div>` : ''}
-          <div>${m.content}</div>
-          ${feedbackHtml}
-          ${tickHtml}
-        </div>
-      `;
-    }).join('');
+    msgsEl.innerHTML = msgs.map(m => _renderMessageBubble(m, _m)).join('');
 
     if (!msgs.length) {
       msgsEl.innerHTML = '<div style="text-align:center;color:#999;padding:20px;">No messages yet</div>';
@@ -699,16 +634,16 @@ function _renderMessageBubble(m, _m) {
   const senderLabel = m.sender === 'bot' ? 'Bot' : m.sender === 'human' ? 'Human Agent' : '';
   const senderClass = m.sender === 'bot' ? 'bot-sender' : m.sender === 'human' ? 'human-sender' : 'customer-sender';
   const bubbleClass = isOut ? `msg-outgoing${m.sender === 'human' ? ' human' : ''}` : 'msg-incoming';
-  const isAiSource = m.source === 'ai';
   let debugObj = null;
   try { debugObj = m.debug_json ? JSON.parse(m.debug_json) : null; } catch(e) {}
   const storedCost = debugObj?._cost_rs;
-  const aiCostPkr = isAiSource && (m.tokens_in || m.tokens_out)
-    ? (storedCost != null ? storedCost : ((m.tokens_in || 0) * _m.pricing.input + (m.tokens_out || 0) * _m.pricing.output) / 1000000 * 300).toFixed(2)
-    : null;
   const storedModel = debugObj?._model;
+  // Show cost badge if _cost_rs exists in debug_json OR if source is 'ai' with tokens
+  const isAiSource = m.source === 'ai' || !!storedModel;
+  const aiCostPkr = storedCost != null ? storedCost.toFixed(2)
+    : (isAiSource && (m.tokens_in || m.tokens_out) ? ((m.tokens_in || 0) * _m.pricing.input + (m.tokens_out || 0) * _m.pricing.output) / 1000000 * 300 : null)?.toFixed?.(2) || null;
   const costLabel = aiCostPkr ? ` <span class="ai-cost-badge">Rs.${aiCostPkr}</span>` : '';
-  const modelLabel = storedModel || (isAiSource ? _m.name : 'T');
+  const modelLabel = storedModel || (m.source === 'ai' ? _m.name : 'T');
   const srcBadge = (isOut && m.sender === 'bot' && m.source)
     ? `<span class="msg-source-badge ${isAiSource ? 'src-ai' : 'src-tpl'}">${modelLabel}</span>${costLabel}`
     : '';
