@@ -1,5 +1,9 @@
 // Force Pakistan Standard Time (UTC+5) — server may be in US timezone
 process.env.TZ = 'Asia/Karachi';
+// Polyfill globalThis.File for Node 18 (openai SDK v6 needs it for file uploads)
+if (!globalThis.File) {
+  try { globalThis.File = require('node:buffer').File; } catch (e) { /* Node < 18.13 */ }
+}
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express = require('express');
 const session = require('express-session');
