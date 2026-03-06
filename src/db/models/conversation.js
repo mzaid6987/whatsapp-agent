@@ -3,13 +3,10 @@
  */
 const { getDb } = require('../index');
 
-const SESSION_HOURS = 24;
-
 function findActive(customerId) {
   return getDb().prepare(`
     SELECT * FROM conversations
     WHERE customer_id = ? AND is_active = 1
-    AND datetime(last_message_at, '+${SESSION_HOURS} hours') > datetime('now','localtime')
     ORDER BY last_message_at DESC LIMIT 1
   `).get(customerId);
 }
