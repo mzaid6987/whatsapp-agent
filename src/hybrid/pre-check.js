@@ -93,6 +93,21 @@ function preCheck(message, currentState, collected) {
     return { intent: 'complaint' };
   }
 
+  // 0d. COLLECT_DELIVERY_PHONE early check — compound voice messages like
+  // "haan call receive karlunga ... kharab to nahi hai" start with YES but contain complaint words later
+  // Must check BEFORE complaint detection to not lose the delivery phone confirmation
+  if (currentState === 'COLLECT_DELIVERY_PHONE') {
+    const startsWithYes = /^(ha+n|ji+|jee|g|yes|yup|ok|haan|hn)\b/i.test(l.trim());
+    const hasYesWord = /\b(ha+n|ji|yes|yup|ik|ok[zgky]?|haan|hn|g|k|shi|sahi|sa[ih]i?|theek|thik|thk|tik|bilkul|done)\b/i.test(l);
+    const hasNoWord = /\b(nahi|nhi|no|nope|na+h|mat|cancel)\b/i.test(l);
+    if (/\b(isi|same|yehi|yahi|wohi)\b/i.test(l) || isYes(l) || /^k+$/i.test(l.trim()) || (hasYesWord && !hasNoWord) || (startsWithYes && hasNoWord)) {
+      return { intent: 'same_phone', extracted: { same_phone: true } };
+    }
+    if (isNo(l) || (hasNoWord && !hasYesWord && !startsWithYes)) {
+      return { intent: 'no' };
+    }
+  }
+
   // 1. COMPLAINT — highest priority, any state (but not if also trust question)
   // "kharab to nahi hogi" / "toot to nahi jayegi" = QUESTION about quality, not complaint
   const complaint = isComplaint(l);
@@ -100,7 +115,8 @@ function preCheck(message, currentState, collected) {
   const isQualityQuestion = /\b(to\s*nahi|toh?\s*nahi|nahi\s*ho|nhi\s*ho|nahi\s*na|hogi|hoga|jayega|jayegi|sakti|sakta)\b/i.test(l) && complaint;
   // Strong complaint = clearly reporting an issue (past tense, active problem)
   // "sending damage", "not work", "broken hai", "kharab mila", "charger issue" etc.
-  const strongComplaint = complaint && /\b(sending|sent|mila|receive[d]?|not work|not fit|broken|damage[d]?\s*product|issue|problem|stopped|charger|band ho|chal nahi|chal nhi|chalt[ai]\s*(hi\s*)?(nahi|nhi|ni)|work\s*nahi|work\s*nhi|working\s*nahi|working\s*nhi|sahi\s*work|sahi\s*kam|sahi\s*nahi|hilta|missing|toota|tuta)\b/i.test(l);
+  // "receive" alone is NOT a complaint — "call receive kar lunga" is normal. Only "receive nhi/nahi" is complaint.
+  const strongComplaint = complaint && /\b(sending|sent|mila|receive[d]?\s*(nahi|nhi|ni|nai)|not work|not fit|broken|damage[d]?\s*product|issue|problem|stopped|charger|band ho|chal nahi|chal nhi|chalt[ai]\s*(hi\s*)?(nahi|nhi|ni)|work\s*nahi|work\s*nhi|working\s*nahi|working\s*nhi|sahi\s*work|sahi\s*kam|sahi\s*nahi|hilta|missing|toota|tuta)\b/i.test(l);
   if (isQualityQuestion && !strongComplaint) {
     return { intent: 'trust_question' };
   }
@@ -252,17 +268,7 @@ function preCheck(message, currentState, collected) {
     }
   }
 
-  // 4. DELIVERY PHONE — same number detection (flexible: "han kb ayga" = yes + side question)
-  if (currentState === 'COLLECT_DELIVERY_PHONE') {
-    const hasYesWord = /\b(ha+n|ji|yes|yup|ik|ok[zgky]?|haan|hn|g|k|shi|sahi|sa[ih]i?|theek|thik|thk|tik|bilkul|done)\b/i.test(l);
-    const hasNoWord = /\b(nahi|nhi|no|nope|na+h|mat|cancel)\b/i.test(l);
-    if (/\b(isi|same|yehi|yahi|wohi)\b/i.test(l) || isYes(l) || /^k+$/i.test(l.trim()) || (hasYesWord && !hasNoWord)) {
-      return { intent: 'same_phone', extracted: { same_phone: true } };
-    }
-    if (isNo(l) || (hasNoWord && !hasYesWord)) {
-      return { intent: 'no' };
-    }
-  }
+  // 4. DELIVERY PHONE — handled early in section 0d (before complaint detection)
 
   // 4a-0b. NAME IN MIXED MESSAGE — voice messages often have name + question together
   // "Yaar Sukkur mein kab delivery hogi aur mera naam hai Amjad" → extract name, answer question
@@ -450,7 +456,13 @@ function preCheck(message, currentState, collected) {
     const hasOrderConfirm = /\b(kardo|kar\s*do|karna|krna|krdo|kr\s*do|kro|karo|kar|de\s*do|dedo|bhej\s*do|bhejdo|confirm|mangwao|mangwana)\b/i.test(l);
     const hasYesWord = /\b(ha+n|ji|yes|yup|theek|thik|thk|tik|ik|ok|done|bilkul|sahi)\b/i.test(l);
     if ((hasOrderAction && hasOrderConfirm) || (hasYesWord && hasOrderConfirm)) {
-      return { intent: 'order_intent' };
+      // Extract product + city from same message so we don't lose them
+      const oiProduct = detectProduct(msg);
+      const oiCity = extractCity(msg);
+      const oiExtracted = {};
+      if (oiProduct) oiExtracted.product = oiProduct.short, oiExtracted.product_name = oiProduct.name;
+      if (oiCity) oiExtracted.city = oiCity;
+      return { intent: 'order_intent', extracted: oiExtracted };
     }
     // Flexible yes in PRODUCT_INQUIRY or HAGGLING = wants to order
     // Multi-word like "theek hai haan karo", "ok done", "bilkul theek"
@@ -488,7 +500,11 @@ function preCheck(message, currentState, collected) {
     // If message has order intent words + delivery question → prioritize order (any state)
     if (hasOrderWords && /\b(order|mangwa|chahiye|chahea)\b/i.test(l)) {
       const dtCity = extractCity(msg);
-      return { intent: 'order_intent', extracted: { side_question: 'delivery_time', ...(dtCity ? { city: dtCity } : {}) } };
+      const dtProduct = detectProduct(msg);
+      const dtExtracted = { side_question: 'delivery_time' };
+      if (dtCity) dtExtracted.city = dtCity;
+      if (dtProduct) { dtExtracted.product = dtProduct.short; dtExtracted.product_name = dtProduct.name; }
+      return { intent: 'order_intent', extracted: dtExtracted };
     }
     if (['PRODUCT_INQUIRY', 'HAGGLING'].includes(currentState) && hasYesOrOrder) {
       return { intent: 'order_intent', extracted: { side_question: 'delivery_time' } };

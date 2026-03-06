@@ -589,6 +589,19 @@ function intentToNextState(intent, currentState, extracted, state) {
       if (extracted?.product || extracted?.product_name) return 'COLLECT_NAME';
       return currentState;
     case 'order_intent':
+      // If product was extracted from the message, set it on state
+      if (!state?.product && (extracted?.product || extracted?.product_name)) {
+        const { PRODUCTS } = require('./data');
+        const pMatch = PRODUCTS.find(p => p.short === extracted.product || p.name === extracted.product_name);
+        if (pMatch) {
+          state.product = pMatch;
+          state.collected.product = pMatch.short;
+        }
+      }
+      // If city was extracted, set it
+      if (!state?.collected?.city && extracted?.city) {
+        state.collected.city = extracted.city;
+      }
       if (state?.product) return 'COLLECT_NAME';
       return 'PRODUCT_SELECTION';
     case 'product_list':
@@ -2441,14 +2454,20 @@ function handlePreCheck(pre, message, state, storeName, phone) {
 
     case 'order_intent':
     case 'yes': {
-      // In PRODUCT_INQUIRY/HAGGLING → start order collection
-      if (['PRODUCT_INQUIRY', 'HAGGLING'].includes(state.current) && state.product) {
+      // Product extracted from pre-check → set it and start order collection
+      if (state.product) {
         const nextField = askNextField(state, storeName);
         // If customer also asked delivery time ("G karna ha kB tak ajayga"), prepend answer
         if (nextField && pre.extracted?.side_question === 'delivery_time') {
           nextField.reply = fillTemplate('DELIVERY_TIME', vars) + ' ' + nextField.reply;
         }
         return nextField;
+      }
+      // No product yet → ask which product
+      if (pre.intent === 'order_intent' && !state.product) {
+        state.current = 'PRODUCT_SELECTION';
+        const owpVars = buildVars(state, storeName);
+        return { reply: fillTemplate('ORDER_WITHOUT_PRODUCT', owpVars), state: 'PRODUCT_SELECTION' };
       }
       // In template states, handled by handleTemplateState already
       return null;

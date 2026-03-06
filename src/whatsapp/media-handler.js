@@ -118,8 +118,12 @@ Common Whisper mistakes for this store's context:
 - "oil spray/always pray" → "oil spray"
 - "cutting board/cutting bored" → "cutting board"
 - "grey duster/gray duster" → "duster kit"
+- "cheese/chees" → "cheez" (thing/product)
+- "even/Ivan/heaven" near "cheez/product/quality" → "A1" (meaning good quality)
+- "receive car/receive car" → "receive kar" (will receive)
 - Any English-sounding word that doesn't make sense in Pakistani shopping context → find the closest Roman Urdu/product match
 - IMPORTANT: If customer mentions a color + random English word near "order" → likely a product name. Match to closest product.
+- IMPORTANT: "A1" or "number 1" means excellent quality in Pakistani slang. Keep as-is.
 
 Products sold: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Ear Wax Kit, Vegetable Cutter, Facial Hair Remover, Nebulizer, Knee Sleeve, Duster Kit
 
