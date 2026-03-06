@@ -709,23 +709,24 @@ app.get('/api/orders', requireAuth, (req, res) => {
       LEFT JOIN conversations c ON c.id = o.conversation_id
       ORDER BY o.created_at DESC LIMIT 200
     `).all();
+    // Batch AI cost calculation — one query for all conversation IDs
+    const convIds = [...new Set(orders.map(o => o.conversation_id).filter(Boolean))];
+    const costMap = {};
+    if (convIds.length) {
+      const allMsgs = db.prepare(`SELECT conversation_id, debug_json FROM messages WHERE conversation_id IN (${convIds.map(() => '?').join(',')}) AND debug_json IS NOT NULL`).all(...convIds);
+      allMsgs.forEach(m => {
+        try {
+          const d = JSON.parse(m.debug_json);
+          if (!costMap[m.conversation_id]) costMap[m.conversation_id] = 0;
+          if (d._cost_rs) costMap[m.conversation_id] += d._cost_rs;
+          if (d._media_cost_rs) costMap[m.conversation_id] += d._media_cost_rs;
+        } catch (e) { /* ignore */ }
+      });
+    }
     res.json(orders.map(o => {
       const items = o.items_json ? JSON.parse(o.items_json) : [];
       const hasUpsell = items.length > 1;
-      // Calculate AI cost from actual stored costs in messages (same as dashboard)
-      let aiCostRs = 0;
-      if (o.conversation_id) {
-        const msgs = db.prepare('SELECT debug_json FROM messages WHERE conversation_id = ?').all(o.conversation_id);
-        msgs.forEach(m => {
-          if (!m.debug_json) return;
-          try {
-            const d = JSON.parse(m.debug_json);
-            if (d._cost_rs) aiCostRs += d._cost_rs;
-            if (d._media_cost_rs) aiCostRs += d._media_cost_rs;
-          } catch (e) { /* ignore */ }
-        });
-      }
-      aiCostRs = Math.round(aiCostRs * 100) / 100;
+      const aiCostRs = Math.round((costMap[o.conversation_id] || 0) * 100) / 100;
       return {
         ...o, items, has_upsell: hasUpsell, ai_cost_rs: aiCostRs,
         template_count: o.template_count || 0, ai_count: o.ai_count || 0,
