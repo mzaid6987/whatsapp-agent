@@ -48,18 +48,31 @@ function broadcast(data) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'whatsapp-agent-secret-key-change-me',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
-}));
 
 // Admin password (from env or default for dev)
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const AUTH_SECRET = process.env.SESSION_SECRET || 'whatsapp-agent-secret-key-change-me';
+
+// Simple signed-cookie auth (survives server restarts — no memory sessions)
+const crypto = require('crypto');
+function signToken(data) {
+  const payload = Buffer.from(JSON.stringify(data)).toString('base64');
+  const sig = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('hex');
+  return payload + '.' + sig;
+}
+function verifyToken(token) {
+  if (!token || !token.includes('.')) return null;
+  const [payload, sig] = token.split('.');
+  const expected = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('hex');
+  if (sig !== expected) return null;
+  try { return JSON.parse(Buffer.from(payload, 'base64').toString()); } catch { return null; }
+}
 
 // Auth middleware
 function requireAuth(req, res, next) {
+  // Check signed cookie token (persistent) OR legacy session
+  const token = req.cookies?.auth_token;
+  if (token && verifyToken(token)) return next();
   if (req.session && req.session.authenticated) return next();
   if (req.headers.accept && req.headers.accept.includes('application/json')) {
     return res.status(401).json({ error: 'Not authenticated' });
@@ -67,10 +80,21 @@ function requireAuth(req, res, next) {
   res.redirect('/admin/login.html');
 }
 
+// Keep express-session for backwards compat (existing logged-in users)
+app.use(session({
+  secret: AUTH_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 24 * 60 * 60 * 1000 }
+}));
+
 // ---- AUTH API ----
 app.post('/api/auth/login', (req, res) => {
   if (req.body.password === ADMIN_PASSWORD) {
     req.session.authenticated = true;
+    // Also set signed cookie (survives restarts, 30 days)
+    const token = signToken({ auth: true, t: Date.now() });
+    res.cookie('auth_token', token, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true, sameSite: 'lax' });
     res.json({ success: true });
   } else {
     res.status(401).json({ error: 'Wrong password' });
@@ -79,11 +103,14 @@ app.post('/api/auth/login', (req, res) => {
 
 app.post('/api/auth/logout', (req, res) => {
   req.session.destroy();
+  res.clearCookie('auth_token');
   res.json({ success: true });
 });
 
 app.get('/api/auth/check', (req, res) => {
-  res.json({ authenticated: !!(req.session && req.session.authenticated) });
+  const tokenValid = !!(req.cookies?.auth_token && verifyToken(req.cookies.auth_token));
+  const sessionValid = !!(req.session && req.session.authenticated);
+  res.json({ authenticated: tokenValid || sessionValid });
 });
 
 // ---- API ROUTES (Real DB) ----

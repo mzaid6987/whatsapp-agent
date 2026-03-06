@@ -600,17 +600,21 @@ async function loadSettings() {
 
 // ---- WEBSOCKET + POLLING FALLBACK ----
 let _wsConnected = false;
+let _lastMsgCount = {}; // track message counts per conversation
+
 function connectWebSocket() {
   try {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-    ws.onopen = () => { _wsConnected = true; };
+    ws.onopen = () => { _wsConnected = true; console.log('[WS] Connected'); };
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
       if (data.type === 'bot_status') updateBotUI(data.enabled);
       if (data.type === 'new_message') {
-        loadChats();
-        if (currentChatId) openChat(currentChatId);
+        // Smart update: refresh chat list without full DOM re-render
+        _smartRefreshChatList();
+        // If this chat is open, append new messages only
+        if (currentChatId) _smartAppendMessages(currentChatId);
       }
       if (data.type === 'msg_status') {
         const bubble = document.querySelector(`.msg-bubble[data-wa-id="${data.wa_message_id}"]`);
@@ -625,15 +629,129 @@ function connectWebSocket() {
         }
       }
     };
-    ws.onclose = () => { _wsConnected = false; setTimeout(connectWebSocket, 5000); };
+    ws.onclose = () => { _wsConnected = false; console.log('[WS] Disconnected, reconnecting...'); setTimeout(connectWebSocket, 3000); };
     ws.onerror = () => { _wsConnected = false; };
   } catch (e) { _wsConnected = false; }
 }
 
-// Polling fallback — runs every 5s when WebSocket is not connected
+// Smart chat list refresh — only updates changed items, no full re-render
+let _smartRefreshPending = false;
+async function _smartRefreshChatList() {
+  if (_smartRefreshPending) return; // debounce
+  _smartRefreshPending = true;
+  setTimeout(async () => {
+    _smartRefreshPending = false;
+    try {
+      const convos = await api('/api/conversations');
+      if (!convos) return;
+      conversations = convos;
+      // Update badges
+      const unreplied = convos.filter(c => c.unreplied);
+      const complaints = convos.filter(c => c.complaint_flag);
+      const unrepliedBadge = document.getElementById('unrepliedBadge');
+      const complaintBadge = document.getElementById('complaintBadge');
+      if (unrepliedBadge) {
+        unrepliedBadge.style.display = unreplied.length > 0 ? 'flex' : 'none';
+        document.getElementById('unrepliedCount').textContent = unreplied.length;
+      }
+      if (complaintBadge) {
+        complaintBadge.style.display = complaints.length > 0 ? 'flex' : 'none';
+        document.getElementById('complaintCount').textContent = complaints.length;
+      }
+      renderChatList(convos);
+    } catch (e) { /* silent */ }
+  }, 300); // 300ms debounce
+}
+
+// Smart message append — only fetch and append NEW messages to open chat
+let _lastRenderedMsgId = 0;
+async function _smartAppendMessages(chatId) {
+  const msgsEl = document.getElementById('chatMessages');
+  if (!msgsEl) return;
+  // Get current last message ID from DOM
+  const allBubbles = msgsEl.querySelectorAll('.msg-bubble[data-msg-id]');
+  const lastId = allBubbles.length > 0 ? parseInt(allBubbles[allBubbles.length - 1].dataset.msgId) || 0 : 0;
+  try {
+    const msgs = await api(`/api/conversations/${chatId}/messages?t=${Date.now()}`) || [];
+    // Find new messages not yet in DOM
+    const newMsgs = msgs.filter(m => m.id > lastId);
+    if (!newMsgs.length) return;
+    if (!window._aiModel) {
+      try { window._aiModel = await api('/api/model'); } catch(e) { window._aiModel = { name: 'AI', pricing: { input: 0.25, output: 1.25 } }; }
+    }
+    const _m = window._aiModel;
+    // Append each new message
+    newMsgs.forEach(m => {
+      const html = _renderMessageBubble(m, _m);
+      msgsEl.insertAdjacentHTML('beforeend', html);
+    });
+    // Scroll to bottom
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  } catch (e) { /* silent */ }
+}
+
+// Extract message bubble HTML generation for reuse
+function _renderMessageBubble(m, _m) {
+  const isOut = m.direction === 'outgoing';
+  const senderLabel = m.sender === 'bot' ? 'Bot' : m.sender === 'human' ? 'Human Agent' : '';
+  const senderClass = m.sender === 'bot' ? 'bot-sender' : m.sender === 'human' ? 'human-sender' : 'customer-sender';
+  const bubbleClass = isOut ? `msg-outgoing${m.sender === 'human' ? ' human' : ''}` : 'msg-incoming';
+  const isAiSource = m.source === 'ai';
+  let debugObj = null;
+  try { debugObj = m.debug_json ? JSON.parse(m.debug_json) : null; } catch(e) {}
+  const storedCost = debugObj?._cost_rs;
+  const aiCostPkr = isAiSource && (m.tokens_in || m.tokens_out)
+    ? (storedCost != null ? storedCost : ((m.tokens_in || 0) * _m.pricing.input + (m.tokens_out || 0) * _m.pricing.output) / 1000000 * 300).toFixed(2)
+    : null;
+  const storedModel = debugObj?._model;
+  const costLabel = aiCostPkr ? ` <span class="ai-cost-badge">Rs.${aiCostPkr}</span>` : '';
+  const modelLabel = storedModel || (isAiSource ? _m.name : 'T');
+  const srcBadge = (isOut && m.sender === 'bot' && m.source)
+    ? `<span class="msg-source-badge ${isAiSource ? 'src-ai' : 'src-tpl'}">${modelLabel}</span>${costLabel}`
+    : '';
+  const mediaCostRs = debugObj?._media_cost_rs;
+  const mediaType = debugObj?._media_type;
+  const mediaModel = debugObj?._media_model;
+  const mediaBadge = (!isOut && mediaCostRs != null)
+    ? `<span class="msg-source-badge src-ai" style="font-size:10px;">${mediaType === 'voice' ? '🎤' : '🖼️'} ${mediaModel || 'Media'}</span> <span class="ai-cost-badge">Rs.${mediaCostRs.toFixed(2)}</span>`
+    : '';
+  const feedbackHtml = `
+    ${m.admin_feedback ? `<div class="msg-feedback-text" id="fb-text-${m.id}">${escHtml(m.admin_feedback)}</div>` : ''}
+    <div class="msg-feedback-row">
+      <div class="msg-time">${formatTime(m.created_at)}</div>
+      <button class="msg-feedback-btn${m.admin_feedback ? ' has-feedback' : ''}" onclick="toggleFeedback(${m.id})" title="${m.admin_feedback ? 'Edit feedback' : 'Add feedback'}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+    </div>
+    <div class="msg-feedback-form" id="fb-form-${m.id}" style="display:none">
+      <textarea id="fb-input-${m.id}" placeholder="Feedback likho...">${m.admin_feedback ? escHtml(m.admin_feedback) : ''}</textarea>
+      <div class="msg-feedback-actions">
+        <button class="fb-save-btn" onclick="saveFeedback(${m.id})">Save</button>
+        <button class="fb-cancel-btn" onclick="toggleFeedback(${m.id})">Cancel</button>
+      </div>
+    </div>
+  `;
+  const tickHtml = isOut ? (() => {
+    const st = m.wa_status || 'sent';
+    if (st === 'read') return '<span class="msg-ticks read" title="Read">&#10003;&#10003;</span>';
+    if (st === 'delivered') return '<span class="msg-ticks delivered" title="Delivered">&#10003;&#10003;</span>';
+    return '<span class="msg-ticks sent" title="Sent">&#10003;</span>';
+  })() : '';
+  return `
+    <div class="msg-bubble ${bubbleClass}" data-msg-id="${m.id}" data-wa-id="${m.wa_message_id || ''}">
+      ${senderLabel ? `<div class="msg-sender ${senderClass}">${senderLabel}${srcBadge}</div>` : ''}
+      ${mediaBadge ? `<div style="margin-bottom:4px">${mediaBadge}</div>` : ''}
+      <div>${m.content}</div>
+      ${feedbackHtml}
+      ${tickHtml}
+    </div>
+  `;
+}
+
+// Polling fallback — runs every 10s when WebSocket is not connected
 let _lastPollHash = '';
 setInterval(async () => {
-  if (_wsConnected) return; // WebSocket working, no need to poll
+  if (_wsConnected) return;
   const path = window.location.pathname;
   if (path !== '/admin/' && path !== '/admin/index.html') return;
   try {
@@ -644,10 +762,10 @@ setInterval(async () => {
       _lastPollHash = hash;
       conversations = convos;
       renderChatList(conversations);
-      if (currentChatId) openChat(currentChatId);
+      if (currentChatId) _smartAppendMessages(currentChatId);
     }
   } catch (e) { /* silent */ }
-}, 5000);
+}, 10000);
 
 // ---- INIT ----
 document.addEventListener('DOMContentLoaded', () => {
