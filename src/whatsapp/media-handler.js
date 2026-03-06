@@ -107,12 +107,19 @@ TASK: Fix the transcription to what the customer ACTUALLY said. Convert to Roman
 
 Common Whisper mistakes for this store's context:
 - "telemetry/telemetery" → "trimmer"
-- "grade star" → "order karna"
-- "black hat" → "blackhead"
+- "grade star/great star" → "order karna"
+- "black hat/black head" → "blackhead remover"
 - "nebula/nebulae" → "nebulizer"
-- "vegetable Qatar" → "vegetable cutter"
+- "vegetable Qatar/cater" → "vegetable cutter"
 - "facial hair mover" → "facial hair remover"
-- Any English-sounding word that doesn't make sense → find the closest Roman Urdu/product match
+- "red Easter/red duster/Easter" → "duster" (Duster Kit product)
+- "knee sleep/knee sleeve" → "knee sleeve"
+- "ear wax/ear works" → "ear wax kit"
+- "oil spray/always pray" → "oil spray"
+- "cutting board/cutting bored" → "cutting board"
+- "grey duster/gray duster" → "duster kit"
+- Any English-sounding word that doesn't make sense in Pakistani shopping context → find the closest Roman Urdu/product match
+- IMPORTANT: If customer mentions a color + random English word near "order" → likely a product name. Match to closest product.
 
 Products sold: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Ear Wax Kit, Vegetable Cutter, Facial Hair Remover, Nebulizer, Knee Sleeve, Duster Kit
 

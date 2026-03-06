@@ -482,9 +482,14 @@ function preCheck(message, currentState, collected) {
     /\b(kb\s*tk\s*(ayga|aayga|ajayga|ajaye?ga|milega|pohchega)?)\b/i.test(l) ||
     /\b(parcel|order)\s*(kab|kb)\s*(aaye?ga|ajaye?ga|milega|pohche?ga)?\b/i.test(l);
   if (isDeliveryTimeQ) {
-    // In PRODUCT_INQUIRY/HAGGLING — if message also has yes/order intent ("G karna ha kB tak ajayga"),
-    // prioritize order intent. Delivery time info will come later or as side answer.
+    // Check if message ALSO has order intent — "order karna hai ... kab tak ayega"
+    const hasOrderWords = /\b(order|mangwa|chahiye|chahea|krna|karna|krdo|kardo|kar\s*do|book)\b/i.test(l);
     const hasYesOrOrder = /\b(ha+n|ji|yes|g|ok|theek|thik|kardo|kar\s*do|kro|karo|krna|karna|krdo)\b/i.test(l);
+    // If message has order intent words + delivery question → prioritize order (any state)
+    if (hasOrderWords && /\b(order|mangwa|chahiye|chahea)\b/i.test(l)) {
+      const dtCity = extractCity(msg);
+      return { intent: 'order_intent', extracted: { side_question: 'delivery_time', ...(dtCity ? { city: dtCity } : {}) } };
+    }
     if (['PRODUCT_INQUIRY', 'HAGGLING'].includes(currentState) && hasYesOrOrder) {
       return { intent: 'order_intent', extracted: { side_question: 'delivery_time' } };
     }
@@ -701,9 +706,10 @@ function preCheck(message, currentState, collected) {
   // 8b. YES in GREETING → show product list (greeting asks "products dekhna hai?")
   // BUT if a specific product is mentioned, skip to product detection instead
   if (currentState === 'GREETING') {
-    // Pure acknowledgment ("ok", "acha", "theek", "hmm") in GREETING = silent, no reply needed
-    const isJustAck = /^(ik|ok+|okay|acha+|accha+|theek|thik|thk|tik|hmm+|hm+|g|k)\s*[.!]?\s*$/i.test(l);
-    if (isJustAck) return { intent: 'greeting_ack' };
+    // Pure acknowledgment ("acha", "theek", "hmm") in GREETING = "yes, show products"
+    // "ok/okay/g/ji" → treat as YES (show products), not silent ack
+    const isSilentAck = /^(acha+|accha+|hmm+|hm+)\s*[.!]?\s*$/i.test(l);
+    if (isSilentAck) return { intent: 'show_products' };
 
     const greetingProduct = detectProduct(msg);
     if (!greetingProduct) {
