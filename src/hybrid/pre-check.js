@@ -54,11 +54,11 @@ function isComplaint(l) {
 
 // ============= YES / NO DETECTION =============
 function isYes(l) {
-  return /^(ha+n?|hm+|ji+|jee|g|yes+|yess+|yup|ik|o?k+a*y+|o?ki+|ok\s*ok|o?ok(ay|k|y)?|done|th[ie]*k|tik|sai|sahi|sa[ih]i?|bilkul|c[oa]n?f[iou]r?m(ed)?|comf[io]rm(ed)?|conf?rim(ed)?|zaroor|hn|kr\s*do|kardo|krdo|kar\s*do|bhejwa?\s*d[oae]|bhijwa?\s*d[oae]|mangwa?\s*d[oae]|laga?\s*d[oae])\s*[.!]?\s*$/i.test(l);
+  return /^(ha+n?|hm+|ji+|jee|g|yes+|yess+|yup|ik|o?k+a*y+|o?ki+|ok\s*ok|o?ok(ay|k|y)?|done|th[ie]*k|tik|sai|sahi|sa[ih]i?|bilkul|c[oa]n?f[iou]r?m(ed)?|comf[io]rm(ed)?|conf?rim(ed)?|zaroor|hn+|kr\s*do|kardo|krdo|kar\s*do|bhejwa?\s*d[oae]|bhijwa?\s*d[oae]|mangwa?\s*d[oae]|laga?\s*d[oae])\s*[.!]?\s*$/i.test(l);
 }
 
 function isNo(l) {
-  return /^(nahi+|nhi|no|cancel|nope|na+h?|mat|band|nai|rehne\s*do|chor[od]|ni)\s*[.!]?\s*$/i.test(l);
+  return /^(nahi+|nhi+|no+|cancel|nope|na+h?|mat|band|nai|rehne\s*do|chor[od]|ni+)\s*[.!]?\s*$/i.test(l);
 }
 
 // ============= MAIN PRE-CHECK =============
@@ -121,9 +121,18 @@ function preCheck(message, currentState, collected) {
   // "haan call receive karlunga ... kharab to nahi hai" start with YES but contain complaint words later
   // Must check BEFORE complaint detection to not lose the delivery phone confirmation
   if (currentState === 'COLLECT_DELIVERY_PHONE') {
-    const startsWithYes = /^(ha+n|ji+|jee|g|yes|yup|ok|haan|hn)\b/i.test(l.trim());
-    const hasYesWord = /\b(ha+n|ji|yes|yup|ik|ok[zgky]?|haan|hn|g|k|shi|sahi|sa[ih]i?|theek|thik|thk|tik|bilkul|done)\b/i.test(l);
-    const hasNoWord = /\b(nahi|nhi|no|nope|na+h|mat|cancel)\b/i.test(l);
+    // Check for rural address FIRST — "chak no 32 mangla" has "no" which false-matches hasNoWord
+    const ruralInPhone = detectRuralAddress(msg);
+    if (ruralInPhone && ruralInPhone.isRural) {
+      const cityInMsg = extractCity(msg);
+      return { intent: 'rural_in_phone_state', extracted: { rural_part: ruralInPhone.ruralPart, rural_type: ruralInPhone.type, city: cityInMsg } };
+    }
+
+    const startsWithYes = /^(ha+n|ji+|jee|g|yes|yup|ok|haan|hn+)\b/i.test(l.trim());
+    const hasYesWord = /\b(ha+n|ji|yes|yup|ik|ok[zgky]?|haan|hn+|g|k|shi|sahi|sa[ih]i?|theek|thik|thk|tik|bilkul|done)\b/i.test(l);
+    // Exclude "no" when it's part of "no." / "no " + digit (number abbreviation like "chak no 32")
+    const noWordCleaned = l.replace(/\bno\.?\s*\d/gi, '___');
+    const hasNoWord = /\b(nahi|nhi|no|nope|na+h|mat|cancel)\b/i.test(noWordCleaned);
     // "krlungi/karlunga/karlungi/krlnga" = "I'll do it" = YES (receive kar lungi/lunga)
     const hasWillDo = /\b(kr\s*lun?g[ia]|kar\s*lun?g[ia]|receive\s*kr|receive\s*kar)\b/i.test(l);
     if (/\b(isi|same|yehi|yahi|wohi)\b/i.test(l) || isYes(l) || /^k+$/i.test(l.trim()) || (hasYesWord && !hasNoWord) || (startsWithYes && hasNoWord) || hasWillDo) {

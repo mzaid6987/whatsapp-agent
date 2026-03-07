@@ -374,6 +374,11 @@ function detectRuralAddress(msg) {
   const chakMatch = l.match(/\b(chak\s*(?:no\.?\s*|number\s*)?\d+[\s/-]?[a-z]{0,3})\b/i);
   if (chakMatch) return { isRural: true, type: 'chak', ruralPart: chakMatch[1].trim() };
 
+  // Bare "chak" with delivery/location context (no number) — "chak mein dena hai", "chak me bhejo"
+  // This catches cases where customer previously mentioned chak number and now just says "chak mein dena"
+  const chakBareMatch = l.match(/\bchak\s*(mein|me|mai|par|pe|pr|p|ko|tk|tak)\s*(dena|de\s*do|bhej|deliver|rakhna|rakh)/i);
+  if (chakBareMatch) return { isRural: true, type: 'chak', ruralPart: 'Chak' };
+
   // Rural keyword patterns — both "keyword + name" AND "name + keyword"
   // e.g. "gaon miani" AND "miani gaon", "goth ibrahim" AND "ibrahim goth"
   const RURAL_KEYWORDS = ['village', 'gaon', 'gao', 'goth', 'killi', 'dhoke', 'dhok', 'mauza', 'mouza', 'dehat'];

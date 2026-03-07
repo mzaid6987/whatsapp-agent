@@ -624,7 +624,7 @@ const VALID_TRANSITIONS = {
   'PRODUCT_SELECTION': ['PRODUCT_INQUIRY', 'PRODUCT_SELECTION', 'COLLECT_NAME'],
   'COLLECT_NAME': ['COLLECT_NAME', 'COLLECT_PHONE'],
   'COLLECT_PHONE': ['COLLECT_PHONE', 'COLLECT_DELIVERY_PHONE', 'COLLECT_NAME'],
-  'COLLECT_DELIVERY_PHONE': ['COLLECT_DELIVERY_PHONE', 'COLLECT_CITY'],
+  'COLLECT_DELIVERY_PHONE': ['COLLECT_DELIVERY_PHONE', 'COLLECT_CITY', 'COLLECT_ADDRESS'],
   'COLLECT_CITY': ['COLLECT_CITY', 'COLLECT_ADDRESS', 'CONFIRM_RURAL_CITY'],
   'CONFIRM_RURAL_CITY': ['CONFIRM_RURAL_CITY', 'COLLECT_CITY', 'COLLECT_ADDRESS'],
   'COLLECT_ADDRESS': ['COLLECT_ADDRESS', 'COLLECT_CITY'], // AI stays here, code decides when complete; city change allowed
@@ -780,7 +780,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     const l = message.toLowerCase().trim();
     // Flexible yes: "haan", "haan sahi hai", "ji bilkul", "confirm", "yes", "jee", "je", "yess", "g"
     const flexYes = /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|done|theek|thik|thk|tik|hn|hm+|g+|acha|accha|achha|bhej\s*d[oae]|bhejd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|kr\s*d[oae]|kard[oae]|krd[oae])\b/i.test(l) && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
-    const flexNo = /\b(nahi|nhi|no|galat|nope|na+h|mat|cancel)\b/i.test(l);
+    const flexNo = /\b(nahi+|nhi+|no+|galat|nope|na+h|mat|cancel)\b/i.test(l);
 
     if (flexYes) {
       state.address_confirming = false;
@@ -984,6 +984,41 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         }
         // Zilla already collected → fall through to completeness check
       }
+    }
+  }
+
+  // ============================================
+  // PATH 1.59: COLLECT_ADDRESS — Late rural detection
+  // When customer says "gaon hai" / "village hai" / "house number nahi hote" mid-address
+  // Switch to rural mode even if not detected earlier
+  // ============================================
+  if (state.current === 'COLLECT_ADDRESS' && !state._is_rural && !state.address_confirming) {
+    const ll = message.toLowerCase().trim();
+    const isGaonDeclaration = /\b(gaon|gao|village|dehat)\s*(hai|he|h|mein|me|mai)\b/i.test(ll) ||
+      /\bye\s*(gaon|gao|village|dehat)\s*(hai|he|h)\b/i.test(ll) ||
+      /\b(house\s*no|house\s*number|ghar\s*ka\s*number|flat)\s*(nahi|nhi|ni|nai)\s*(hota|hote|hoti|hai|he|milta|milte)\b/i.test(ll) ||
+      /\b(number|no)\s*(nahi|nhi|ni)\s*(hot[aei]|hai|he|hain|milta|milte)\b/i.test(ll) ||
+      /\b(yaha|yahan|idhar)\s*(ye|yeh)?\s*(nahi|nhi|ni)\s*(hot[aei]|hain|milta)\b/i.test(ll);
+    if (isGaonDeclaration) {
+      state._is_rural = true;
+      // Clear urban-style fields, keep area
+      state.collected.address_parts.street = null;
+      state.collected.address_parts.house = null;
+      // Ask for delivery point (TCS/post office/mashoor jagah)
+      const ruralVars = buildVars(state, storeName);
+      const nextAsk = fillTemplate('ASK_RURAL_DELIVERY_POINT', ruralVars);
+      state.messages.push({ role: 'user', content: message });
+      state.messages.push({ role: 'assistant', content: nextAsk });
+      if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+      const reply = qualityGate(nextAsk);
+      saveMessages(dbConv, message, reply, 'late_rural_detect', 'template', state, {});
+      saveState(dbConv, state);
+      return {
+        reply, state: 'COLLECT_ADDRESS', collected: { ...state.collected },
+        needs_human: false, source: 'template', intent: 'late_rural_detect',
+        tokens_in: 0, tokens_out: 0, response_ms: Date.now() - startTime,
+        db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+      };
     }
   }
 
@@ -1669,9 +1704,33 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     }
 
     // Address confirmation yes/no is handled in PATH 1.5 (before AI call)
-    // If we reach here with address_confirming, it means user gave a correction
+    // If we reach here with address_confirming, it means user gave a correction or unclear no
     if (state.current === 'COLLECT_ADDRESS' && state.address_confirming) {
       state.address_confirming = false;
+      // Safety net: if AI returned "no" or "unknown" intent, user probably rejected the address
+      // Reset and re-ask instead of showing same address again
+      if (aiIntent === 'no' || aiIntent === 'unknown') {
+        state.collected.address_parts = { area: null, street: null, house: null, landmark: null };
+        state.address_step = 'area';
+        const reaskVars = buildVars(state, storeName);
+        reaskVars.area_suggestions = getAreaSuggestions(state.collected.city) || '';
+        const reaskReply = fillTemplate('ASK_ADDRESS_AREA', reaskVars);
+        state.messages.push({ role: 'user', content: message });
+        state.messages.push({ role: 'assistant', content: reaskReply });
+        if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+        const reply = qualityGate(reaskReply);
+        saveMessages(dbConv, message, reply, 'address_reject_ai', 'ai→template', state, {
+          tokens_in: aiResult.tokens_in, tokens_out: aiResult.tokens_out,
+        });
+        saveState(dbConv, state);
+        return {
+          reply, state: 'COLLECT_ADDRESS', collected: { ...state.collected },
+          needs_human: false, source: 'ai→template', intent: 'address_reject',
+          tokens_in: aiResult.tokens_in || 0, tokens_out: aiResult.tokens_out || 0,
+          response_ms: Date.now() - startTime,
+          db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+        };
+      }
     }
 
     // --- DATA-DRIVEN STATE ADVANCE ---
@@ -2356,7 +2415,10 @@ function handlePreCheck(pre, message, state, storeName, phone) {
 
     case 'rural_no_city': {
       // Rural address without city — store rural part and ask for city
-      state._rural_part = pre.extracted.rural_part;
+      // Keep existing _rural_part if it's more specific (e.g. "chak no 32" vs bare "chak")
+      if (!state._rural_part || pre.extracted.rural_part.length > state._rural_part.length) {
+        state._rural_part = pre.extracted.rural_part;
+      }
       state._rural_type = pre.extracted.rural_type;
       const ruralVars = { ...vars, rural_part: pre.extracted.rural_part };
       return { reply: fillTemplate('ASK_RURAL_CITY', ruralVars), state: 'COLLECT_CITY' };
@@ -2476,6 +2538,25 @@ function handlePreCheck(pre, message, state, storeName, phone) {
         nextField.reply = sidePrefix + nextField.reply;
       }
       return nextField;
+    }
+
+    case 'rural_in_phone_state': {
+      // Customer gave rural address (e.g. "chak no 32 mangla") in COLLECT_DELIVERY_PHONE
+      // Assume same phone, store rural info, move to city or rural flow
+      state.collected.delivery_phone = 'same';
+      state._rural_part = pre.extracted.rural_part;
+      state._rural_type = pre.extracted.rural_type;
+      if (pre.extracted.city) {
+        // Rural + city both mentioned — confirm and start rural address flow
+        state.collected.city = pre.extracted.city;
+        state._is_rural = true;
+        state.collected.address_parts.area = pre.extracted.rural_part;
+        const ruralVars = { ...vars, city: pre.extracted.city, rural_part: pre.extracted.rural_part };
+        return { reply: fillTemplate('ASK_RURAL_DELIVERY_POINT', ruralVars), state: 'COLLECT_ADDRESS' };
+      }
+      // Rural without city — ask for city/tehsil
+      const ruralVars = { ...vars, rural_part: pre.extracted.rural_part };
+      return { reply: fillTemplate('ASK_RURAL_CITY', ruralVars), state: 'COLLECT_CITY' };
     }
 
     case 'name_given': {

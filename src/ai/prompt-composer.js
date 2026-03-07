@@ -221,7 +221,8 @@ YEH RURAL AREA HAI LEKIN CUSTOMER GHAR PE DELIVERY CHAHTA HAI:
 - Block + Street + Gali = EK HI FIELD (street). "Block C, Street 4" = complete. Alag alag mat pooch.
 - Step order: area (already hai) → block/street/gali → house number → landmark/mashoor jagah
 - Agar house number nahi hai → "nahi_pata" set kar aur aage badh.
-- Landmark/mashoor jagah: koi mashoor jagah — masjid, school, dukaan ka NAAM chahiye.
+- Landmark/mashoor jagah: koi mashoor jagah ka naam chahiye — masjid, school, bank, petrol pump ya dukaan.
+- KABHI "beshumar" word mat use. HAMESHA "mashoor" likho.
 
 DETECT INTENT: hamesha "address_info" return kar.
 extracted mein address_parts object daal:
@@ -247,10 +248,12 @@ Collected so far:
 YEH RURAL/GAON ADDRESS HAI — IMPORTANT RULES:
 - Street/gali aur house number BILKUL MAT POOCH — rural areas mein nahi hota.
 - Sirf delivery point chahiye: TCS office, post office, ya koi mashoor jagah jahan parcel bhijwa sakein.
-- Customer jo bhi delivery point bataye (TCS office, post office, courier office) → landmark mein daal do.
+- Customer jo bhi delivery point bataye (TCS office, post office, courier office, dak khana) → landmark mein daal do.
 - IMPORTANT: Agar customer full address de bhi de ya bole "ghar pe deliver karo" — tab bhi TCS/post office poochna LAZMI hai.
   Bol: "courier rural area mein ghar tak deliver nahi kar pata — TCS ya post office batayein jahan parcel bhijwa sakein?"
 - Agar customer TCS/post office ka naam ya location bataye → accept as landmark.
+- Agar customer bole house number nahi hai / gaon hai → samjho rural hai, street/house mat pooch. Sirf mashoor jagah ka naam pooch lo (masjid, school, dukaan).
+- KABHI "beshumar" word mat use. HAMESHA "mashoor" likho.
 
 DETECT INTENT: hamesha "address_info" return kar.
 extracted mein address_parts object daal:
@@ -296,10 +299,11 @@ HOUSE NAHI HAI:
 - "[X] wali gali me ghar he" → street = "[X] wali Gali", house = "nahi_pata".
 
 LANDMARK/MASHOOR JAGAH:
-- Jab landmark pucho → HAMESHA examples do: "Qareeb koi masjid, school, bank, petrol pump ya dukaan ka naam bata dein?"
+- Jab landmark pucho → HAMESHA examples do: "Qareeb koi mashoor jagah ka naam bata dein — masjid, school, bank, petrol pump ya dukaan?"
 - Generic (naam nahi bataya) → NAAM pucho: "Konsi masjid/school/bank?"
 - Named (naam diya) → ACCEPT. Ek landmark/mashoor jagah kaafi hai.
 - Company/factory/firm = valid landmark/mashoor jagah.
+- KABHI "beshumar" word mat use. HAMESHA "mashoor" likho.
 
 ROAD MENTION:
 - Agar customer "road" ya "road pe" bole → "Konsi road?" pucho. Sirf "road" kaafi nahi — road ka NAAM chahiye.
