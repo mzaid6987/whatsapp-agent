@@ -336,15 +336,11 @@ function handleTemplateState(message, state, storeName, preIntent) {
           }
           return { reply: `${up.short} already discounted price Rs.${finalPrice.toLocaleString()} pe mil raha hai — original Rs.${up.price.toLocaleString()} tha 🏷️ Add karna hai order mein? 😊`, state: 'UPSELL_SHOW' };
         }
-        // Give 5% discount on main product if not already given
-        if (!state.discount_percent) state.discount_percent = 5;
-        const product = state.product;
-        const discPrice = Math.round(product.price * (1 - state.discount_percent / 100));
+        // No specific upsell product selected yet — ask customer to pick first
         let uList = state.upsell_candidates.map((p, i) =>
           `${i + 1}. ${p.short} — Rs.${Math.max((p.upsell_price || p.price) - 500, 499).toLocaleString()}`
         ).join('\n');
-        const discVars = { ...vars, discount_percent: state.discount_percent, discounted_price: discPrice.toLocaleString(), discount_amount: Math.round(product.price * state.discount_percent / 100), upsell_list: uList };
-        return { reply: fillTemplate('UPSELL_DISCOUNT', discVars), state: 'UPSELL_SHOW' };
+        return { reply: `Pehle batayein konsa product pasand aaya? Number ya naam bata dein 😊\n\n${uList}`, state: 'UPSELL_SHOW' };
       }
       // Number pick
       const nm = l.match(/^(\d)$/);

@@ -617,6 +617,18 @@ function preCheck(message, currentState, collected) {
         const colonName = msg.match(/\b(?:na+me?|naam)\s*[:\.\-="']\s*"?\s*([A-Za-z\s]{2,30})/i);
         if (colonName) extracted.name = colonName[1].trim().replace(/["']+$/, '').split(/\n/)[0].trim();
       }
+      // Name before phone number — "Sardar Shaukat 03001234567 address here..."
+      // Match 1-3 capitalized words right before phone number
+      if (!extracted.name) {
+        const nameBeforePhone = msg.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+(?:\+?92|0)3\d{9}/);
+        if (nameBeforePhone) {
+          const candidateName = nameBeforePhone[1].trim();
+          const isNotName = /^(Office|Ground|Floor|Plaza|Block|House|Flat|Street|Road|Colony|Phase|Sector|Near|Punjab|Sindh|KPK|Balochistan|Spring|North|South|East|West)$/i.test(candidateName.split(/\s+/).pop());
+          if (!isNotName && candidateName.length >= 3) {
+            extracted.name = candidateName;
+          }
+        }
+      }
       // Name after phone number — "03001234567 Ali Khan, address here..."
       // Match 1-2 capitalized words right after phone, followed by comma (simple reliable pattern)
       if (!extracted.name) {
