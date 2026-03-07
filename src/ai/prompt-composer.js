@@ -296,12 +296,18 @@ HOUSE NAHI HAI:
 - "[X] wali gali me ghar he" → street = "[X] wali Gali", house = "nahi_pata".
 
 LANDMARK/MASHOOR JAGAH:
-- Generic (naam nahi bataya) → NAAM pucho: "Konsi masjid/bakery?"
+- Jab landmark pucho → HAMESHA examples do: "Qareeb koi masjid, school, bank, petrol pump ya dukaan ka naam bata dein?"
+- Generic (naam nahi bataya) → NAAM pucho: "Konsi masjid/school/bank?"
 - Named (naam diya) → ACCEPT. Ek landmark/mashoor jagah kaafi hai.
 - Company/factory/firm = valid landmark/mashoor jagah.
 
+ROAD MENTION:
+- Agar customer "road" ya "road pe" bole → "Konsi road?" pucho. Sirf "road" kaafi nahi — road ka NAAM chahiye.
+- Road ka naam mile → landmark = "[road name] Road". Phir bhi ek aur reference point pucho: "Road pe koi mashoor jagah (masjid, school, bank)?"
+
 CUSTOMER BAS KARNA CHAHTA HAI:
 - "rider call krle", "bas itna he address", "aa kr puch lena" → accept jo hai, missing = "nahi_pata".
+- LEKIN agar "road pe aa kr call kro" bole → PEHLE road ka naam pucho, sirf accept mat karo.
 
 DETECT INTENT: hamesha "address_info" return kar.
 extracted: {"address_parts":{"area":"...","street":"...","house":"...","landmark":"..."}}

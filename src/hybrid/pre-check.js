@@ -629,6 +629,21 @@ function preCheck(message, currentState, collected) {
           }
         }
       }
+      // Multi-line: first line may be name if it's 1-4 alpha words (not phone/address/city)
+      // e.g. "Mujammad zaid\n03705938753\nJamia milia multan"
+      if (!extracted.name) {
+        const lines = msg.split(/\n/).map(ln => ln.trim()).filter(Boolean);
+        if (lines.length >= 2) {
+          const firstLine = lines[0];
+          const isAlphaName = /^[A-Za-z\s]{2,40}$/.test(firstLine) && firstLine.split(/\s+/).length <= 4;
+          const isNotAddress = !/\b(address|office|house|flat|block|street|gali|phase|sector|road|colony|plot|floor|plaza|near|bahria|dha|cantt|gulberg|model)\b/i.test(firstLine);
+          const isNotCity = extractCity(firstLine) === null;
+          const isNotPhone = !/\d{4,}/.test(firstLine);
+          if (isAlphaName && isNotAddress && isNotCity && isNotPhone) {
+            extracted.name = firstLine;
+          }
+        }
+      }
       // Name after phone number — "03001234567 Ali Khan, address here..."
       // Match 1-2 capitalized words right after phone, followed by comma (simple reliable pattern)
       if (!extracted.name) {
@@ -787,6 +802,12 @@ function preCheck(message, currentState, collected) {
       // Product — "trimer chahea", "facial remover" etc. in bulk message
       const bulkProduct = detectProduct(msg);
       if (bulkProduct) extracted.product = bulkProduct;
+
+      // Strip name from address_text if name was detected (prevent name polluting address)
+      if (extracted.name && extracted.address_text) {
+        const nameRegex = new RegExp('\\b' + extracted.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        extracted.address_text = extracted.address_text.replace(nameRegex, '').replace(/^[\s,.\-]+/, '').replace(/[\s,.\-]+$/, '').trim();
+      }
 
       // Gender — feminine verb forms: "btaogi", "deti hon", "krlungi", "karungi", "hon me"
       const isFeminine = /\b(btao\s*gi|batao\s*gi|krlun\s*gi|karun\s*gi|deti\s*h[ou]n|lun\s*gi|dalon\s*gi|bhejun\s*gi|hon\s*m[ei]|hun\s*m[ei]|nahi\s*btao\s*gi)\b/i.test(l) ||

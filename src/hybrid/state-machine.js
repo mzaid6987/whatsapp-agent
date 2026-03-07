@@ -313,7 +313,19 @@ function handleTemplateState(message, state, storeName, preIntent) {
     // ===== UPSELL SHOW =====
     case 'UPSELL_SHOW': {
       if (no) {
+        // If pending upsell and customer says no → skip just the pending, confirm order
+        if (state._pending_upsell) {
+          state._pending_upsell = null;
+        }
         return confirmOrder(state, storeName);
+      }
+      // YES to pending upsell — add it to order
+      if (yes && state._pending_upsell) {
+        const up = state._pending_upsell;
+        state._pending_upsell = null;
+        if (!(state.products || []).length) state.products = [state.product];
+        state.products.push(up);
+        return confirmOrder(state, storeName, `Done! ${up.short} bhi add ho gaya.\n\n`);
       }
       // Discount/offer query OR price reduction — handle both together
       // Matches: discount/discoutn/disocunt/discont, offer, sasti, 75%, price km kro, mehngi, etc.
@@ -342,16 +354,18 @@ function handleTemplateState(message, state, storeName, preIntent) {
         ).join('\n');
         return { reply: `Pehle batayein konsa product pasand aaya? Number ya naam bata dein 😊\n\n${uList}`, state: 'UPSELL_SHOW' };
       }
-      // Number pick
-      const nm = l.match(/^(\d)$/);
+      // Number pick — "8", "8 wala", "8 number", "number 8", "# 8", "no 8"
+      const nm = l.match(/^(\d)\s*(wala|vala|wali|number|no\.?|nmbr)?\s*$/i) ||
+                 l.match(/^(?:number|no\.?|nmbr|#)\s*(\d)\s*(wala|vala)?\s*$/i);
       if (nm) {
-        const idx = parseInt(nm[1]) - 1;
+        const digit = nm[1];
+        const idx = parseInt(digit) - 1;
         if (idx >= 0 && idx < state.upsell_candidates.length) {
           const up = { ...state.upsell_candidates[idx] };
-          up.price = Math.max((up.upsell_price || up.price) - 500, 499); // use upsell discounted price
-          if (!(state.products || []).length) state.products = [state.product];
-          state.products.push(up);
-          return confirmOrder(state, storeName, `Done! ${up.short} bhi add ho gaya.\n\n`);
+          const upsellPrice = Math.max((up.upsell_price || up.price) - 500, 499);
+          // Ask before adding — don't auto-add
+          state._pending_upsell = { ...up, price: upsellPrice };
+          return { reply: `${up.short} — Rs.${upsellPrice.toLocaleString()} 🏷️ Add kar dun order mein? 😊`, state: 'UPSELL_SHOW' };
         }
       }
       // Product detection
@@ -473,8 +487,9 @@ function handleTemplateState(message, state, storeName, preIntent) {
       // Discount/price reduction request after order confirmed — polite response
       const isPriceReq = /\b(disc?oun?t|discoutn|disocunt|discont|off|offer|sast[ai])\b/i.test(l) ||
         /\b(price\s*km|km\s*kr|km\s*kro|km\s*price|mehn?g[aio]|rate\s*km|km\s*rate|pais[ey]\s*km|qeemat\s*km|daam\s*km|thora\s*km)\b/i.test(l) ||
-        /\b(price|rate|pais[ey])\s*(km|kam|kam\s*kr|karo|kro)\b/i.test(l) ||
-        /\b(km|kam)\s*(kro|kr|kardo|kar\s*do)\b/i.test(l);
+        /\b(price|rate|pais[ey])\s*(or|aur)?\s*(km|kam|kam\s*kr|karo|kro)\b/i.test(l) ||
+        /\b(km|kam)\s*(kro|kr|kardo|kar\s*do|krdein|karden|nhi|nahi)\b/i.test(l) ||
+        /\b(or|aur)\s*(km|kam)\b/i.test(l);
       if (isPriceReq) {
         state._thanked = false;
         const honorific = getHonorific(state.collected.name);
