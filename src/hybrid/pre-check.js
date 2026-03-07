@@ -84,6 +84,16 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'spam' };
   }
 
+  // 0b1. BOT IDENTITY — "tumhara naam kya hai", "what is your name", "aapka naam", "tum kaun ho"
+  // Must be EARLY so it works in ALL states (COLLECT_NAME, COLLECT_ADDRESS, ORDER_SUMMARY etc.)
+  const isBotIdentityQ = /\b(tumhara|tumhary|apka|aapka|tera|ap\s*ka|aap\s*ka)\s*(naam|name)\b/i.test(l) ||
+    /\b(what\s*is\s*your\s*name|whats?\s*your\s*name|your\s*name\s*(kya|kia|what))\b/i.test(l) ||
+    /\b(naam\s*(kya|kia|batao|btao|bta)\s*(hai|he|h)?)\b/i.test(l) && /\b(tumhara|tumhary|apka|aapka|tera|your|tum|aap)\b/i.test(l) ||
+    /\b(kaun|kon|who)\s*(ho|hai|he|h|are\s*you)\b/i.test(l) && !/\b(order|delivery|rider)\b/i.test(l);
+  if (isBotIdentityQ) {
+    return { intent: 'bot_identity' };
+  }
+
   // 0b2. IMAGE NO MATCH — Vision says image is not a product or doesn't match
   // e.g. "[Image: Yeh tasveer kisi product ka nahi...]" — prevent false product detection
   const imageMatch = msg.match(/\[Image:\s*([^\]]+)\]/);

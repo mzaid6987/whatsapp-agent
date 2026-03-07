@@ -780,7 +780,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     const l = message.toLowerCase().trim();
     // Flexible yes: "haan", "haan sahi hai", "ji bilkul", "confirm", "yes", "jee", "je", "yess", "g"
     const flexYes = /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|done|theek|thik|thk|tik|hn|hm+|g+|acha|accha|achha|bhej\s*d[oae]|bhejd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|kr\s*d[oae]|kard[oae]|krd[oae])\b/i.test(l) && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
-    const flexNo = /\b(nahi+|nhi+|no+|galat|nope|na+h|mat|cancel)\b/i.test(l);
+    const flexNo = /\b(nahi+|nhi*|nh|no+|galat|nope|na+h|mat|cancel)\b/i.test(l);
 
     if (flexYes) {
       state.address_confirming = false;
@@ -1288,7 +1288,10 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     const hasExplicitName = /\b(name|naam|my\s*name|mera\s*naam)\s+/i.test(message);
     if (extracted.name && (state.current === 'COLLECT_NAME' || hasExplicitName)) {
       const name = extracted.name.trim();
-      if (name.length >= 2 && name.length <= 50) {
+      // Guard: don't store question fragments as name (e.g. "kya hai" from "tumhara naam kya hai")
+      const isQuestionFragment = /^(kya|kia|what|kaun|kon|who|how|kaise|kitna|kitne)\b/i.test(name) ||
+        /\b(hai|he|h|ho|hain)\s*[?]?\s*$/i.test(name);
+      if (name.length >= 2 && name.length <= 50 && !isQuestionFragment) {
         state.collected.name = name;
       }
     }
@@ -1473,7 +1476,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const ap = state.collected.address_parts;
       const newParts = addrParts;
       // Filter out "MISSING" / null / empty / "nahi" — AI may echo prompt placeholders or customer refusals
-      const valid = (v) => v && typeof v === 'string' && !['missing', 'null', 'undefined', 'none', 'n/a', '-', '—'].includes(v.toLowerCase().trim()) && v.trim() !== '';
+      const valid = (v) => v && typeof v === 'string' && !['missing', 'null', 'undefined', 'none', 'n/a', '-', '—', '...', '..'].includes(v.toLowerCase().trim()) && v.trim() !== '' && !/^\.{2,}$/.test(v.trim());
       const isRefusal = (v) => v && /^(nahi?|nhi|no|none|nope)([_\s]*(he|hai|h|pata))?$/i.test(v.trim());
       if (valid(newParts.area) && !isRefusal(newParts.area)) {
         // Don't store a city name as area (AI sometimes extracts city typo as area)
@@ -2094,6 +2097,29 @@ function handlePreCheck(pre, message, state, storeName, phone) {
     case 'greeting_howru': {
       state.current = 'GREETING';
       return { reply: fillTemplate('GREETING_HOWRU', vars), state: 'GREETING' };
+    }
+
+    case 'bot_identity': {
+      // "Tumhara naam kya hai?" / "What is your name?" — answer as Zoya, keep current state
+      const botReply = 'Mera naam Zoya hai 😊';
+      // In collection/address states — answer + re-ask current field
+      const isCollectionState = ['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_ADDRESS', 'COLLECT_DELIVERY_PHONE'].includes(state.current);
+      if (isCollectionState || state.address_confirming) {
+        if (state.address_confirming) {
+          // During address confirmation — answer + re-show confirmation
+          const addrStr = buildAddressString(state.collected.address_parts);
+          const cityLabel = state.collected.city || '';
+          const fullAddr = cityLabel ? addrStr + ', ' + cityLabel : addrStr;
+          return { reply: botReply + ` 📍 Yeh address sahi hai? ${fullAddr} ✅`, state: state.current };
+        }
+        const reask = askNextField(state, storeName);
+        if (reask) return { reply: botReply + ' ' + reask.reply, state: state.current };
+        return { reply: botReply, state: state.current };
+      }
+      if (state.current === 'ORDER_SUMMARY') {
+        return { reply: botReply + ' Order confirm karna hai?', state: state.current };
+      }
+      return { reply: botReply, state: state.current };
     }
 
     case 'greeting_in_collection': {

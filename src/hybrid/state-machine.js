@@ -241,8 +241,10 @@ function handleTemplateState(message, state, storeName, preIntent) {
         }
         return { reply: fillTemplate('WHAT_TO_CHANGE', vars), state: 'ORDER_SUMMARY' };
       }
-      // Change requests
-      if (l.includes('naam') || l.includes('name')) {
+      // Change requests — but NOT "tumhara naam kya hai" / "what is your name" (bot identity)
+      const isBotNameQ = /\b(tumhara|apka|aapka|tera|your)\s*(naam|name)\b/i.test(l) ||
+        /\b(what\s*is\s*your|whats?\s*your)\s*name\b/i.test(l);
+      if ((l.includes('naam') || l.includes('name')) && !isBotNameQ) {
         state.collected.name = null;
         state.current = 'COLLECT_NAME';
         return { reply: fillTemplate('CHANGE_NAME', vars), state: 'COLLECT_NAME' };
