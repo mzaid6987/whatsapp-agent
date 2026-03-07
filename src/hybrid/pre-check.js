@@ -43,7 +43,7 @@ const TRUST_WORDS = /\b(asli|original|cod|cash\s*on|return\s*policy|exchange\s*p
 // Note: "fake" removed from TRUST_WORDS — it's almost always a complaint, not a trust question
 // "achi he na", "theek hogi na ye", "chalegi na", "kaisi hai", "quality kesi he" — quality reassurance questions
 // BUT NOT "kam krta he" / "sahi kam krta he" / "works?" — those are product functionality questions (AI handles)
-const QUALITY_ASK = /(\b(ach+[ia]|theek|thik|thk|chale\s*g[ia])\b.*\b(hai|he|h|na|hogi|hoga|hain)\b|\bkais[ie]\s*h[ae]i?\b|\bkes[ie]\s*h[ae]i?\b|\bquality\s*(kais[ie]|kes[ie]|kaisi|kesi)\s*(h[ae]i?|he)?\b)/i;
+const QUALITY_ASK = /(\b(ach+[ia]|theek|thik|thk|chale\s*g[ia])\b.*\b(hai|he|h|na|hogi|hoga|hain)\b|\bkais[ie]\s*h[ae]i?\b|\bkes[ie]\s*h[ae]i?\b|\bquality\s*(kais[ie]|kes[ie]|kaisi|kesi)\s*(h[ae]i?|he)?\b|\bquality\s*[?؟]\s*$|\bquality\s*(hai|he|h|batao|btao|bta|dikhao)?\s*[?؟]\s*$)/im;
 // "kam krta", "kaam karta", "works" — product functionality question, NOT trust
 // Covers typos: kryta, krte, krta, krti, kregi, karti, karta etc.
 const IS_FUNCTIONALITY_Q = /\b(kam\s*kr[yta]*[aie]?|kaam\s*kr[yta]*[aie]?|kam\s*kar[tae]*[aie]?|kaam\s*kar[tae]*[aie]?|works?|work\s*kart?a?)\b/i;
@@ -133,7 +133,11 @@ function preCheck(message, currentState, collected) {
     return { intent: 'trust_question' };
   }
   // Standalone trust question without complaint — "warranty kitny time ki", "COD hai?", "exchange hota hai?"
+  // BUT: "quality?" alone = quality question (not trust) — route to quality_question
   if (trust && !complaint) {
+    if (QUALITY_ASK.test(l)) {
+      return { intent: 'quality_question' };
+    }
     return { intent: 'trust_question' };
   }
 
@@ -225,6 +229,15 @@ function preCheck(message, currentState, collected) {
 
   // 3. CITY — in city collection state
   if (currentState === 'COLLECT_CITY') {
+    // 3-pre. "yh dono numbers he" / "dono number mere hain" / "both numbers are mine"
+    // Customer is clarifying about phone numbers, NOT giving a city. Acknowledge and re-ask city.
+    const isDualNumberMsg = /\b(dono|donon|both)\s*(number|no|nmbr|phone)s?\b/i.test(l) ||
+      /\b(number|no|nmbr|phone)s?\s*(dono|donon|both)\b/i.test(l) ||
+      /\b(yh|ye|yeh)\s*(dono|donon)\s*(number|no|nmbr)?\b/i.test(l);
+    if (isDualNumberMsg) {
+      return { intent: 'phone_clarification_in_city' };
+    }
+
     // Rural address detection (chak/village/gaon/goth/killi/dhoke/mauza)
     const rural = detectRuralAddress(msg);
     if (rural && rural.isRural) {

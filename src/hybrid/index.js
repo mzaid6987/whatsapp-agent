@@ -2284,6 +2284,11 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       return { reply: fillTemplate('REGION_NOT_CITY', regionVars), state: 'COLLECT_CITY' };
     }
 
+    case 'phone_clarification_in_city': {
+      // Customer talking about phone numbers in COLLECT_CITY state — acknowledge and re-ask city
+      return { reply: `Noted ${vars.honorific}! 👍 Ab city bata dein — delivery kahan karni hai? 🚚`, state: 'COLLECT_CITY' };
+    }
+
     case 'multiple_cities': {
       const cities = pre.extracted.cities;
       const cityList = cities.join(' ya ');
