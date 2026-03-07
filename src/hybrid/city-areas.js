@@ -2763,7 +2763,7 @@ function matchArea(input, city) {
   // Keyword match: key word of multi-word area found as standalone word in input
   // E.g., "johar" in input → matches "johar town", "gulberg" → "gulberg"
   // Skip generic words (town, colony, etc.) and city name to avoid false matches
-  const GENERIC_AREA_WORDS = new Set(['town','city','nagar','abad','pura','ganj','gunj','road','scheme','phase','sector','block','colony','society','housing','extension','ext','north','south','east','west','new','old']);
+  const GENERIC_AREA_WORDS = new Set(['town','city','nagar','abad','pura','ganj','gunj','road','scheme','phase','sector','block','colony','society','housing','extension','ext','north','south','east','west','new','old','chak','village','gaon','goth','killi','dhoke','mauza']);
   const cityWord = city.toLowerCase().replace(/[-\s]/g, '');
   const inputWords = l.split(/\s+/);
   for (const area of data.areas) {

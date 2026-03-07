@@ -411,7 +411,7 @@ function preCheck(message, currentState, collected, state) {
   // 4a0. DISCOUNT/HAGGLE in COLLECT_NAME — "discount to do", "offer do", "sasta kro"
   // Must catch BEFORE name detection so "discount to do" is not saved as name
   if (currentState === 'COLLECT_NAME') {
-    const isDiscountInName = /\b(disc?o?u?n?t|discoutn|disocunt|discont|discoynt|off|offer|sast[aie]|kam\s*kr|km\s*kr|mehn?g[aie])\b/i.test(l);
+    const isDiscountInName = /\b(disc?o?u?n?t|discoutn|disocunt|discont|discoynt|off|offer|sast[aie]|kam\s*kr|km\s*kr|mehn?g[aie]|price\s*kam|price\s*km|rate\s*kam|rate\s*km)\b/i.test(l);
     if (isDiscountInName) return { intent: 'haggle_in_collection' };
   }
 
@@ -581,11 +581,12 @@ function preCheck(message, currentState, collected, state) {
 
   // 7b2. DELIVERY TIME question — "kb tk ayga?", "kitne din lagenge", "kab milega"
   const isDeliveryTimeQ = /\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|ajayga|ajaye?ga|aye?\s*ga|pohch|pohnch))\b/i.test(l) ||
-    /\b(kitne?\s*(din|days?|waqt|time))\b/i.test(l) ||
+    /\b(kitn[ew]?\s*(din|dino[nm]?|days?|waqt|time))\b/i.test(l) ||
     /\b(kab\s*(aaye|milega|ayega|ayga|ajayga|ajaye?ga|pohchega|deliver))\b/i.test(l) ||
     /\b(delivery\s*(time|din|days?|kitne?|kab|kb))\b/i.test(l) ||
     /\b(kb\s*tk\s*(ayga|aayga|ajayga|ajaye?ga|milega|pohchega)?)\b/i.test(l) ||
-    /\b(parcel|order)\s*(kab|kb)\s*(aaye?ga|ajaye?ga|milega|pohche?ga)?\b/i.test(l);
+    /\b(parcel|order)\s*(kab|kb)\s*(aaye?ga|ajaye?ga|milega|pohche?ga)?\b/i.test(l) ||
+    /\b(aa\s*jaye?\s*ga|mil\s*jaye?\s*ga|pohch\s*jaye?\s*ga)\b/i.test(l);
   if (isDeliveryTimeQ) {
     // Check if message ALSO has order intent — "order karna hai ... kab tak ayega"
     const hasOrderWords = /\b(order|mangwa|chahiye|chahea|krna|karna|krdo|kardo|kar\s*do|book)\b/i.test(l);

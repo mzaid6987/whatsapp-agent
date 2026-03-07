@@ -1033,7 +1033,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     const lastMsg = state.messages.length > 0 ? state.messages[state.messages.length - 1]?.content || '' : '';
     const askedZilla = /zill[ae]|district/i.test(lastMsg);
     if (askedZilla && message.trim().length >= 2) {
-      const zillaText = message.trim().replace(/\s*(zilla|district|ka|ki|ke|mein|mai|me|se)\s*$/i, '').trim();
+      const zillaText = message.trim().replace(/^\s*(zilla|zila|district)\s+/i, '').replace(/\s*(zilla|zila|district|ka|ki|ke|mein|mai|me|se)\s*$/i, '').trim();
       if (zillaText.length >= 2) {
         state.collected.address_parts.zilla = zillaText.charAt(0).toUpperCase() + zillaText.slice(1).toLowerCase();
       }
