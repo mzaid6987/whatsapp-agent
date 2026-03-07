@@ -127,6 +127,7 @@ const MALE_NAMES = new Set([
   'sufyan','suleman','sultan','sumayr','syed','taaha','taimur','talat','tauqeer','tauseef',
   'toqeer','ubaid','umer','wali','yasin','yasir','younus','zubair','zulfiqar',
   'zolfeqar','zulfeqar','zulifqar','alam','aalam','ghulam','anwaar','ikhlaq','inam',
+  'shaukat','shafqat','sardar','rafaqat','iftikhar','liaqat','liaquat',
 
   // === Pakistani Muslim Male — Extended ===
   'aaban','aahil','aariz','aatif','abaan','abbad','abdaal','abdi','afaq','ahad',

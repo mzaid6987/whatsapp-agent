@@ -47,11 +47,10 @@ const T = {
     "Ji {honorific}, {product_name} Rs.{price} ki hai 🏷️ {f1}, {f2}. Order karna hai?",
   ],
   PRODUCT_WITH_ORDER: [
-    "Bilkul {honorific}! ✅ {product_short} — Rs.{price}. {f1}. Apna naam bata dein?",
-    "Zaroor {honorific}! ✅ {product_short} Rs.{price}. {f1} aur {f2}. Apna naam bata dein?",
+    "Bilkul {honorific}! ✅\n\n📦 {product_name}\n💰 Rs.{price}\n\n{f1}. {f2}.\n\nApna naam bata dein?",
   ],
   PRODUCT_WITH_ORDER_KNOWN_NAME: [
-    "Bilkul {name} {honorific}! ✅ {product_short} — Rs.{price}. {f1}. Phone number bata dein?",
+    "Bilkul {name} {honorific}! ✅\n\n📦 {product_name}\n💰 Rs.{price}\n\n{f1}. {f2}.\n\nPhone number bata dein?",
   ],
 
   // ==========================================

@@ -814,7 +814,8 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       state.collected.address_parts = { area: null, street: null, house: null, landmark: null };
       state.address_step = 'area';
       const reaskReply = fillTemplate('ASK_ADDRESS_AREA', {
-        city: state.collected.city || '', honorific: getHonorific(state.collected.name, state.gender), name: state.collected.name || ''
+        city: state.collected.city || '', honorific: getHonorific(state.collected.name, state.gender), name: state.collected.name || '',
+        area_suggestions: getAreaSuggestions(state.collected.city) || ''
       });
 
       state.messages.push({ role: 'user', content: message });
@@ -1368,6 +1369,36 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     if (!state.collected.address_parts.area) {
       const rawArea = extractArea(message, state.collected.city);
       if (rawArea) state.collected.address_parts.area = rawArea;
+    }
+    // Full address extraction: when customer sends name + detailed address in one message
+    // e.g. "Sardar Shaukat Sardar Builders, Office No. 1, Ground Floor, Plaza No. 99D, Spring North, Bahria Phase 7, Rawalpindi, Punjab"
+    if (state.collected.name && state.collected.city && !state.collected.address && message.length > 40) {
+      // Remove name from the beginning (could be anywhere in msg)
+      let addrText = message;
+      const nameWords = state.collected.name.split(/\s+/);
+      for (const w of nameWords) {
+        addrText = addrText.replace(new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i'), '');
+      }
+      // Remove city + province
+      addrText = addrText.replace(new RegExp('\\b' + state.collected.city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), '');
+      addrText = addrText.replace(/\b(Punjab|Sindh|KPK|Khyber\s*Pakhtunkhwa|Balochistan|Islamabad)\b\.?/gi, '');
+      // Remove phone numbers
+      addrText = addrText.replace(/(?:\+?92|0)3\d{9}/g, '');
+      // Clean up extra commas, dots, spaces
+      addrText = addrText.replace(/^[\s,.\-]+/, '').replace(/[\s,.\-]+$/, '').replace(/\s*,\s*,+\s*/g, ', ').trim();
+      // Check if remaining text has house/office number + area/phase (= complete address)
+      const hasHouseNum = /\b(house|makan|ghar|flat|apartment|apt|office|plot|floor|ground\s*floor)\s*(no\.?|number|#)?\s*\d/i.test(addrText) ||
+        /\b(no\.?|#)\s*\d+\s*[a-z]?\b/i.test(addrText) ||
+        /\b\d+\s*-?\s*[a-z]\b/i.test(addrText.toLowerCase());
+      const hasArea = /\b(phase|block|sector|colony|town|society|scheme|bahria|dha|gulberg|model|cantt|saddar|johar|north|south|east|west|spring)\b/i.test(addrText);
+      if (hasHouseNum && hasArea && addrText.length > 15) {
+        state.collected.address = addrText + ', ' + state.collected.city;
+        // Also fill address_parts so COLLECT_ADDRESS is skipped
+        state.collected.address_parts.area = addrText;
+        state.collected.address_parts.street = 'nahi_pata';
+        state.collected.address_parts.house = 'nahi_pata';
+        state.collected.address_parts.landmark = 'nahi_pata';
+      }
     }
     // Extract block/street/gali from any message (standalone — even without smart fill)
     if (!state.collected.address_parts.street) {
