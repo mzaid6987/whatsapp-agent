@@ -114,9 +114,12 @@ ${ctx.productListShort}`,
 
   PRODUCT_SELECTION: (ctx) => `TERA KAAM: Customer ko product select karne mein help kar.
 
+STRICT RULE: SIRF product select karwao. KABHI address, phone, ya naam is state mein mat maango. Woh baad mein system poochega. Tu SIRF product decide karwa.
+IMPORTANT: Jab customer "hn", "ji", "yes" bole kisi product ke baare mein → extracted.product_name mein woh product ZAROOR daal. Kabhi empty extracted mat chhorna agar product clear ho.
+
 DETECT INTENT:
 - "product_inquiry" — kisi product ke baare mein pucha (extracted.product_name daal)
-- "product_with_order" — product + order dono (extracted.product_name + extracted.wants_order=true)
+- "product_with_order" — product + order dono (extracted.product_name ZAROOR daal + extracted.wants_order=true)
 - "unknown" — samajh nahi aaya
 
 RESPONSE: Product list dikha ke pucho konsa chahiye. Agar customer kisi feature ke baare mein puche (steel, electric, etc.) → neeche features dekh ke sahi product batao.

@@ -1267,6 +1267,9 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     const aiIntent = aiResult.intent || aiResult.extracted?.intent || 'unknown';
     const extracted = aiResult.extracted || {};
 
+    // Reset consecutive error counter on successful AI call
+    state._error_count = 0;
+
     // --- Process AI extracted data ---
 
     // Product detection from AI
@@ -1282,6 +1285,25 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     }
     if (extracted.wants_order && state.product) {
       // Product + order intent — move to collection
+    }
+
+    // INFERENCE: If AI says product_with_order but didn't extract product,
+    // scan previous bot messages for product suggestions (e.g. "Kya aap T9 Trimmer ka order dena chahte hain?")
+    if (aiIntent === 'product_with_order' && !state.product && !extracted.product_name && !extracted.product) {
+      for (let i = state.messages.length - 1; i >= 0; i--) {
+        if (state.messages[i].role === 'assistant') {
+          const botMsg = state.messages[i].content;
+          const inferredProduct = PRODUCTS.find(p =>
+            botMsg.includes(p.short) || botMsg.includes(p.name)
+          );
+          if (inferredProduct) {
+            state.product = inferredProduct;
+            state.collected.product = inferredProduct.short;
+            console.log(`[AI] Inferred product "${inferredProduct.short}" from previous bot message`);
+            break;
+          }
+        }
+      }
     }
 
     // Name extraction — in COLLECT_NAME, or explicit "name X" in any state
@@ -2008,6 +2030,42 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     console.error('[AI] Error:', err.message);
     console.error('[AI] Stack:', err.stack);
     console.error('[AI] State:', state.current, '| Msg:', message.substring(0, 80), '| Product:', typeof state.product, state.product?.short || state.product);
+
+    // Track consecutive errors — after 2, try recovery AI call instead of generic template
+    state._error_count = (state._error_count || 0) + 1;
+    console.log(`[AI] Consecutive error count: ${state._error_count}`);
+
+    // After 2 consecutive errors, try a simple recovery AI call with minimal prompt
+    if (state._error_count >= 2 && apiKey) {
+      try {
+        console.log('[AI] Attempting recovery AI call after consecutive errors...');
+        const recoveryPrompt = `Tu WhatsApp sales assistant hai. Roman Urdu mein jawab de. Customer se baat chal rahi hai. Uski baat samajh ke helpful jawab de. Max 2 lines. Agar address ya info de raha hai to acknowledge kar aur aage badh. JSON format: {"reply":"..."}`;
+        const recoveryMessages = state.messages.slice(-6);
+        recoveryMessages.push({ role: 'user', content: message });
+        const recoveryResult = await chat(apiKey, recoveryPrompt, recoveryMessages);
+        if (recoveryResult.reply && recoveryResult.reply.trim()) {
+          state._error_count = 0; // Reset on success
+          state.messages.push({ role: 'user', content: message });
+          state.messages.push({ role: 'assistant', content: recoveryResult.reply });
+          if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+          const reply = qualityGate(recoveryResult.reply);
+          saveMessages(dbConv, message, reply, 'recovery', 'ai', state, {
+            tokens_in: recoveryResult.tokens_in, tokens_out: recoveryResult.tokens_out,
+            debug: { path: 'PATH3_ERROR_RECOVERY', error_count: state._error_count, original_error: err.message },
+          });
+          saveState(dbConv, state);
+          return {
+            reply, state: state.current, collected: { ...state.collected },
+            needs_human: false, source: 'ai', intent: 'recovery',
+            tokens_in: recoveryResult.tokens_in || 0, tokens_out: recoveryResult.tokens_out || 0,
+            response_ms: Date.now() - startTime,
+          };
+        }
+      } catch (recoveryErr) {
+        console.error('[AI] Recovery call also failed:', recoveryErr.message);
+      }
+    }
+
     // State-aware error fallback — don't give generic "samajh nahi aaya" everywhere
     let errReply;
     if (state.current === 'HAGGLING' && state.product) {
@@ -2021,7 +2079,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     } else {
       errReply = 'Ji, kuch samajh nahi aaya. Dobara bata dein?';
     }
-    saveMessages(dbConv, message, errReply, 'error', 'error', state, { debug: { error: err.message, stack: err.stack?.split('\n').slice(0, 5).join(' | '), state_current: state.current, product_type: typeof state.product } });
+    saveMessages(dbConv, message, errReply, 'error', 'error', state, { debug: { error: err.message, stack: err.stack?.split('\n').slice(0, 5).join(' | '), state_current: state.current, product_type: typeof state.product, error_count: state._error_count } });
     return {
       reply: errReply, state: state.current, collected: { ...state.collected },
       needs_human: false, source: 'error', intent: 'error',
