@@ -666,9 +666,29 @@ app.delete('/api/conversations/:id', requireAuth, (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const db = getDb();
+    // Get customer phone before deleting — needed to clear in-memory state
+    const convo = db.prepare('SELECT customer_id FROM conversations WHERE id = ?').get(id);
+    let customerPhone = null;
+    if (convo?.customer_id) {
+      const cust = db.prepare('SELECT phone FROM customers WHERE id = ?').get(convo.customer_id);
+      customerPhone = cust?.phone;
+    }
+    // Count orders being deleted to adjust customer stats
+    const orderCount = db.prepare('SELECT COUNT(*) as cnt FROM orders WHERE conversation_id = ?').get(id)?.cnt || 0;
+    const orderTotal = db.prepare('SELECT COALESCE(SUM(grand_total),0) as total FROM orders WHERE conversation_id = ?').get(id)?.total || 0;
     db.prepare('DELETE FROM messages WHERE conversation_id = ?').run(id);
     db.prepare('DELETE FROM orders WHERE conversation_id = ?').run(id);
     db.prepare('DELETE FROM conversations WHERE id = ?').run(id);
+    // Decrement customer order stats so smartfill doesn't prefill stale data
+    if (convo?.customer_id && orderCount > 0) {
+      db.prepare('UPDATE customers SET total_orders = MAX(0, total_orders - ?), total_revenue = MAX(0, total_revenue - ?) WHERE id = ?')
+        .run(orderCount, orderTotal, convo.customer_id);
+    }
+    // Clear in-memory conversation state so bot doesn't remember old data
+    if (customerPhone) {
+      const { clearConv } = require('./hybrid/index');
+      clearConv(customerPhone);
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });

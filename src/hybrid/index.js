@@ -534,6 +534,12 @@ function resetConv(phone) {
   return getOrCreateConv(phone);
 }
 
+// Hard clear — no smartfill, no DB restore. Used when admin deletes a chat.
+function clearConv(phone) {
+  const p = normalizePhone(phone);
+  delete conversations[p];
+}
+
 // ============= DB WRITE-THROUGH =============
 function dbSave(fn) {
   try { fn(); } catch (e) { console.error('[DB Write-through]', e.message); }
@@ -2614,4 +2620,4 @@ function getHistory(phone) {
   return state ? state.messages : [];
 }
 
-module.exports = { handleMessage, getHistory, clearHistory, getOrCreateConv, resetConv };
+module.exports = { handleMessage, getHistory, clearHistory, getOrCreateConv, resetConv, clearConv };
