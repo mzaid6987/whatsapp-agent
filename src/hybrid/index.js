@@ -1991,6 +1991,14 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       return { reply: null, state: state.current, skip: true };
     }
 
+    case 'image_not_recognized': {
+      // Image sent but Vision couldn't match it to any product
+      const imgReply = state.product
+        ? `Yeh image samajh nahi aayi 🤔 Aap ${state.product.short} ke baare mein poochna chahte hain ya kuch aur? Text mein bata dein.`
+        : 'Yeh image samajh nahi aayi 🤔 Aap kya chahte hain text mein bata dein, taake hum madad kar sakein!';
+      return { reply: imgReply, state: state.current };
+    }
+
     case 'greeting': {
       state.current = 'GREETING';
       if (state.isReturning && state.collected.name) {

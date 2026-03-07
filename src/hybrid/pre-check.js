@@ -84,6 +84,26 @@ function preCheck(message, currentState, collected) {
     return { intent: 'spam' };
   }
 
+  // 0b2. IMAGE NO MATCH — Vision says image is not a product or doesn't match
+  // e.g. "[Image: Yeh tasveer kisi product ka nahi...]" — prevent false product detection
+  const imageMatch = msg.match(/\[Image:\s*([^\]]+)\]/);
+  if (imageMatch) {
+    const imgDesc = imageMatch[1].toLowerCase();
+    const isNoMatch = /\b(kisi product ka nahi|product.*nahi|match nahi|identify nahi|pehchaan nahi|product se nahi|taluq.*nahi|samajh nahi|koi product nahi)\b/i.test(imageMatch[1]) ||
+      (/\bnahi\b/.test(imgDesc) && /\b(product|match|taluq|pehchaan)\b/.test(imgDesc));
+    // Check if message is ONLY the image (no meaningful text besides it)
+    const textWithoutImage = msg.replace(/\[Image:[^\]]*\]/g, '').trim();
+    const isImageOnly = textWithoutImage.length < 5 || /^(yh|ye|yeh|is|check|dekho?|dekhein)\s*$/i.test(textWithoutImage);
+    if (isNoMatch && isImageOnly) {
+      return { intent: 'image_not_recognized' };
+    }
+    // Even if not image-only, strip product names from image description to prevent false product detection
+    if (isNoMatch) {
+      msg = msg.replace(/\[Image:[^\]]*\]/, '[Image: unrecognized]');
+      l = msg.toLowerCase().trim();
+    }
+  }
+
   // 0c. PAST ORDER REFERENCE — "maine magayi thi", "maine order kiya tha", "aap se li thi"
   // Past tense = already ordered. If combined with negative words = complaint about existing order
   const isPastOrder = /\b(maine|mene|mne|mny|humne)\s*(aap\s*se\s*|apny|ap\s*sy\s*)?(order|manga|mangi|magayi?|magaya?|magwa[iy]?a?|mangwa[iy]?a?|li[iy]?|lea?|kharid[ia]?|liya?|kia)\s*(th[aie]|tha|thi|hai|he|h)?\b/i.test(l) ||
