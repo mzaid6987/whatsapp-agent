@@ -2562,7 +2562,15 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       if (state.collected.name || state.collected.phone || state.collected.city ||
           pwoDetails.name || pwoDetails.phone || pwoDetails.city || pwoDetails.address || pwoDetails.addressParts) {
         const nextField = askNextField(state, storeName);
-        if (nextField) return nextField;
+        if (nextField) {
+          // Always prepend product price info so customer sees it (even when skipping to phone/city)
+          const p = state.product;
+          if (p) {
+            const priceInfo = `${p.short} — Rs.${p.price.toLocaleString()}. ${p.f1}.\n`;
+            nextField.reply = priceInfo + nextField.reply;
+          }
+          return nextField;
+        }
       }
 
       // No details at all — show product info + ask name (existing behavior)

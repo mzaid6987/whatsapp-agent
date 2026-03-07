@@ -79,6 +79,17 @@ function getSmartFill(phone) {
   const customer = customerModel.findByPhone(phone);
   if (!customer || customer.total_orders === 0) return null;
 
+  // Verify actual orders exist (counter may be stale from old deletions)
+  try {
+    const { getDb } = require('../db');
+    const actualOrders = getDb().prepare('SELECT COUNT(*) as cnt FROM orders WHERE customer_id = ?').get(customer.id)?.cnt || 0;
+    if (actualOrders === 0) {
+      // Fix stale counter
+      customerModel.update(customer.id, { total_orders: 0, total_revenue: 0 });
+      return null;
+    }
+  } catch (e) { /* ignore — fallback to counter */ }
+
   return {
     name: customer.name,
     city: customer.city,
