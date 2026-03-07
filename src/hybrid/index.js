@@ -2076,7 +2076,20 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       // Fill address parts
       if (ext.address_text || ext.landmark) {
         if (!state.collected.address_parts) state.collected.address_parts = { area: null, street: null, house: null, landmark: null };
-        if (ext.address_text) state.collected.address_parts.area = ext.address_text;
+        if (ext.address_text) {
+          state.collected.address_parts.area = ext.address_text;
+          // Check if bulk address is already detailed enough (has house/office/flat/plot number + area)
+          const addrLower = ext.address_text.toLowerCase();
+          const hasHouseNum = /\b(house|makan|ghar|flat|apartment|apt|office|plot|floor|ground\s*floor)\s*(no\.?|number|#)?\s*\d/i.test(ext.address_text) ||
+            /\b(no\.?|#)\s*\d+\s*[a-z]?\b/i.test(ext.address_text) ||
+            /\b\d+\s*-?\s*[a-z]\b/i.test(addrLower);
+          const hasArea = /\b(phase|block|sector|colony|town|society|scheme|bahria|dha|gulberg|model|cantt|saddar|johar|north|south|east|west)\b/i.test(ext.address_text);
+          if (hasHouseNum && hasArea) {
+            // Address is complete — set final address directly to skip COLLECT_ADDRESS
+            const city = ext.city || state.collected.city;
+            state.collected.address = city ? ext.address_text + ', ' + city : ext.address_text;
+          }
+        }
         if (ext.landmark) state.collected.address_parts.landmark = ext.landmark;
       }
 
@@ -2425,6 +2438,15 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       // Also save city if extracted from same message (voice: "naam Amjad hai aur Sukkur mein delivery")
       if (pre.extracted.city && !state.collected.city) {
         state.collected.city = pre.extracted.city;
+      }
+      // Strip customer name from address_parts.area if it was accidentally included (bulk extraction)
+      if (state.collected.address_parts?.area && state.collected.name) {
+        const nameRegex = new RegExp('^\\s*' + state.collected.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*[,.]?\\s*', 'i');
+        state.collected.address_parts.area = state.collected.address_parts.area.replace(nameRegex, '').trim();
+        // Also update final address if already set
+        if (state.collected.address) {
+          state.collected.address = state.collected.address.replace(nameRegex, '').trim();
+        }
       }
       const sidePrefix = sideQuestionPrefix(message, state, storeName);
       const nextField = askNextField(state, storeName);

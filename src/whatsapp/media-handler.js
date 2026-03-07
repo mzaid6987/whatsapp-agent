@@ -207,7 +207,7 @@ async function analyzeImage(mediaId, accessToken, openaiApiKey) {
         },
         {
           type: 'text',
-          text: 'This image is from a WhatsApp customer of a Pakistani ecommerce store. Our products: T9 Trimmer (gold metal hair trimmer), Blackhead Remover, Cutting Board, Oil Spray bottle, Ear Wax Kit, Vegetable Cutter, Facial Hair Remover (pink/rose gold), Nebulizer, Knee Sleeve, Duster Kit. Identify which product this is if possible. Reply in 1 short sentence in Roman Urdu. If there is text, mention it.'
+          text: 'This image is from a WhatsApp customer of a Pakistani ecommerce store. Identify which product this matches. Our products:\n1. T9 Trimmer - gold metal hair trimmer with guide combs\n2. Blackhead Remover - white vacuum suction device with heads\n3. Cutting Board - STAINLESS STEEL flat sheet (silver metal), used for chopping food on it\n4. Oil Spray - glass bottle with spray nozzle\n5. Ear Wax Kit - set of small steel tools\n6. Vegetable Cutter - electric chopper with blades\n7. Facial Hair Remover - pink/rose gold small device\n8. Nebulizer - white medical breathing device with mask\n9. Knee Sleeve - black fabric knee support\n10. Duster Kit - extendable cleaning brush\n\nIMPORTANT: Look at ALL objects in the image, not just the most obvious one. If food/ingredients are ON a steel/metal surface, that surface is likely our Cutting Board. Reply in 1 short sentence in Roman Urdu. If there is text, mention it.'
         }
       ]
     }]
