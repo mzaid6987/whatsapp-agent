@@ -262,9 +262,16 @@ function preCheck(message, currentState, collected) {
     if (allCities.length === 1) {
       // Check if message also has area info (e.g. "Karachi ke andar Jinnah Square")
       const { matchArea } = require('./city-areas');
-      // Remove city name and common filler, then check remaining text for known areas
+      // Remove city name, city abbreviations, and common filler, then check remaining text for known areas
       const cityLower = allCities[0].toLowerCase();
-      const remaining = l.replace(new RegExp('\\b' + cityLower + '\\b', 'i'), '').replace(/\b(ke|ka|ki|mein|me|mai|andar|dena|hai|he|h|pe|par|wahan|yahan|delivery|bhejo|bhej|do|karni|krni)\b/gi, '').trim();
+      // Also remove abbreviations that map to this city (e.g., "pindi" for Rawalpindi)
+      const { CITY_ABBR } = require('./data');
+      const cityAbbrs = Object.entries(CITY_ABBR).filter(([, v]) => v.toLowerCase() === cityLower).map(([k]) => k);
+      let remaining = l.replace(new RegExp('\\b' + cityLower + '\\b', 'i'), '');
+      for (const abbr of cityAbbrs) {
+        remaining = remaining.replace(new RegExp('\\b' + abbr + '\\b', 'i'), '');
+      }
+      remaining = remaining.replace(/\b(ke|ka|ki|mein|me|mai|andar|dena|hai|he|h|pe|par|wahan|yahan|delivery|bhejo|bhej|do|karni|krni)\b/gi, '').trim();
       if (remaining.length >= 3) {
         const areaInCity = matchArea(remaining, allCities[0]);
         if (areaInCity) {
@@ -328,19 +335,23 @@ function preCheck(message, currentState, collected) {
 
   // 4a-1. PHONE NUMBER in COLLECT_NAME — customer gives phone before we ask
   // Catch it so it doesn't get lost or go to AI which makes up random responses
+  // BUT: if message is long and has city/address → let bulk_info_given handle it (section 7d)
   if (currentState === 'COLLECT_NAME') {
     const phone = extractPhone(msg);
-    if (phone) {
+    const isBulkCandidate = msg.length > 30 && (extractCity(msg) !== null || /\b(address|mohall?ah?|gali|street|sector|phase|block|colony|bahria|dha)\b/i.test(l));
+    if (phone && !isBulkCandidate) {
       const validation = validatePhone(phone);
       if (validation.valid) {
         return { intent: 'phone_in_name_state', extracted: { phone: validation.phone } };
       }
     }
-    // Pure digits that look like phone
-    const digits = msg.replace(/[\s\-\+]/g, '').match(/\d+/)?.[0];
-    if (digits && /^0?3\d{9}$/.test(digits)) {
-      const normalized = digits.startsWith('3') ? '0' + digits : digits;
-      return { intent: 'phone_in_name_state', extracted: { phone: normalized } };
+    // Pure digits that look like phone (only if NOT bulk)
+    if (!isBulkCandidate) {
+      const digits = msg.replace(/[\s\-\+]/g, '').match(/\d+/)?.[0];
+      if (digits && /^0?3\d{9}$/.test(digits)) {
+        const normalized = digits.startsWith('3') ? '0' + digits : digits;
+        return { intent: 'phone_in_name_state', extracted: { phone: normalized } };
+      }
     }
     // "Use this WhatsApp number" in COLLECT_NAME — save phone early
     const useWaInName = /\b(yehi|yahi|yhi|isi|issi|same)\s*(number|no|nmbr|nomber)\b/i.test(l) ||
