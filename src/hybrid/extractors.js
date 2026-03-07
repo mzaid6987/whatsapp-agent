@@ -163,6 +163,13 @@ function extractCity(msg) {
   }
 
   // Check misspelling aliases (lahire→lahore, faislabad→faisalabad, etc.)
+  // First check multi-word aliases (e.g. "mian chunu" → "mian channu")
+  for (const [alias, correct] of Object.entries(CITY_ALIASES)) {
+    if (alias.includes(' ') && l.includes(alias)) {
+      return correct.charAt(0).toUpperCase() + correct.slice(1);
+    }
+  }
+  // Then single-word aliases
   for (const word of words) {
     if (CITY_ALIASES[word]) {
       const correct = CITY_ALIASES[word];
@@ -204,7 +211,13 @@ function extractAllCities(msg) {
     }
   }
 
-  // Check misspelling aliases (per word)
+  // Check misspelling aliases — multi-word first, then single-word
+  for (const [alias, correct] of Object.entries(CITY_ALIASES)) {
+    if (alias.includes(' ') && l.includes(alias) && !seen.has(correct)) {
+      found.push(correct.charAt(0).toUpperCase() + correct.slice(1));
+      seen.add(correct);
+    }
+  }
   for (const word of words) {
     if (CITY_ALIASES[word] && !seen.has(CITY_ALIASES[word])) {
       const correct = CITY_ALIASES[word];
@@ -588,13 +601,17 @@ function buildAddressString(parts) {
       pieces.push(st);
     }
   }
-  // Landmark: delivery points (Dak Khana/TCS) go FIRST, then area; urban landmarks go after area
+  // Detect rural: has zilla/tehsil or area has chak/gaon/village pattern
+  const isRural = !!parts.zilla || !!parts.tehsil || /\b(chak|gaon|goth|village|killi|dhoke|mauza)\b/i.test(parts.area || '');
+
+  // Landmark handling
   let landmarkText = null;
   let isDeliveryPoint = false;
   if (parts.landmark && !skip(parts.landmark)) {
     const lm = parts.landmark.toString();
     isDeliveryPoint = /\b(dak\s*khana|post\s*office|tcs|leopard|call\s*courier)\b/i.test(lm);
-    if (isDeliveryPoint) {
+    if (isDeliveryPoint || isRural) {
+      // Rural/delivery point: no "near" prefix — landmark IS the delivery reference
       landmarkText = lm.replace(/\b[a-z]/g, c => c.toUpperCase());
     } else if (/^near\s/i.test(lm)) {
       landmarkText = lm;
@@ -602,12 +619,21 @@ function buildAddressString(parts) {
       landmarkText = 'near ' + lm;
     }
   }
-  if (isDeliveryPoint && landmarkText) pieces.push(landmarkText);
-  if (parts.area) pieces.push(parts.area);
-  if (!isDeliveryPoint && landmarkText) pieces.push(landmarkText);
-  // Tehsil & Zilla — for village/gaon/chak customers
-  if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
-  if (parts.zilla) pieces.push('Zilla ' + parts.zilla);
+
+  if (isRural) {
+    // Rural format: Landmark, Chak/Gaon (area), Tehsil, Zilla
+    if (landmarkText) pieces.push(landmarkText);
+    if (parts.area) pieces.push(parts.area);
+    if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
+    if (parts.zilla) pieces.push('Zilla ' + parts.zilla);
+  } else {
+    // Urban format: House, Street, Area, near Landmark
+    if (isDeliveryPoint && landmarkText) pieces.push(landmarkText);
+    if (parts.area) pieces.push(parts.area);
+    if (!isDeliveryPoint && landmarkText) pieces.push(landmarkText);
+    if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
+    if (parts.zilla) pieces.push('Zilla ' + parts.zilla);
+  }
   return pieces.join(', ');
 }
 

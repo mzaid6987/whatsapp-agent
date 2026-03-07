@@ -379,7 +379,7 @@ function preCheck(message, currentState, collected, state) {
   // BUT: if message is long and has city/address → let bulk_info_given handle it (section 7d)
   if (currentState === 'COLLECT_NAME') {
     const phone = extractPhone(msg);
-    const isBulkCandidate = msg.length > 30 && (extractCity(msg) !== null || /\b(address|mohall?ah?|gali|street|sector|phase|block|colony|bahria|dha)\b/i.test(l));
+    const isBulkCandidate = msg.length > 30 && (extractCity(msg) !== null || /\b(address|mohall?ah?|gali|street|sector|phase|block|colony|bahria|dha|chak|village|gaon|goth)\b/i.test(l));
     if (phone && !isBulkCandidate) {
       const validation = validatePhone(phone);
       if (validation.valid) {
