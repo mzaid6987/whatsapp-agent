@@ -163,6 +163,22 @@ function handleTemplateState(message, state, storeName, preIntent) {
 
     // ===== ORDER SUMMARY =====
     case 'ORDER_SUMMARY': {
+      // Quality/reassurance questions — "kharab to nahi hoga?", "quality theek hai?", "original hai?"
+      // These contain "nahi" but are NOT rejection — customer is just worried, reassure them
+      // Patterns: "quality to khrab nahi hogi?", "kharab to nahi hoga?", "tootega to nahi?", "quality kaisi hai?"
+      const hasWorryWord = /\b(kh?[au]?ra+b|khrab|khrb|toot|toote?g[aie]|break|quality|qlty|original|asli|fake|naqli|copy)\b/i.test(l);
+      const hasNahi = /\b(nahi|nhi|na|ni)\b/i.test(l);
+      const hasToNahi = /\b(to|toh?)\b/i.test(l) && hasNahi;
+      const hasNahiVerb = /\b(nahi|nhi|na)\s*(hog[aie]|hota|hoti|ho|hoig)\b/i.test(l);
+      const isQualityAsk = /\b(quality|qlty)\s*(kais[ie]|kesi|kaisi|theek|thik|achi|acha)\s*(h[ae]i?|he|hogi|hoga)?\s*[?؟]?\s*$/i.test(l);
+      const isReassurance = (hasWorryWord && (hasToNahi || hasNahiVerb)) || isQualityAsk;
+      if (isReassurance) {
+        const productDesc = state.product?.f2 || state.product?.f1 || '';
+        const reassureReply = productDesc
+          ? `Bilkul ${vars.honorific}, fikar na karein! ${productDesc}. Order confirm karein? ✅`
+          : `Bilkul ${vars.honorific}, fikar na karein — product tested hai. Order confirm karein? ✅`;
+        return { reply: reassureReply, state: 'ORDER_SUMMARY' };
+      }
       if (yes) {
         // Save order to DB IMMEDIATELY so it's never lost (even if customer doesn't reply to upsell)
         const items = (state.products || []).length ? state.products : [state.product];
