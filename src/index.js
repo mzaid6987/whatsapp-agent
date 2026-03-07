@@ -983,8 +983,32 @@ app.use('/admin', express.static(path.join(__dirname, 'admin/public')));
 // Root redirect
 app.get('/', (req, res) => res.redirect('/admin/'));
 
-// ---- AUTO-DEPLOY ENDPOINT ----
+// ---- DEPLOY INFO ENDPOINT ----
 const { execSync } = require('child_process');
+const SERVER_START_TIME = new Date().toISOString();
+
+app.get('/api/deploy-info', requireAuth, (req, res) => {
+  try {
+    const appRoot = path.join(__dirname, '..');
+    const commitHash = execSync('git log -1 --format=%h', { cwd: appRoot }).toString().trim();
+    const commitMsg = execSync('git log -1 --format=%s', { cwd: appRoot }).toString().trim();
+    const commitDate = execSync('git log -1 --format=%ci', { cwd: appRoot }).toString().trim();
+    const commitAuthor = execSync('git log -1 --format=%an', { cwd: appRoot }).toString().trim();
+    const totalCommits = execSync('git rev-list --count HEAD', { cwd: appRoot }).toString().trim();
+    res.json({
+      commit_hash: commitHash,
+      commit_message: commitMsg,
+      commit_date: commitDate,
+      commit_author: commitAuthor,
+      total_commits: totalCommits,
+      server_started: SERVER_START_TIME,
+    });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
+// ---- AUTO-DEPLOY ENDPOINT ----
 const DEPLOY_SECRET = process.env.DEPLOY_SECRET || 'nuvenza-deploy-2026';
 
 // Support both GET and POST for deploy (LiteSpeed blocks POST on some setups)
