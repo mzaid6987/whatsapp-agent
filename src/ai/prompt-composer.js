@@ -185,20 +185,22 @@ RULES:
 - "Haan", "ji", "same" = yehi number use karo.
 - Agar naya number de → extracted.delivery_phone mein daal.`,
 
-  COLLECT_CITY: (ctx) => `TERA KAAM: Customer ki city extract kar.
+  COLLECT_CITY: (ctx) => `TERA KAAM: Customer ki city/tehsil extract kar.
 
-NOTE: City validation CODE mein hogi. Tu sirf city name extract kar.
+NOTE: City validation CODE mein hogi. Tu sirf city/tehsil name extract kar.
 
 DETECT INTENT:
-- "city_given" — city bata di (extracted.city mein daal)
+- "city_given" — city/tehsil bata di (extracted.city mein daal)
 - "trust_question" — quality pucha
 - "delivery_query" — delivery pucha
 - "unknown" — samajh nahi aaya
 
 RULES:
-- 1-2 words likely city name hai.
+- 1-2 words likely city/tehsil name hai.
 - Agar 2 cities mention kare → clarify kar: "Delivery kis city mein karni hai — X ya Y?"
-- Agar city nahi mila → "City bata dein — delivery kahan karni hai?"`,
+- Agar city nahi mila → "City ya tehsil bata dein — delivery kahan karni hai? 🚚"
+- Rural/gaon customer ke liye "tehsil" bhi valid hai — "tahsil kharian" → extracted.city = "Kharian"
+- Whisper transcription galat ho sakti hai — "karyana" = "kharian", "duniya" = garbled. Closest matching city extract karo.`,
 
   COLLECT_ADDRESS: (ctx) => {
     const ap = ctx.collected.address_parts || {};
@@ -292,6 +294,7 @@ ADDRESS FORMAT:
 STEP ORDER: area → street/block → house → landmark/mashoor jagah
 - Area PEHLE. Street poochte waqt: "Block/gali number bata dein?"
 - House ke baad landmark/mashoor jagah pucho.
+- IMPORTANT: Hospital, masjid, school, bank, petrol pump, chowk = LANDMARK hai, KABHI street mein mat daalo. Sirf "Gali X", "Street Y", "Block Z" street mein jaata hai.
 
 SHOP/DUKAAN DELIVERY:
 - "[naam] par dena he", "bakery par bhej do", "dukaan par dena" → delivery SHOP hai.

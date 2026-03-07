@@ -354,13 +354,15 @@ function preCheck(message, currentState, collected, state) {
   // "Yaar Sukkur mein kab delivery hogi aur mera naam hai Amjad" → extract name, answer question
   // Must run BEFORE other COLLECT_NAME checks to not lose the name
   if (currentState === 'COLLECT_NAME' && msg.length > 20) {
-    const nameInMsg = msg.match(/\b(?:naam|name)\s+(?:hai|he|h|mera|mra)?\s*([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20})?)\b/i) ||
+    // Order matters: "X naam hai mera" pattern FIRST (more specific), then "naam hai X"
+    const nameInMsg = msg.match(/\b([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20})?)\s+(?:naam|name)\s+(?:hai|he|h)\s+(?:mera|mra)\b/i) ||
+      msg.match(/\b([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20})?)\s+(?:naam|name)\s+(?:hai|he|h)\s*(?:mera|mra)?\s*$/i) ||
       msg.match(/\b(?:mera|mra)\s+(?:naam|name)\s+(?:hai|he|h)?\s*([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20})?)\b/i) ||
-      msg.match(/\b([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20})?)\s+(?:naam|name)\s+(?:hai|he|h)\s+(?:mera|mra)\b/i);
+      msg.match(/\b(?:naam|name)\s+(?:hai|he|h|mera|mra)?\s*([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20})?)\b/i);
     if (nameInMsg) {
       const rawName = nameInMsg[1].trim();
       // Make sure it's not a common word
-      const isCommon = /^(delivery|order|product|price|rate|quality|time|sukkur|lahore|karachi|islamabad|local|number|phone|yaar|bhai|kab|kya|kitna|nahi|haan)$/i.test(rawName);
+      const isCommon = /^(delivery|order|product|price|rate|quality|time|sukkur|lahore|karachi|islamabad|local|number|phone|yaar|bhai|kab|kya|kitna|nahi|haan|mera|mra|hai|he|aap|tum|tera|apka)$/i.test(rawName);
       if (!isCommon && rawName.length >= 2) {
         const name = rawName.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
         // Also try to extract city from same message

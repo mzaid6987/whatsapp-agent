@@ -1443,7 +1443,9 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const numWords = { one:'1', two:'2', three:'3', four:'4', five:'5', six:'6', seven:'7', eight:'8', nine:'9', ten:'10' };
       let bv = null;
       const bf = message.match(/\b(?:bloc?k?|blk)\s+([A-Za-z]+|\d+)\b/i);
-      if (bf) bv = 'Block ' + (numWords[bf[1].trim().toLowerCase()] || bf[1].trim().charAt(0).toUpperCase() + bf[1].trim().slice(1).toLowerCase());
+      // Exclude Urdu words that follow "block" in negation/conversation: "block ya gharhi nahi hai"
+      const BLOCK_EXCLUDE = /^(ya|hai|he|h|nahi|nhi|na|ka|ki|ke|ko|pe|par|pr|me|mein|ho|hota|wala|bhi|to|kya|koi|naya|purana|number|nahin)$/i;
+      if (bf && !BLOCK_EXCLUDE.test(bf[1].trim())) bv = 'Block ' + (numWords[bf[1].trim().toLowerCase()] || bf[1].trim().charAt(0).toUpperCase() + bf[1].trim().slice(1).toLowerCase());
       if (!bv) {
         const br = message.match(/\b([A-Za-z]{2,})\s+(?:bloc?k?|blk)\b/i);
         if (br && !/\b(flat|house|near|qareeb|ke)\b/i.test(br[1])) bv = br[1].charAt(0).toUpperCase() + br[1].slice(1).toLowerCase() + ' Block';
@@ -1488,7 +1490,16 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
           ap.area = newParts.area;
         }
       }
-      if (valid(newParts.street) && !isRefusal(newParts.street)) ap.street = newParts.street;
+      if (valid(newParts.street) && !isRefusal(newParts.street)) {
+        // If AI put a landmark-type word in street (hospital, masjid, school etc.), move to landmark
+        const isLandmarkInStreet = /\b(hospital|hosptal|masjid|mosque|school|bank|petrol\s*pump|chowk|chorangi|park|market|bazaar|plaza|clinic|dispensary|library|church|mandir|gurdwara|dargah|factory|mill|company|office)\b/i.test(newParts.street);
+        if (isLandmarkInStreet && !ap.landmark) {
+          ap.landmark = newParts.street;
+          console.log(`[Address] AI street "${newParts.street}" is a landmark — moved to landmark field`);
+        } else if (!isLandmarkInStreet) {
+          ap.street = newParts.street;
+        }
+      }
       if (valid(newParts.house)) {
         // "nahi" for house → set nahi_pata (not null — means customer said they don't know)
         ap.house = isRefusal(newParts.house) ? 'nahi_pata' : newParts.house;

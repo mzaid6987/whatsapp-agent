@@ -2614,7 +2614,7 @@ const CITY_ALIASES = {
   'mian chanu': 'mian channu', 'mian chunu': 'mian channu', 'mianchannu': 'mian channu',
   'mian channo': 'mian channu', 'mianchanu': 'mian channu', 'mian chanu': 'mian channu',
   // Tier 1 cities aliases
-  'khariyan': 'kharian', 'kharyan': 'kharian', 'kherian': 'kharian',
+  'khariyan': 'kharian', 'kharyan': 'kharian', 'kherian': 'kharian', 'karyana': 'kharian', 'khariana': 'kharian', 'khariaan': 'kharian',
   'shujabadh': 'shujabad', 'shujabat': 'shujabad',
   'shakargharh': 'shakargarh', 'shakergarh': 'shakargarh', 'shakar garh': 'shakargarh',
   'jaampur': 'jampur', 'jam pur': 'jampur',

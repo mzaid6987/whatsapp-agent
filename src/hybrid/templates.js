@@ -115,8 +115,8 @@ const T = {
   // COLLECT CITY
   // ==========================================
   ASK_CITY: [
-    "City bata dein — delivery kahan karni hai? 🚚",
-    "{name} {honorific}, konsi city mein delivery chahiye? 🚚",
+    "City/tehsil bata dein — delivery kahan karni hai? 🚚",
+    "{name} {honorific}, konsi city ya tehsil mein delivery chahiye? 🚚",
     "{name} {honorific}, delivery konsi city mein karni hai? {city_hint} 🚚",
   ],
   REGION_NOT_CITY: [
