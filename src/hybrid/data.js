@@ -19,7 +19,7 @@ const PRODUCTS = [
   { id:3, name:'Stainless Steel Cutting Board Large Size', short:'Cutting Board', price:1799,
     kw:['cutting board','chopping','steel board','steel sheet','sheet','chopping board'],
     f1:'Food grade stainless steel — 39cm x 48cm large size',
-    f2:'Non-slip rubber base hai, non-porous hai bacteria nahi lagta, scratch-proof',
+    f2:'Non-porous hai bacteria nahi lagta, scratch-proof, easy to clean — paani se dho lo bas',
     desc:'Wooden boards ki tarah bacteria nahi absorb karta. Easy to clean — paani se dho lo bas. Kitchen mein sabzi, gosht sab kaat sakte ho safely.' },
 
   { id:4, name:'2 in 1 Glass Oil Spray Dispenser', short:'Oil Spray', price:1399,

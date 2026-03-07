@@ -152,7 +152,7 @@ function handleTemplateState(message, state, storeName, preIntent) {
   const l = message.toLowerCase().trim();
   const vars = buildVars(state, storeName);
   // Use pre-detected intent if available, otherwise use strict detection
-  const flexYes = /\b(ha+n|ji|yes|shi|sahi|bilkul|confir\w*|ik|ok[zgky]?|done|theek|thik|thk|tik|zaroor|kr\s*do|kardo|krdo|kar\s*do|bhej\s*d[oae]|bhejd[oae]|bhij\s*d[oae]|bhijd[oae]|bhaj\s*d[oae]|bhajd[oae]|bhwj\s*d[oae]|bhwjd[oae]|bhjdo|bhjd[oae])\b/i.test(l);
+  const flexYes = /\b(ha+n|ji|yes|shi|sahi|bilkul|confir\w*|ik|ok[zgky]?|done|theek|thik|thk|tik|zaroor|kr\s*do|kardo|krdo|kar\s*do|bhej\s*d[oae]|bhejd[oae]|bhij\s*d[oae]|bhijd[oae]|bhaj\s*d[oae]|bhajd[oae]|bhwj\s*d[oae]|bhwjd[oae]|bhjdo|bhjd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|bhijwad[oae]|bhejwad[oae]|mangwa\s*d[oae]|mangwad[oae]|mngwa\s*d[oae]|mngwad[oae]|laga\s*d[oae]|lagad[oae]|lgad[oae]|lga\s*d[oae])\b/i.test(l);
   const flexNo = /\b(nahi|nhi|no|galat|nope|na+h|mat|cancel|rehne\s*do|bas|choro|chor\s*do|chod\s*do|chhoro|chhod\s*do|rhn\s*do|jane\s*do)\b/i.test(l);
   // Handle "kuch nahi sab sahi hai" = yes (nahi negates "change", not order)
   const negatedNo = /\b(kuch\s*nahi|koi\s*nahi|nahi\s*kuch|change\s*nahi|nahi\s*change)\b/i.test(l) && /\b(sahi|theek|thik|done|ok|confirm|bilkul)\b/i.test(l);
@@ -170,7 +170,9 @@ function handleTemplateState(message, state, storeName, preIntent) {
       const hasNahi = /\b(nahi|nhi|na|ni)\b/i.test(l);
       const hasToNahi = /\b(to|toh?)\b/i.test(l) && hasNahi;
       const hasNahiVerb = /\b(nahi|nhi|na)\s*(hog[aie]|hota|hoti|ho|hoig)\b/i.test(l);
-      const isQualityAsk = /\b(quality|qlty)\s*(kais[ie]|kesi|kaisi|theek|thik|achi|acha)\s*(h[ae]i?|he|hogi|hoga)?\s*[?؟]?\s*$/i.test(l);
+      const isQualityAsk = /\b(quality|qlty)\s*(kais[ie]|kesi|kaisi|theek|thik|achi|acha)\s*(h[ae]i?|he|hogi|hoga)?\s*[?؟]?\s*$/i.test(l) ||
+        /\b(che+z|chij|product|item)\s*(kais[ie]|kesi|kaisi)\s*(h[ae]i?|he|hogi)?\s*[?؟]?\s*$/i.test(l) ||
+        /\b(kais[ie]|kesi|kaisi)\s*(h[ae]i?|he)\s*(che+z|chij|product|quality|item)\b/i.test(l);
       const isReassurance = (hasWorryWord && (hasToNahi || hasNahiVerb)) || isQualityAsk;
       if (isReassurance) {
         const productDesc = state.product?.f2 || state.product?.f1 || '';
