@@ -343,7 +343,7 @@ function handleTemplateState(message, state, storeName, preIntent) {
         let uList = state.upsell_candidates.map((p, i) =>
           `${i + 1}. ${p.short} — Rs.${Math.max((p.upsell_price || p.price) - 500, 499).toLocaleString()}`
         ).join('\n');
-        const discVars = { ...vars, discounted_price: discPrice.toLocaleString(), upsell_list: uList };
+        const discVars = { ...vars, discount_percent: state.discount_percent, discounted_price: discPrice.toLocaleString(), discount_amount: Math.round(product.price * state.discount_percent / 100), upsell_list: uList };
         return { reply: fillTemplate('UPSELL_DISCOUNT', discVars), state: 'UPSELL_SHOW' };
       }
       // Number pick
