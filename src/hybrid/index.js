@@ -1112,7 +1112,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         // Address complete → confirm
         state.address_confirming = true;
         const fullAddrParts = buildAddressString(ap);
-        const cityLabel = state.collected.city ? (state._is_rural ? 'Tehsil ' + state.collected.city : state.collected.city) : '';
+        const cityLabel = state.collected.city || '';
         const fullAddr = cityLabel ? fullAddrParts + ', ' + cityLabel : fullAddrParts;
         const honorific = getHonorific(state.collected.name, state.gender);
         const confirmReply = fillTemplate('CONFIRM_ADDRESS', {
@@ -1626,7 +1626,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
             // Landmark has a specific name — skip AI follow-up, go to confirmation
             state.address_confirming = true;
             const fullAddrParts = buildAddressString(ap);
-            const cityLabel = state.collected.city ? (state._is_rural ? 'Tehsil ' + state.collected.city : state.collected.city) : '';
+            const cityLabel = state.collected.city || '';
             const fullAddr = cityLabel ? fullAddrParts + ', ' + cityLabel : fullAddrParts;
             const honorific = getHonorific(state.collected.name, state.gender);
             const confirmReply = fillTemplate('CONFIRM_ADDRESS', {
@@ -1672,7 +1672,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         // No follow-up from AI → show template confirmation
         state.address_confirming = true;
         const fullAddrParts = buildAddressString(ap);
-        const cityLabel = state.collected.city ? (state._is_rural ? 'Tehsil ' + state.collected.city : state.collected.city) : '';
+        const cityLabel = state.collected.city || '';
         const fullAddr = cityLabel ? fullAddrParts + ', ' + cityLabel : fullAddrParts;
         const honorific = getHonorific(state.collected.name, state.gender);
         const confirmReply = fillTemplate('CONFIRM_ADDRESS', {
