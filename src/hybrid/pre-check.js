@@ -66,7 +66,7 @@ function isNo(l) {
  * Returns { intent, extracted, templateKey?, templateVars? } or null
  * null = let AI handle it
  */
-function preCheck(message, currentState, collected) {
+function preCheck(message, currentState, collected, state) {
   const msg = message.trim();
   const l = msg.toLowerCase().trim();
 
@@ -488,7 +488,13 @@ function preCheck(message, currentState, collected) {
         // Upsell uses candidate list, handled by state machine
         return { intent: 'number_pick', extracted: { index: idx } };
       }
-      if (idx >= 0 && idx < PRODUCTS.length) {
+      // Use ambiguous products list if available (customer picking from shown list)
+      const ambigList = state && state._ambiguous_products;
+      if (ambigList && idx >= 0 && idx < ambigList.length) {
+        return { intent: 'product_selected', extracted: { product: ambigList[idx] } };
+      }
+      // Fallback to global product list
+      if (!ambigList && idx >= 0 && idx < PRODUCTS.length) {
         return { intent: 'product_selected', extracted: { product: PRODUCTS[idx] } };
       }
     }

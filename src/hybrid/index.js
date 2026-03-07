@@ -1166,7 +1166,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   // ============================================
   // PATH 2: Pre-check (code handles perfectly)
   // ============================================
-  const pre = preCheck(message, state.current, state.collected);
+  const pre = preCheck(message, state.current, state.collected, state);
   if (pre) {
     const preResult = handlePreCheck(pre, message, state, storeName, phone);
     if (preResult) {
@@ -2146,7 +2146,7 @@ function handlePreCheck(pre, message, state, storeName, phone) {
     case 'product_ambiguous': {
       // 2+ products matched with same score — ask customer to clarify
       const ambigProducts = pre.extracted.products;
-      const matchList = ambigProducts.map((p, i) => `${i + 1}. ${p.short} — Rs.${p.price.toLocaleString()}`).join('\n');
+      const matchList = ambigProducts.map((p, i) => `${i + 1}. ${p.name} — Rs.${p.price.toLocaleString()}`).join('\n');
       state.current = 'PRODUCT_SELECTION';
       state._ambiguous_products = ambigProducts;
       const ambigReply = fillTemplate('PRODUCT_AMBIGUOUS', { ...vars, matching_products: matchList });
@@ -2582,6 +2582,7 @@ function handlePreCheck(pre, message, state, storeName, phone) {
 
     case 'product_selected': {
       state.product = pre.extracted.product;
+      delete state._ambiguous_products; // Clear ambiguous list after selection
       state.current = 'PRODUCT_INQUIRY';
       const nextVars = buildVars(state, storeName);
       return { reply: fillTemplate('PRODUCT_INQUIRY', nextVars), state: 'PRODUCT_INQUIRY' };
