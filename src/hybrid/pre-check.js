@@ -54,7 +54,7 @@ function isComplaint(l) {
 
 // ============= YES / NO DETECTION =============
 function isYes(l) {
-  return /^(ha+n?|ji+|jee|g|yes|yup|ik|o?ok(ay|k|y)?|done|th[ie]*k|tik|sahi|sa[ih]i?|bilkul|c[oa]n?f[iou]r?m(ed)?|comf[io]rm(ed)?|conf?rim(ed)?|zaroor|hn|kr\s*do|kardo|krdo|kar\s*do)\s*[.!]?\s*$/i.test(l);
+  return /^(ha+n?|hm+|ji+|jee|g|yes+|yess+|yup|ik|o?k+a*y+|o?ki+|ok\s*ok|o?ok(ay|k|y)?|done|th[ie]*k|tik|sai|sahi|sa[ih]i?|bilkul|c[oa]n?f[iou]r?m(ed)?|comf[io]rm(ed)?|conf?rim(ed)?|zaroor|hn|kr\s*do|kardo|krdo|kar\s*do|bhejwa?\s*d[oae]|bhijwa?\s*d[oae]|mangwa?\s*d[oae]|laga?\s*d[oae])\s*[.!]?\s*$/i.test(l);
 }
 
 function isNo(l) {

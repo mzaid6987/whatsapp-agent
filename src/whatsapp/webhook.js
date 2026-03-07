@@ -320,10 +320,18 @@ async function webhookHandler(req, res) {
       return;
     }
 
-    // Reactions — silently ignore (thumbs up, heart, etc. are not text messages)
+    // Reactions — thumbs up / heart = treat as "haan" (YES), others = ignore
     if (msg.type === 'reaction') {
-      console.log(`[WA] ${fromPhone}: reaction ${msg.reaction?.emoji || '?'} — ignored`);
-      return;
+      const emoji = msg.reaction?.emoji || '';
+      const positiveReactions = ['👍', '❤️', '❤', '♥️', '🙏', '✅', '👌'];
+      if (positiveReactions.includes(emoji) && emoji) {
+        console.log(`[WA] ${fromPhone}: positive reaction ${emoji} — treating as YES`);
+        messageText = 'haan';
+        // Fall through to normal message processing
+      } else {
+        console.log(`[WA] ${fromPhone}: reaction ${emoji} — ignored`);
+        return;
+      }
     }
 
     // Unsupported media types (sticker, video, document, location, contacts)

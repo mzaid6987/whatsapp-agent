@@ -152,7 +152,7 @@ function handleTemplateState(message, state, storeName, preIntent) {
   const l = message.toLowerCase().trim();
   const vars = buildVars(state, storeName);
   // Use pre-detected intent if available, otherwise use strict detection
-  const flexYes = /\b(ha+n|ji|yes|shi|sahi|bilkul|confir\w*|ik|ok[zgky]?|done|theek|thik|thk|tik|zaroor|kr\s*do|kardo|krdo|kar\s*do|bhej\s*d[oae]|bhejd[oae]|bhij\s*d[oae]|bhijd[oae]|bhaj\s*d[oae]|bhajd[oae]|bhwj\s*d[oae]|bhwjd[oae]|bhjdo|bhjd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|bhijwad[oae]|bhejwad[oae]|mangwa\s*d[oae]|mangwad[oae]|mngwa\s*d[oae]|mngwad[oae]|laga\s*d[oae]|lagad[oae]|lgad[oae]|lga\s*d[oae])\b/i.test(l);
+  const flexYes = /\b(ha+n|hm+|ji+|jee|g|yes+|yess+|shi|sai|sahi|bilkul|confir\w*|ik|o?k+a*y+|o?ki+|ok\s*ok|ok[zgky]?|done|theek|thik|thk|tik|zaroor|kr\s*do|kardo|krdo|kar\s*do|bhej\s*d[oae]|bhejd[oae]|bhij\s*d[oae]|bhijd[oae]|bhaj\s*d[oae]|bhajd[oae]|bhwj\s*d[oae]|bhwjd[oae]|bhjdo|bhjd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|bhijwad[oae]|bhejwad[oae]|mangwa\s*d[oae]|mangwad[oae]|mngwa\s*d[oae]|mngwad[oae]|laga\s*d[oae]|lagad[oae]|lgad[oae]|lga\s*d[oae])\b/i.test(l);
   const flexNo = /\b(nahi|nhi|no|galat|nope|na+h|mat|cancel|rehne\s*do|bas|choro|chor\s*do|chod\s*do|chhoro|chhod\s*do|rhn\s*do|jane\s*do)\b/i.test(l);
   // Handle "kuch nahi sab sahi hai" = yes (nahi negates "change", not order)
   const negatedNo = /\b(kuch\s*nahi|koi\s*nahi|nahi\s*kuch|change\s*nahi|nahi\s*change)\b/i.test(l) && /\b(sahi|theek|thik|done|ok|confirm|bilkul)\b/i.test(l);
