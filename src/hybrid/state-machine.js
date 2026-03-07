@@ -181,6 +181,34 @@ function handleTemplateState(message, state, storeName, preIntent) {
           : `Bilkul ${vars.honorific}, fikar na karein — product tested hai. Order confirm karein? ✅`;
         return { reply: reassureReply, state: 'ORDER_SUMMARY' };
       }
+      // Haggle/discount request — "price km krdo", "discount do", "sasta kro"
+      // Must check BEFORE yes — "krdo" in "price km krdo" triggers flexYes falsely
+      const isHaggleInSummary = /\b(disc?o?u?n?t|discoutn|disocunt|discont|off|offer|sast[ai])\b/i.test(l) ||
+        /\b(price\s*km|km\s*kr|km\s*kro|km\s*price|mehn?g[aio]|rate\s*km|km\s*rate|pais[ey]\s*km|qeemat\s*km|daam\s*km|thora\s*km)\b/i.test(l) ||
+        /\b(price|rate|pais[ey])\s*(or|aur)?\s*(km|kam|kam\s*kr|karo|kro)\b/i.test(l) ||
+        /\b(km|kam)\s*(kro|kr|kardo|kar\s*do|krdein|karden)\b/i.test(l) ||
+        /\b(aur|or|thora|thoda)\s*(km|kam|discount|off)\b/i.test(l) ||
+        /\d{3,}\s*(ki|me|mein|mey|mai|ka|rs|rupay?|pe)\s*(de|do|dedo|de\s*do|kr|kro|kardo|rakh|rkh)/i.test(l);
+      if (isHaggleInSummary) {
+        // Route to HAGGLING state
+        state.haggle_round = (state.haggle_round || 0) + 1;
+        state.current = 'HAGGLING';
+        const hp = state.product;
+        // fillTemplate and fmtPrice already imported at top
+        if (state.haggle_round === 1) {
+          return { reply: fillTemplate('HAGGLE_ROUND_1', { ...vars, product_short: hp.short, price: hp.price.toLocaleString() }), state: 'HAGGLING' };
+        } else if (state.haggle_round === 2) {
+          state.discount_percent = 5;
+          const dp2 = Math.round(hp.price * 0.95);
+          return { reply: fillTemplate('HAGGLE_ROUND_2', { ...vars, discount_percent: 5, discounted_price: dp2.toLocaleString(), discount_amount: (hp.price - dp2).toLocaleString() }), state: 'HAGGLING' };
+        } else if (state.haggle_round === 3) {
+          state.discount_percent = 10;
+          const dp3 = Math.round(hp.price * 0.90);
+          return { reply: fillTemplate('HAGGLE_ROUND_3', { ...vars, discounted_price: dp3.toLocaleString() }), state: 'HAGGLING' };
+        } else {
+          return { reply: fillTemplate('HAGGLE_FINAL', vars), state: 'HAGGLING' };
+        }
+      }
       if (yes) {
         // Save order to DB IMMEDIATELY so it's never lost (even if customer doesn't reply to upsell)
         const items = (state.products || []).length ? state.products : [state.product];
