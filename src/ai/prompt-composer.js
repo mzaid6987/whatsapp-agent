@@ -7,7 +7,7 @@
  * Structure: BASE_CONTEXT (~250 tokens) + STATE_PROMPT (~200-400) + DYNAMIC (~50-100)
  */
 
-const { PRODUCTS, fmtPrice, productList, getHonorific, deliveryTime } = require('../hybrid/data');
+const { PRODUCTS, fmtPrice, productList, productListWithFeatures, getHonorific, deliveryTime } = require('../hybrid/data');
 const { getCityAreas, getAreaSuggestions } = require('../hybrid/city-areas');
 
 // ============= BASE CONTEXT (~250 tokens) =============
@@ -116,9 +116,12 @@ DETECT INTENT:
 - "product_with_order" — product + order dono (extracted.product_name + extracted.wants_order=true)
 - "unknown" — samajh nahi aaya
 
-RESPONSE: Product list dikha ke pucho konsa chahiye.
+RESPONSE: Product list dikha ke pucho konsa chahiye. Agar customer kisi feature ke baare mein puche (steel, electric, etc.) → neeche features dekh ke sahi product batao.
 
-PRODUCTS (EXACT copy paste kar, format CHANGE mat karna):
+PRODUCTS WITH FEATURES:
+${ctx.productListWithFeatures}
+
+PRODUCT LIST (customer ko dikhane ke liye EXACT copy paste kar):
 ${ctx.productListShort}`,
 
   COLLECT_NAME: (ctx) => `TERA KAAM: Customer ka naam extract kar.
@@ -356,6 +359,7 @@ function composePrompt(storeName, state, collected, product, extra = {}) {
     product: resolvedProduct,
     collected: collected || {},
     productListShort: productList(),
+    productListWithFeatures: productListWithFeatures(),
     honorific: getHonorific(collected?.name, extra.gender),
     isReturning: extra.isReturning || false,
     haggleRound: extra.haggleRound || 0,

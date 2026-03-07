@@ -606,6 +606,18 @@ function preCheck(message, currentState, collected) {
         const colonName = msg.match(/\b(?:na+me?|naam)\s*[:\.\-="']\s*"?\s*([A-Za-z\s]{2,30})/i);
         if (colonName) extracted.name = colonName[1].trim().replace(/["']+$/, '').split(/\n/)[0].trim();
       }
+      // Name after phone number — "03001234567 Ali Khan, address here..."
+      // Match 1-2 capitalized words right after phone, followed by comma (simple reliable pattern)
+      if (!extracted.name) {
+        const nameAfterPhone = msg.match(/(?:\+?92|0)3\d{9}\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,/);
+        if (nameAfterPhone) {
+          const candidateName = nameAfterPhone[1].trim();
+          const isNotName = /^(Office|Ground|Floor|Plaza|Block|House|Flat|Street|Road|Colony|Phase|Sector|Near|Punjab|Sindh|KPK|Balochistan)$/i.test(candidateName);
+          if (!isNotName && candidateName.length >= 3) {
+            extracted.name = candidateName;
+          }
+        }
+      }
 
       // Phone — "yehi/yhi whatsapp wala" = use customer's WhatsApp number
       const useWa = /\b(yehi|yahi|yhi|isi|same)\s*(number|no|nmbr|nomber|whatsapp|watsapp)\b/i.test(l) ||
@@ -697,26 +709,54 @@ function preCheck(message, currentState, collected) {
         if (famousMatch) extracted.landmark = famousMatch[1].trim().split(/\n/)[0].trim();
       }
 
-      // Free-text address after city — "faisalabad tariqabad main jhumra road railway phatak"
-      // If city found but no labeled address, extract remaining text after city as address
+      // Free-text address — check both BEFORE and AFTER city name
+      // Standard format: "Phone Name Address, City, Province" (address BEFORE city)
+      // Alt format: "City address details" (address AFTER city)
+      // Province names to strip from address
+      const PROVINCES = /\b(punjab|sindh|sind|kpk|khyber\s*pakhtunkhwa|balochistan|baluchistan|islamabad\s*capital\s*territory|ict|azad\s*kashmir|gilgit\s*baltistan|gb)\b/i;
+
       if (extracted.city && !extracted.address_text) {
         const cityLower = extracted.city.toLowerCase();
         const cityIdx = l.indexOf(cityLower);
         if (cityIdx >= 0) {
-          let afterCity = msg.substring(cityIdx + cityLower.length).trim();
-          // Strip trailing punctuation and known non-address labels
-          afterCity = afterCity.replace(/^[,.\s]+/, '').trim();
-          // Remove phone numbers from the text
-          afterCity = afterCity.replace(/\b0[3]\d{9}\b/g, '').trim();
-          // Remove name labels and their values — "name:X", "name"X"", "naam X"
-          afterCity = afterCity.replace(/\b(?:na+me?|naam)\s*[:\.\-="']\s*"?[A-Za-z\s]{1,30}"?\s*/gi, '').trim();
-          // Remove number/phone labels — "number 03...", "phone:03..."
-          afterCity = afterCity.replace(/\b(?:number|phone|mobile|nmbr|nomber)\s*[:\.\-="']?\s*\d*/gi, '').trim();
-          // Clean up double spaces
-          afterCity = afterCity.replace(/\s{2,}/g, ' ').trim();
-          // If remaining text is 5+ chars and has letters, it's address
-          if (afterCity.length > 4 && /[a-z]{2,}/i.test(afterCity)) {
-            extracted.address_text = afterCity.replace(/[,.\n]+$/, '').trim();
+          // Try BEFORE city first — "Sardar Builders, Office No. 1, ..., Rawalpindi, Punjab"
+          let beforeCity = msg.substring(0, cityIdx).trim();
+          // Remove phone number from before-city text
+          beforeCity = beforeCity.replace(/(?:\+?92|0)3\d{9}/g, '').trim();
+          // Remove extracted name from before-city text
+          if (extracted.name) {
+            beforeCity = beforeCity.replace(new RegExp('\\b' + extracted.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i'), '').trim();
+          }
+          // Remove name labels
+          beforeCity = beforeCity.replace(/\b(?:na+me?|naam)\s*[:\.\-="']\s*"?[A-Za-z\s]{1,30}"?\s*/gi, '').trim();
+          // Remove number/phone labels
+          beforeCity = beforeCity.replace(/\b(?:number|phone|mobile|nmbr|nomber)\s*[:\.\-="']?\s*\d*/gi, '').trim();
+          // Clean leading/trailing commas, dots, spaces
+          beforeCity = beforeCity.replace(/^[,.\s]+|[,.\s]+$/g, '').trim();
+          beforeCity = beforeCity.replace(/\s{2,}/g, ' ').trim();
+
+          if (beforeCity.length > 4 && /[a-z]{2,}/i.test(beforeCity)) {
+            extracted.address_text = beforeCity;
+          }
+
+          // Also try AFTER city — "faisalabad tariqabad main jhumra road"
+          if (!extracted.address_text) {
+            let afterCity = msg.substring(cityIdx + cityLower.length).trim();
+            afterCity = afterCity.replace(/^[,.\s]+/, '').trim();
+            afterCity = afterCity.replace(/\b0[3]\d{9}\b/g, '').trim();
+            afterCity = afterCity.replace(/\b(?:na+me?|naam)\s*[:\.\-="']\s*"?[A-Za-z\s]{1,30}"?\s*/gi, '').trim();
+            afterCity = afterCity.replace(/\b(?:number|phone|mobile|nmbr|nomber)\s*[:\.\-="']?\s*\d*/gi, '').trim();
+            // Strip province names
+            afterCity = afterCity.replace(PROVINCES, '').trim();
+            afterCity = afterCity.replace(/^[,.\s]+|[,.\s]+$/g, '').replace(/\s{2,}/g, ' ').trim();
+            if (afterCity.length > 4 && /[a-z]{2,}/i.test(afterCity)) {
+              extracted.address_text = afterCity.replace(/[,.\n]+$/, '').trim();
+            }
+          }
+
+          // Strip province from address_text if present
+          if (extracted.address_text) {
+            extracted.address_text = extracted.address_text.replace(PROVINCES, '').replace(/^[,.\s]+|[,.\s]+$/g, '').replace(/\s{2,}/g, ' ').trim();
           }
         }
       }

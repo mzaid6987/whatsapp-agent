@@ -163,8 +163,15 @@ function productList() {
   }).join('\n');
 }
 
+function productListWithFeatures() {
+  return PRODUCTS.map((p, i) => {
+    const num = `${i + 1}.`;
+    return `${num} ${p.short} — ${fmtPrice(p.price)} | ${p.f1}`;
+  }).join('\n');
+}
+
 module.exports = {
   PRODUCTS, UPSELL_MAP, CITIES_FAST, CITIES_MED, CITY_ABBR, ALL_CITIES,
   REGIONS, REGION_EXAMPLES, FEMALE_NAMES, MALE_NAMES, MALE_NAMES_ENDING_A,
-  getHonorific, deliveryTime, fmtPrice, productList
+  getHonorific, deliveryTime, fmtPrice, productList, productListWithFeatures
 };
