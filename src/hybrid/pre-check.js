@@ -914,8 +914,15 @@ function preCheck(message, currentState, collected, state) {
     // Has product/price content → fall through to product detection
   }
 
-  // 8b. YES in GREETING → show product list (greeting asks "products dekhna hai?")
+  // 8b. YES in GREETING/PRODUCT_SELECTION → show product list
+  // In PRODUCT_SELECTION: "hn" after "list dekhni hai?" = show products via template
   // BUT if a specific product is mentioned, skip to product detection instead
+  if (currentState === 'PRODUCT_SELECTION') {
+    const isShortYes = /^(ha+n|ji+|yes+|hn|hm+|g|ok|okay|jee|dikhao|dikhado|batao|dekhna)\s*[.!]?\s*$/i.test(l);
+    if (isShortYes && !detectProduct(msg)) {
+      return { intent: 'show_products' };
+    }
+  }
   if (currentState === 'GREETING') {
     // Pure acknowledgment ("acha", "theek", "hmm") in GREETING = "yes, show products"
     // "ok/okay/g/ji" → treat as YES (show products), not silent ack
@@ -967,9 +974,9 @@ function preCheck(message, currentState, collected, state) {
   // 8d. ORDER INTENT (English) — "i want to order", "wanna order", "need to order"
   // No product mentioned but clear order intent → show product list
   if (['IDLE', 'GREETING', 'PRODUCT_SELECTION'].includes(currentState)) {
-    const engOrderIntent = /\b(wan[nrt]?[aoe]?\s*(to\s*)?order|wanna\s*order|need\s*to\s*order|i\s*want\s*to\s*(order|buy)|want\s*to\s*(buy|order|purchase))\b/i.test(l) ||
-      /\b(order\s*kr?n?a?\s*(hai|he|h|ha|chahta|chahti)?)\b/i.test(l) ||
-      /\b(order\s*karb?a?\s*(hai|he|h|ha)?)\b/i.test(l) ||
+    const engOrderIntent = /\b(wan[nrt]?[aoe]?\s*(to\s*)?(order|ordr|ordeer|ordar|odr)|wanna\s*(order|ordr)|need\s*to\s*(order|ordr)|i\s*want\s*to\s*(order|ordr|buy)|want\s*to\s*(buy|order|ordr|purchase))\b/i.test(l) ||
+      /\b(order|ordr|ordeer)\s*kr?n?a?\s*(hai|he|h|ha|chahta|chahti)?\b/i.test(l) ||
+      /\b(order|ordr)\s*karb?a?\s*(hai|he|h|ha)?\b/i.test(l) ||
       /\b(mujhe|muje|mjhe|mjy|humain|hmain|hme)\s*(order|manga|mangwa|chahiye|chaiye|chahea|chahye|chahy|chahe)\s*(kr|kar|karb?a?|krn?a?|karn?a?)?\s*(hai|he|h|ha)?\b/i.test(l) ||
       /\b(mujhe|muje|mjhe|mjy)\s*(chahy|chahiy?e?|chaiy?e?|chahea)\b/i.test(l) ||
       /\b(kuch|koi)\s*(order|manga|mangwa)\s*(krn?a?|karn?a?|karb?a?)\s*(hai|he|h|ha|tha|chahta)?\b/i.test(l);

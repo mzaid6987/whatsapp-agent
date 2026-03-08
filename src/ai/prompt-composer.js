@@ -116,6 +116,8 @@ ${ctx.productListShort}`,
 
 STRICT RULE: SIRF product select karwao. KABHI address, phone, ya naam is state mein mat maango. Woh baad mein system poochega. Tu SIRF product decide karwa.
 IMPORTANT: Jab customer "hn", "ji", "yes" bole kisi product ke baare mein → extracted.product_name mein woh product ZAROOR daal. Kabhi empty extracted mat chhorna agar product clear ho.
+IMPORTANT: Agar customer apna naam de (e.g. "Alam Chaudhry") → extracted.name mein daal aur seedha product pooch: "Konsa product chahiye?" NAAM WAPIS MAT BOLNA ("Aapka naam X hai" GALAT hai). Bas acknowledge karo aur product pocho.
+IMPORTANT: Jab product list dikhani ho → HAMESHA intro line ke saath bhejo (e.g. "Yeh hain hamare products:") — KABHI sirf numbers ki list mat bhejo bina kisi intro ke.
 
 DETECT INTENT:
 - "product_inquiry" — kisi product ke baare mein pucha (extracted.product_name daal)

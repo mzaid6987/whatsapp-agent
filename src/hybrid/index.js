@@ -1306,9 +1306,9 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       }
     }
 
-    // Name extraction — in COLLECT_NAME, or explicit "name X" in any state
+    // Name extraction — in COLLECT_NAME, PRODUCT_SELECTION (early info), or explicit "name X" in any state
     const hasExplicitName = /\b(name|naam|my\s*name|mera\s*naam)\s+/i.test(message);
-    if (extracted.name && (state.current === 'COLLECT_NAME' || hasExplicitName)) {
+    if (extracted.name && (state.current === 'COLLECT_NAME' || state.current === 'PRODUCT_SELECTION' || hasExplicitName)) {
       const name = extracted.name.trim();
       // Guard: don't store question fragments as name (e.g. "kya hai" from "tumhara naam kya hai")
       const isQuestionFragment = /^(kya|kia|what|kaun|kon|who|how|kaise|kitna|kitne)\b/i.test(name) ||
