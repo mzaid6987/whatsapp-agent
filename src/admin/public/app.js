@@ -165,7 +165,7 @@ function renderChatList(convos) {
     // Silent customer timer — live calculated from last_msg_time
     const liveHours = (c.last_msg_direction === 'outgoing' && c.last_msg_time) ? calcSilentHoursLive(c.last_msg_time) : null;
     const liveIs24h = liveHours !== null && liveHours >= 24;
-    const showSilent = liveHours !== null && !c.spam_flag && !c.complaint_flag && !c.needs_human && !['ORDER_CONFIRMED','CANCEL_AFTER_CONFIRM','COMPLAINT'].includes(c.state);
+    const showSilent = liveHours !== null && !c.spam_flag && !c.complaint_flag && !c.needs_human && !['ORDER_CONFIRMED','UPSELL_HOOK','UPSELL_SHOW','CANCEL_AFTER_CONFIRM','COMPLAINT'].includes(c.state);
     if (showSilent && liveIs24h) {
       labels.push(`<span class="label-badge label-silent24">24h+ ${formatSilentTimer(liveHours)}</span>`);
     } else if (showSilent && liveHours >= 0) {
@@ -712,7 +712,7 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
   // Silent timer — show on last outgoing message if customer hasn't replied (live from message time)
   let silentTimerHtml = '';
   if (lastMsgConv && isOut && lastMsgConv.last_msg_direction === 'outgoing' && lastMsgConv.last_msg_time) {
-    const excluded = lastMsgConv.spam_flag || lastMsgConv.complaint_flag || lastMsgConv.needs_human || ['ORDER_CONFIRMED','CANCEL_AFTER_CONFIRM','COMPLAINT'].includes(lastMsgConv.state);
+    const excluded = lastMsgConv.spam_flag || lastMsgConv.complaint_flag || lastMsgConv.needs_human || ['ORDER_CONFIRMED','UPSELL_HOOK','UPSELL_SHOW','CANCEL_AFTER_CONFIRM','COMPLAINT'].includes(lastMsgConv.state);
     if (!excluded) {
       const liveH = calcSilentHoursLive(m.created_at);
       const is24h = liveH >= 24;

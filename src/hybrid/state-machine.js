@@ -654,16 +654,27 @@ function askNextField(state, storeName) {
     case 'COLLECT_ADDRESS': {
       // Pre-fill from address_hint saved during COLLECT_PHONE
       if (state._address_hint && !state.collected.address_parts.area) {
-        const hint = state._address_hint.toLowerCase();
-        // Try to extract area from common patterns
-        const areaMatch = hint.match(/\b(main\s*baz[ae]ar|bazar|bazaar|market|mohall?ah?\s+\w+|\w+\s+colony|\w+\s+town|\w+\s+road)\b/i);
+        const hint = state._address_hint;
+        const hintLower = hint.toLowerCase();
+        // Extract area (greedy — "main bazar" not just "bazar")
+        const areaMatch = hintLower.match(/\b(main\s*baz[ae]ar|\w+\s+baz[ae]ar|baz[ae]ar|\w+\s+market|market|mohall?ah?\s+\w+|\w+\s+colony|\w+\s+town|\w+\s+road)\b/i);
         if (areaMatch) {
           state.collected.address_parts.area = areaMatch[0].replace(/\b\w/g, c => c.toUpperCase());
         }
-        // Try to extract landmark (shop/fabric/store name)
-        const shopMatch = hint.match(/(\w[\w\s]*?)\s*(fabric|shop|store|dukaan|dukan|bakery|kiryana|medical)\b/i);
+        // Extract landmark (shop/fabric/store — grab preceding name words)
+        const shopMatch = hintLower.match(/(\w+(?:\s+\w+)?)\s+(fabric|shop|store|dukaan|dukan|bakery|kiryana|medical|cloth)\b/i);
         if (shopMatch) {
           state.collected.address_parts.landmark = shopMatch[0].replace(/\b\w/g, c => c.toUpperCase());
+        }
+        // Extract city/tehsil hint (leading words before shop/area keywords)
+        if (!state.collected.city) {
+          const cityMatch = hintLower.match(/^(\w+(?:\s+\w+)?)\s+(?=\w+\s*(fabric|shop|store|dukaan|bakery|cloth|medical))/i);
+          if (cityMatch) {
+            const possibleCity = cityMatch[1].replace(/\b\w/g, c => c.toUpperCase());
+            if (!/\b(main|baz[ae]ar|market|mohall?ah?|colony|town|road|nagar|block|street|gali)\b/i.test(possibleCity)) {
+              state.collected.city = possibleCity;
+            }
+          }
         }
         delete state._address_hint;
       }

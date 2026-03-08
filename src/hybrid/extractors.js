@@ -610,11 +610,13 @@ function buildAddressString(parts) {
   // Landmark handling
   let landmarkText = null;
   let isDeliveryPoint = false;
+  let isShopDelivery = false;
   if (parts.landmark && !skip(parts.landmark)) {
     const lm = parts.landmark.toString();
     isDeliveryPoint = /\b(dak\s*khana|post\s*office|tcs|leopard|call\s*courier)\b/i.test(lm);
-    if (isDeliveryPoint || isRural) {
-      // Rural/delivery point: no "near" prefix — landmark IS the delivery reference
+    isShopDelivery = /\b(shop|dukaan|dukan|store|fabric|bakery|kiryana|medical|pharmacy|cloth|kapra|general|mart|karyana|hotel|restaurant|dhaba|office|workshop|godown)\b/i.test(lm);
+    if (isDeliveryPoint || isRural || isShopDelivery) {
+      // Rural/delivery point/shop: no "near" prefix — landmark IS the delivery location
       landmarkText = lm.replace(/\b[a-z]/g, c => c.toUpperCase());
     } else if (/^near\s/i.test(lm)) {
       landmarkText = lm;
@@ -629,11 +631,16 @@ function buildAddressString(parts) {
     if (parts.area) pieces.push(parts.area);
     if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
     if (parts.zilla) pieces.push('Zilla ' + parts.zilla);
+  } else if (isShopDelivery || isDeliveryPoint) {
+    // Shop/delivery point format: Landmark (shop name), Area, City
+    if (landmarkText) pieces.push(landmarkText);
+    if (parts.area) pieces.push(parts.area);
+    if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
+    if (parts.zilla) pieces.push('Zilla ' + parts.zilla);
   } else {
     // Urban format: House, Street, Area, near Landmark
-    if (isDeliveryPoint && landmarkText) pieces.push(landmarkText);
     if (parts.area) pieces.push(parts.area);
-    if (!isDeliveryPoint && landmarkText) pieces.push(landmarkText);
+    if (landmarkText) pieces.push(landmarkText);
     if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
     if (parts.zilla) pieces.push('Zilla ' + parts.zilla);
   }
