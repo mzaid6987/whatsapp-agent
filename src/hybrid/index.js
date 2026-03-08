@@ -1241,6 +1241,39 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   // ============================================
   // PATH 3: AI-powered response
   // ============================================
+
+  // GUARD: AI cost limit — if conversation AI cost exceeds Rs.3, hand off to human
+  if (dbConv) {
+    try {
+      const costRow = getDb().prepare(`
+        SELECT COALESCE(SUM(
+          CASE WHEN debug_json IS NOT NULL THEN
+            COALESCE(json_extract(debug_json, '$._cost_rs'), 0) + COALESCE(json_extract(debug_json, '$._media_cost_rs'), 0)
+          ELSE 0 END
+        ), 0) as total_cost
+        FROM messages WHERE conversation_id = ?
+      `).get(dbConv.id);
+      const totalCost = costRow?.total_cost || 0;
+      if (totalCost >= 3) {
+        console.log(`[COST GUARD] Conversation ${dbConv.id} AI cost Rs.${totalCost.toFixed(2)} exceeds Rs.3 limit — switching to human`);
+        conversationModel.setHumanOnly(dbConv.id, true);
+        const costReply = `${getHonorific(state.collected.name, state.gender)}, hamara agent abhi aapse baat karega 🙏 Thori der mein reply milega.`;
+        saveMessages(dbConv, message, costReply, 'cost_limit', 'guard', state, {
+          needs_human: true,
+          debug: { path: 'COST_LIMIT_GUARD', total_cost: totalCost, limit: 3 },
+        });
+        return {
+          reply: costReply, state: state.current, collected: { ...state.collected },
+          needs_human: true, source: 'guard', intent: 'cost_limit',
+          tokens_in: 0, tokens_out: 0, response_ms: Date.now() - startTime,
+          db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+        };
+      }
+    } catch (e) {
+      console.error('[COST GUARD] Error checking AI cost:', e.message);
+    }
+  }
+
   if (!apiKey) {
     const fallback = 'Ji sir, order karna ho to bata dein. Ya koi aur product dekhna hai?';
     saveMessages(dbConv, message, fallback, 'unknown', 'fallback', state);
@@ -2163,6 +2196,54 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       return { reply: imgReply, state: state.current };
     }
 
+    case 'parcel_image': {
+      // Customer sent a parcel/courier label image — extract name, phone, address, city
+      const parcelData = pre.extracted || {};
+      // Save parcel data in state for "usi pe bhejo" follow-up reference
+      state._parcel_data = parcelData;
+      const parts = [];
+      if (parcelData.name) { state.collected.name = parcelData.name; parts.push(`Naam: ${parcelData.name}`); }
+      if (parcelData.phone) { state.collected.phone = parcelData.phone; state.collected.delivery_phone = 'same'; parts.push(`Phone: ${parcelData.phone}`); }
+      if (parcelData.city) {
+        const cityMatch = extractCity(parcelData.city);
+        if (cityMatch) { state.collected.city = cityMatch; parts.push(`City: ${cityMatch}`); }
+        else { state.collected.city = parcelData.city; parts.push(`City: ${parcelData.city}`); }
+      }
+      if (parcelData.address) {
+        state.collected.address_parts = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };
+        state.collected.address_parts.area = parcelData.address;
+        parts.push(`Address: ${parcelData.address}`);
+      }
+      const honorific = getHonorific(state.collected.name, state.gender);
+      const confirmText = parts.length > 0
+        ? `${honorific}, parcel se yeh info mili:\n${parts.join('\n')}\n\nKya yeh sahi hai? ✅`
+        : `${honorific}, parcel se info nahi mil saki. Apna naam bata dein?`;
+      // Move to appropriate next state
+      if (parts.length > 0) {
+        state._parcel_confirming = true;
+      }
+      return { reply: confirmText, state: state.current };
+    }
+
+    case 'parcel_image_confirm': {
+      // Customer said "usi pe bhejo" — apply saved parcel data
+      const pd = pre.extracted || {};
+      if (pd.name && !state.collected.name) state.collected.name = pd.name;
+      if (pd.phone && !state.collected.phone) { state.collected.phone = pd.phone; state.collected.delivery_phone = 'same'; }
+      if (pd.city && !state.collected.city) {
+        const cm = extractCity(pd.city);
+        state.collected.city = cm || pd.city;
+      }
+      if (pd.address) {
+        state.collected.address_parts = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };
+        if (!state.collected.address_parts.area) state.collected.address_parts.area = pd.address;
+      }
+      // Figure out what's next
+      const nf = askNextField(state, storeName);
+      if (nf) return { reply: nf.reply, state: nf.state };
+      return { reply: fillTemplate('FALLBACK', vars), state: state.current };
+    }
+
     case 'greeting': {
       state.current = 'GREETING';
       if (state.isReturning && state.collected.name) {
@@ -2367,6 +2448,12 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       const honorific = getHonorific(state.collected.name, state.gender);
       const productList = PRODUCTS.map((p, i) => `${i + 1}. ${p.short} — Rs.${p.price.toLocaleString()}`).join('\n');
       return { reply: `${honorific.charAt(0).toUpperCase() + honorific.slice(1)}, "${qualText}" ke liye yeh products hain:\n${productList}\nIn mein se konsa chahiye? Number ya naam bata dein.`, state: 'PRODUCT_SELECTION' };
+    }
+
+    case 'frustration': {
+      // Customer is frustrated — hand off to human agent
+      const frustReply = `${getHonorific(state.collected.name, state.gender)}, maafi chahte hain aapko takleef hui 🙏 Hamara agent abhi aapse baat karega. Thori der mein aapko reply milega.`;
+      return { reply: frustReply, state: state.current, needs_human: true };
     }
 
     case 'complaint': {

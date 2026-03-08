@@ -94,6 +94,28 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'bot_identity' };
   }
 
+  // 0b2a. PARCEL IMAGE — Vision detected a courier/parcel label with address info
+  // e.g. "[Image: [Parcel Info] Name: Ahmed, Phone: 03001234567, Address: House 5 Street 3, City: Lahore]"
+  const parcelMatch = msg.match(/\[Parcel Info\]\s*(.+?)(?:\]|$)/i);
+  if (parcelMatch) {
+    const info = parcelMatch[1];
+    const extracted = {};
+    const nameM = info.match(/Name:\s*([^,\]]+)/i);
+    const phoneM = info.match(/Phone:\s*([^,\]]+)/i);
+    const addressM = info.match(/Address:\s*([^,\]]+(?:,\s*[^,\]]+)*)/i);
+    const cityM = info.match(/City:\s*([^,\]]+)/i);
+    if (nameM) extracted.name = nameM[1].trim();
+    if (phoneM) {
+      const ph = phoneM[1].trim().replace(/[\s-]/g, '');
+      if (/^0\d{10}$/.test(ph)) extracted.phone = ph;
+    }
+    if (addressM) extracted.address = addressM[1].trim();
+    if (cityM) extracted.city = cityM[1].trim();
+    if (Object.keys(extracted).length > 0) {
+      return { intent: 'parcel_image', extracted };
+    }
+  }
+
   // 0b2. IMAGE NO MATCH — Vision says image is not a product or doesn't match
   // e.g. "[Image: Yeh tasveer kisi product ka nahi...]" — prevent false product detection
   const imageMatch = msg.match(/\[Image:\s*([^\]]+)\]/);
@@ -112,6 +134,16 @@ function preCheck(message, currentState, collected, state) {
       msg = msg.replace(/\[Image:[^\]]*\]/, '[Image: unrecognized]');
       l = msg.toLowerCase().trim();
     }
+  }
+
+  // 0b3. "ISI PE BHEJO" — reference to previous image/parcel for address
+  // "usi pe bhejo", "isi address pe", "uper jo dress hai usi py bjna"
+  // Only relevant during collection states — tells bot to use previously extracted info
+  const isReferenceToImage = /\b(usi|isi|us[iy]?\s*(pe|py|par)|is[iy]?\s*(pe|py|par)|uper\s*jo|oper\s*jo|wahi|wohi|yehi|yahi)\s*.*(bhej|bjna|send|address|pata|parcel|dress)\b/i.test(l) ||
+    /\b(bhej|bjna|send|address|pata)\s*.*(usi|isi|uper|oper|wahi|wohi|yehi|yahi)\b/i.test(l);
+  if (isReferenceToImage && state && state._parcel_data) {
+    // Customer is saying "use that address" — re-trigger parcel data application
+    return { intent: 'parcel_image_confirm', extracted: state._parcel_data };
   }
 
   // 0c. PAST ORDER REFERENCE — "maine magayi thi", "maine order kiya tha", "aap se li thi"
@@ -171,6 +203,15 @@ function preCheck(message, currentState, collected, state) {
   if (complaint && trust) {
     return { intent: 'trust_question' };
   }
+  // 1x. FRUSTRATION DETECTION — customer is fed up, wants to quit
+  // "rehne do", "chor do", "bhool jao", "band karo", "dimagh kharab", "pagal kr dia"
+  // Only trigger when customer has been in conversation for a while (not first message)
+  const FRUSTRATION_PHRASES = /\b(rehne?\s*d[oey]|rhn[ey]?\s*d[oey]|chor\s*d[oey]|choro|bhool\s*jao|bhul\s*jao|band\s*kar[o]?|bas\s*kar[o]?|dimagh?\s*kharab|dmagh?\s*khrab|pagal|pagl|bewakoof|bewaqoof|bekaar|bekar|wahiyat|time\s*waste|tym\s*waste|koi\s*faida\s*nahi|koi\s*fayda\s*nahi|tang\s*aa?\s*ga[iy]a|thak\s*ga[iy]a|fed\s*up|frustrated|give\s*up|leave\s*it|forget\s*it|nahi\s*chahiye\s*kuch|kuch\s*nahi\s*chahiye|mat\s*karo|baat\s*mat|jawab\s*mat)\b/i;
+  const isFrustrated = FRUSTRATION_PHRASES.test(l);
+  if (isFrustrated && !['IDLE', 'GREETING'].includes(currentState)) {
+    return { intent: 'frustration', needs_human: true };
+  }
+
   // Standalone trust question without complaint — "warranty kitny time ki", "COD hai?", "exchange hota hai?"
   // BUT: "quality?" alone = quality question (not trust) — route to quality_question
   if (trust && !complaint) {
