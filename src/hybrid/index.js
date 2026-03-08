@@ -372,7 +372,7 @@ function matchAutoTemplate(msg, currentState, productId) {
     if (keywords.length === 0) return null;
 
     const templates = db.prepare(
-      'SELECT * FROM auto_templates WHERE state = ? AND (product_id = ? OR product_id IS NULL) AND times_seen >= 3'
+      'SELECT * FROM auto_templates WHERE state = ? AND (product_id = ? OR product_id IS NULL) AND times_seen >= 3 AND (is_active = 1 OR is_active IS NULL)'
     ).all(currentState, productId || null);
 
     let bestMatch = null, bestScore = 0;

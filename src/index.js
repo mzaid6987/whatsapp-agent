@@ -1119,6 +1119,44 @@ function bufIndexOf(buf, search, start) {
   return -1;
 }
 
+// ---- AUTO-TEMPLATES (AI-learned response patterns) ----
+
+app.get('/api/auto-templates', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    const templates = db.prepare('SELECT * FROM auto_templates ORDER BY times_seen DESC, times_used DESC').all();
+    res.json(templates);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/auto-templates/:id', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    const { response, is_active } = req.body;
+    if (response !== undefined) {
+      db.prepare('UPDATE auto_templates SET response = ? WHERE id = ?').run(response, req.params.id);
+    }
+    if (is_active !== undefined) {
+      db.prepare('UPDATE auto_templates SET is_active = ? WHERE id = ?').run(is_active ? 1 : 0, req.params.id);
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/auto-templates/:id', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    db.prepare('DELETE FROM auto_templates WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---- TEST CHAT (Hybrid: Template + AI Fallback) ----
 
 app.post('/api/test-chat', requireAuth, async (req, res) => {

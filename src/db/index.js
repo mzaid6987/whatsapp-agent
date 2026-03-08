@@ -186,6 +186,7 @@ async function initDb() {
   try { db.exec('ALTER TABLE messages ADD COLUMN wa_message_id TEXT'); } catch (e) {}
   try { db.exec('ALTER TABLE messages ADD COLUMN wa_status TEXT DEFAULT \'sent\''); } catch (e) {}
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_msg_waid ON messages(wa_message_id)'); } catch (e) {}
+  try { db.exec('ALTER TABLE auto_templates ADD COLUMN is_active INTEGER DEFAULT 1'); } catch (e) {}
 
   console.log('[DB] SQLite (sql.js) initialized at', DB_PATH);
   return db;
