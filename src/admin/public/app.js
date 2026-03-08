@@ -719,7 +719,7 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
       const timerText = is24h
         ? `24h+ silent (${formatSilentTimer(liveH)})`
         : `Silent: ${formatSilentTimer(liveH)}`;
-      silentTimerHtml = `<div class="silent-timer-msg${is24h ? '' : ' pending'}">${timerText}</div>`;
+      silentTimerHtml = `<div class="silent-timer-msg${is24h ? '' : ' pending'}" id="silentTimerMsg" data-time="${m.created_at}">${timerText}</div>`;
     }
   }
   return `
@@ -734,10 +734,21 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
   `;
 }
 
-// Live timer refresh — re-render chat list every 30s to update silent timers
+// Live timer refresh — re-render chat list + chat view timer every 30s
 setInterval(() => {
   if (conversations && conversations.length > 0) {
     renderChatList(conversations);
+  }
+  // Update chat view silent timer without full re-render
+  const timerEl = document.getElementById('silentTimerMsg');
+  if (timerEl) {
+    const msgTime = timerEl.dataset.time;
+    const liveH = calcSilentHoursLive(msgTime);
+    if (liveH !== null) {
+      const is24h = liveH >= 24;
+      timerEl.textContent = is24h ? `24h+ silent (${formatSilentTimer(liveH)})` : `Silent: ${formatSilentTimer(liveH)}`;
+      timerEl.className = is24h ? 'silent-timer-msg' : 'silent-timer-msg pending';
+    }
   }
 }, 30000);
 
