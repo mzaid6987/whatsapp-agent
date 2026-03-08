@@ -322,12 +322,13 @@ function handleTemplateState(message, state, storeName, preIntent) {
     case 'UPSELL_HOOK': {
       // Media request — "picture dikhao", "photo bhejo" — check BEFORE yes/no
       const isMediaReqHook = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye)\b/i.test(l) ||
-        /\b(video|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye)\b/i.test(l) ||
-        /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid)\b/i.test(l) ||
-        /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(l);
+        /\b(video|vidoe|vedio|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye)\b/i.test(l) ||
+        /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid|vidoe|vedio)\b/i.test(l) ||
+        /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(l) ||
+        /\bki\s+(video|vidoe|vedio|vid|picture|photo|pic|image|tasveer)\b/i.test(l);
       if (isMediaReqHook) {
         const mediaProduct = detectProduct(message) || state.product;
-        const mediaType = /\b(video|vid|reel)\b/i.test(l) ? 'video' : 'image';
+        const mediaType = /\b(video|vidoe|vedio|vid|reel)\b/i.test(l) ? 'video' : 'image';
         if (mediaProduct) {
           return { reply: null, state: 'UPSELL_HOOK', _media: { product_id: mediaProduct.id, type: mediaType, product_name: mediaProduct.short } };
         }
@@ -358,13 +359,14 @@ function handleTemplateState(message, state, storeName, preIntent) {
       // Media request — "picture dikhao", "photo bhejo" — check BEFORE yes/no
       // This handles "Han lekin picture to dikhao" (picture takes priority over yes)
       const isMediaReqShow = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye|to)\b/i.test(l) ||
-        /\b(video|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye|to)\b/i.test(l) ||
-        /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid)\b/i.test(l) ||
+        /\b(video|vidoe|vedio|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye|to)\b/i.test(l) ||
+        /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid|vidoe|vedio)\b/i.test(l) ||
         /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(l) ||
-        /\bpicture\s+to\s+dikha/i.test(l);
+        /\bpicture\s+to\s+dikha/i.test(l) ||
+        /\bki\s+(video|vidoe|vedio|vid|picture|photo|pic|image|tasveer)\b/i.test(l);
       if (isMediaReqShow) {
         const mediaProduct = detectProduct(message) || state._pending_upsell || state.product;
-        const mediaType = /\b(video|vid|reel)\b/i.test(l) ? 'video' : 'image';
+        const mediaType = /\b(video|vidoe|vedio|vid|reel)\b/i.test(l) ? 'video' : 'image';
         if (mediaProduct) {
           return { reply: null, state: 'UPSELL_SHOW', _media: { product_id: mediaProduct.id, type: mediaType, product_name: mediaProduct.short } };
         }
@@ -505,13 +507,14 @@ function handleTemplateState(message, state, storeName, preIntent) {
     case 'ORDER_CONFIRMED': {
       // Media request — "picture dikhao" after order confirmed
       const isMediaReqConf = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye|to)\b/i.test(l) ||
-        /\b(video|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye|to)\b/i.test(l) ||
-        /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid)\b/i.test(l) ||
+        /\b(video|vidoe|vedio|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye|to)\b/i.test(l) ||
+        /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid|vidoe|vedio)\b/i.test(l) ||
         /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(l) ||
-        /\bpicture\s+to\s+dikha/i.test(l);
+        /\bpicture\s+to\s+dikha/i.test(l) ||
+        /\bki\s+(video|vidoe|vedio|vid|picture|photo|pic|image|tasveer)\b/i.test(l);
       if (isMediaReqConf) {
         const mediaProduct = detectProduct(message) || state.product;
-        const mediaType = /\b(video|vid|reel)\b/i.test(l) ? 'video' : 'image';
+        const mediaType = /\b(video|vidoe|vedio|vid|reel)\b/i.test(l) ? 'video' : 'image';
         if (mediaProduct) {
           return { reply: null, state: 'ORDER_CONFIRMED', _media: { product_id: mediaProduct.id, type: mediaType, product_name: mediaProduct.short } };
         }
