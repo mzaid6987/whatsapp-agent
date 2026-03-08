@@ -159,7 +159,7 @@ function productList() {
   return PRODUCTS.map((p, i) => {
     const num = `${i + 1}.`;
     const emoji = PRODUCT_EMOJIS[i] || '📦';
-    return `${num} ${emoji} ${p.short} — ${fmtPrice(p.price)}`;
+    return `${num} ${emoji} ${p.name} — ${fmtPrice(p.price)}`;
   }).join('\n');
 }
 
