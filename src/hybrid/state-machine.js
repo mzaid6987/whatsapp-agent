@@ -611,7 +611,7 @@ function handleTemplateState(message, state, storeName, preIntent) {
         state.collected.city = state._pending_city;
         state.collected.address_parts = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };
         state.collected.address_parts.area = state._rural_part;
-        state._is_rural = true; // Mark rural — skip street/house
+        state._is_rural = true; state.collected._is_rural = true; // Mark rural — skip street/house
         delete state._rural_part;
         delete state._rural_type;
         delete state._pending_city;
@@ -654,7 +654,14 @@ function askNextField(state, storeName) {
     case 'COLLECT_ADDRESS': {
       // Don't blindly reset to 'area' — check what's already collected
       const ap = state.collected.address_parts;
-      const isRural = !!state._is_rural;
+      // Backup rural detection: check collected._is_rural (persisted in DB), _rural_type, or rural pattern in area
+      let isRural = !!state._is_rural || !!state.collected?._is_rural;
+      if (!isRural && (state._rural_type || state.collected?._rural_type || /\b(chak|gaon|gao|goth|killi|dhoke|dhok|mauza|mouza|village|dehat)\b/i.test(ap?.area || ''))) {
+        isRural = true;
+      }
+      if (isRural && !state._is_rural) {
+        state._is_rural = true; state.collected._is_rural = true;
+      }
       const isRuralHome = !!state._rural_home_delivery;
 
       // Rural (non-home): street/house not needed — only area + landmark

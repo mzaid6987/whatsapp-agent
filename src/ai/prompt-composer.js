@@ -248,7 +248,7 @@ STRICT:
 - 1-2 sentences max.`;
     }
 
-    // Rural-specific prompt — skip street/house, focus on TCS/post office
+    // Rural-specific prompt — skip street/house, focus on delivery point
     if (isRural) {
       return `TERA KAAM: Rural/gaon address hai — delivery point extract kar.
 
@@ -260,25 +260,25 @@ Collected so far:
 
 YEH RURAL/GAON ADDRESS HAI — IMPORTANT RULES:
 - Street/gali aur house number BILKUL MAT POOCH — rural areas mein nahi hota.
-- Sirf delivery point chahiye: TCS office, post office, ya koi mashoor jagah jahan parcel bhijwa sakein.
-- Customer jo bhi delivery point bataye (TCS office, post office, courier office, dak khana) → landmark mein daal do.
-- IMPORTANT: Agar customer full address de bhi de ya bole "ghar pe deliver karo" — tab bhi TCS/post office poochna LAZMI hai.
-  Bol: "courier rural area mein ghar tak deliver nahi kar pata — TCS ya post office batayein jahan parcel bhijwa sakein?"
-- Agar customer TCS/post office ka naam ya location bataye → accept as landmark.
-- Agar customer bole house number nahi hai / gaon hai → samjho rural hai, street/house mat pooch. Sirf mashoor jagah ka naam pooch lo (masjid, school, dukaan).
+- Sirf delivery point chahiye: koi mashoor jagah jahan parcel bhijwa sakein.
+- Customer jo bhi delivery point bataye (TCS office, post office, courier office, daak khana, masjid, school, dukaan) → landmark mein daal do.
+- "daak khana" / "dak khana" = post office. Landmark mein "Daak Khana" daal do.
+- Agar customer bole house number nahi hai / gaon hai → samjho rural hai, street/house mat pooch. Sirf mashoor jagah ka naam pooch lo.
+- KABHI internal terms mat use (landmark, delivery point). Customer ko SEEDHA pooch: "Qareeb koi mashoor jagah — masjid, school, dukaan?"
 - KABHI "beshumar" word mat use. HAMESHA "mashoor" likho.
+- Response CHHOTA aur NATURAL rakh — 1 sentence. Internal logic explain mat kar.
 
 DETECT INTENT: hamesha "address_info" return kar.
 extracted mein address_parts object daal:
 {"address_parts":{"area":"...","street":null,"house":null,"landmark":"..."}}
 - area pehle se set hai — change mat kar.
 - street aur house HAMESHA null rakho (rural mein nahi chahiye).
-- landmark = delivery point (TCS office, post office, ya named place).
+- landmark = delivery point (masjid, school, TCS, post office, daak khana, dukaan etc.).
 
 STRICT:
 - SIRF delivery point collect — order/upsell/COD KABHI mat bol.
 - TU KABHI mat bol ke "address complete ho gaya" — code decide karega.
-- 1-2 sentences max.`;
+- 1 sentence max. Natural rakh.`;
     }
 
     // Urban/normal address prompt

@@ -394,8 +394,18 @@ function detectRuralAddress(msg) {
 
   // Rural keyword patterns — both "keyword + name" AND "name + keyword"
   // e.g. "gaon miani" AND "miani gaon", "goth ibrahim" AND "ibrahim goth"
+  // IMPORTANT: keyword-LAST patterns come FIRST so "Hari gaon me" matches "Hari gaon" not "gaon me"
   const RURAL_KEYWORDS = ['village', 'gaon', 'gao', 'goth', 'killi', 'dhoke', 'dhok', 'mauza', 'mouza', 'dehat'];
   const ruralPatterns = [
+    // keyword LAST (check first!): "miani gaon", "ibrahim goth", "Hari gaon me"
+    { regex: /\b([a-z]{2,20}\s+village)\b/i, type: 'village' },
+    { regex: /\b([a-z]{2,20}\s+gaon?)\b/i, type: 'gaon' },
+    { regex: /\b([a-z]{2,20}\s+goth)\b/i, type: 'goth' },
+    { regex: /\b([a-z]{2,20}\s+killi)\b/i, type: 'killi' },
+    { regex: /\b([a-z]{2,20}\s+dhoke?)\b/i, type: 'dhoke' },
+    { regex: /\b([a-z]{2,20}\s+mauza)\b/i, type: 'mauza' },
+    { regex: /\b([a-z]{2,20}\s+mouza)\b/i, type: 'mauza' },
+    { regex: /\b([a-z]{2,20}\s+dehat)\b/i, type: 'dehat' },
     // keyword FIRST: "gaon miani", "goth ibrahim jokhio"
     { regex: /\b(village\s+[a-z\s]{2,30})/i, type: 'village' },
     { regex: /\b(gaon?\s+[a-z\s]{2,30})/i, type: 'gaon' },
@@ -405,15 +415,6 @@ function detectRuralAddress(msg) {
     { regex: /\b(mauza\s+[a-z\s]{2,30})/i, type: 'mauza' },
     { regex: /\b(mouza\s+[a-z\s]{2,30})/i, type: 'mauza' },
     { regex: /\b(dehat\s+[a-z\s]{2,30})/i, type: 'dehat' },
-    // keyword LAST: "miani gaon", "ibrahim goth", "xyz village"
-    { regex: /\b([a-z]{2,20}\s+village)\b/i, type: 'village' },
-    { regex: /\b([a-z]{2,20}\s+gaon?)\b/i, type: 'gaon' },
-    { regex: /\b([a-z]{2,20}\s+goth)\b/i, type: 'goth' },
-    { regex: /\b([a-z]{2,20}\s+killi)\b/i, type: 'killi' },
-    { regex: /\b([a-z]{2,20}\s+dhoke?)\b/i, type: 'dhoke' },
-    { regex: /\b([a-z]{2,20}\s+mauza)\b/i, type: 'mauza' },
-    { regex: /\b([a-z]{2,20}\s+mouza)\b/i, type: 'mauza' },
-    { regex: /\b([a-z]{2,20}\s+dehat)\b/i, type: 'dehat' },
   ];
 
   for (const p of ruralPatterns) {
@@ -421,6 +422,8 @@ function detectRuralAddress(msg) {
     if (m) {
       // Trim trailing city names from the rural part
       let rural = m[1].trim();
+      // Remove trailing prepositions: "Hari gaon me" → "Hari gaon", "gaon mein rehta" → "gaon"
+      rural = rural.replace(/\s+(me|mein|mai|m|pe|par|pr|se|ko|ka|ki|ke|hai|he|h|rehta|rehti|rehte|hun|houn)\s*$/i, '').trim();
       // Remove any known city from the end
       const cities = extractAllCities(rural);
       if (cities.length) {

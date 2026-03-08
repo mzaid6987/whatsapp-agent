@@ -479,6 +479,10 @@ function getOrCreateConv(phone) {
             unknown_count: dbConv.unknown_count || 0,
             messages,
             isReturning: true,
+            // Restore rural flags from collected JSON (persisted)
+            _is_rural: !!collected._is_rural,
+            _rural_type: collected._rural_type || null,
+            _rural_home_delivery: !!collected._rural_home_delivery,
           };
           restored = true;
           console.log(`[State] Restored from DB for ${phone}: state=${dbConv.state}, product=${product?.short || 'N/A'}, name=${collected.name || 'N/A'}`);
@@ -851,7 +855,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       /\bhome\s*delivery\b/i.test(message) ||
       /\bghar\s*(tk|tak|pe|par)\s*(aa|a|bhej|deliver|pohch|ana|aana)\b/i.test(message);
     if (isGharPe) {
-      state._rural_home_delivery = true;
+      state._rural_home_delivery = true; state.collected._rural_home_delivery = true;
       // Keep area, clear landmark (was expecting TCS/post office), collect full address
       state.collected.address_parts.landmark = null;
       state.collected.address_parts.street = null;
@@ -1002,7 +1006,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       /\b(number|no)\s*(nahi|nhi|ni)\s*(hot[aei]|hai|he|hain|milta|milte)\b/i.test(ll) ||
       /\b(yaha|yahan|idhar)\s*(ye|yeh)?\s*(nahi|nhi|ni)\s*(hot[aei]|hain|milta)\b/i.test(ll);
     if (isGaonDeclaration) {
-      state._is_rural = true;
+      state._is_rural = true; state.collected._is_rural = true;
       // Clear urban-style fields, keep area
       state.collected.address_parts.street = null;
       state.collected.address_parts.house = null;
@@ -1098,8 +1102,8 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const hasHouse = ap.house && ap.house !== 'nahi_pata';
       const houseUnknown = ap.house === 'nahi_pata';
       const hasLandmark = !!ap.landmark;
-      const isRural = !!state._is_rural;
-      const isRuralHome = !!state._rural_home_delivery;
+      const isRural = !!state._is_rural || !!state.collected?._is_rural;
+      const isRuralHome = !!state._rural_home_delivery || !!state.collected?._rural_home_delivery;
       const hasZilla = !!ap.zilla;
       // Rural home delivery = full address + zilla (like urban but with zilla)
       // Rural TCS = area + landmark(delivery point) + zilla
@@ -1404,7 +1408,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       if (state._rural_part) {
         state.collected.address_parts = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };
         state.collected.address_parts.area = state._rural_part;
-        state._is_rural = true;
+        state._is_rural = true; state.collected._is_rural = true;
         delete state._rural_part;
         delete state._rural_type;
       }
@@ -2592,7 +2596,7 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       if (state._rural_part) {
         state.collected.address_parts = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };
         state.collected.address_parts.area = state._rural_part;
-        state._is_rural = true; // Mark as rural — skip street/house, ask TCS/post office
+        state._is_rural = true; state.collected._is_rural = true; // Mark as rural — skip street/house, ask TCS/post office
         state.address_step = 'tcs_postoffice'; // Skip street/house entirely
         delete state._rural_part;
         delete state._rural_type;
@@ -2636,15 +2640,21 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       if (!state._rural_part || pre.extracted.rural_part.length > state._rural_part.length) {
         state._rural_part = pre.extracted.rural_part;
       }
-      state._rural_type = pre.extracted.rural_type;
+      state._rural_type = pre.extracted.rural_type; state.collected._rural_type = pre.extracted.rural_type;
       const ruralVars = { ...vars, rural_part: pre.extracted.rural_part };
       return { reply: fillTemplate('ASK_RURAL_CITY', ruralVars), state: 'COLLECT_CITY' };
+    }
+
+    case 'generic_admin_word': {
+      // Customer said "taluqa", "tehsil", "zila" etc. — ask for actual name
+      const word = pre.extracted?.word || 'tehsil';
+      return { reply: `${vars.honorific}, "${word}" ka naam kya hai? Tehsil ya city ka poora naam bata dein 🏙️`, state: 'COLLECT_CITY' };
     }
 
     case 'rural_with_city': {
       // Rural + city both mentioned — ask confirmation
       state._rural_part = pre.extracted.rural_part;
-      state._rural_type = pre.extracted.rural_type;
+      state._rural_type = pre.extracted.rural_type; state.collected._rural_type = pre.extracted.rural_type;
       state._pending_city = pre.extracted.city;
       state.current = 'CONFIRM_RURAL_CITY';
       const ruralVars = { ...vars, city: pre.extracted.city, rural_part: pre.extracted.rural_part };
@@ -2762,11 +2772,11 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       // Assume same phone, store rural info, move to city or rural flow
       state.collected.delivery_phone = 'same';
       state._rural_part = pre.extracted.rural_part;
-      state._rural_type = pre.extracted.rural_type;
+      state._rural_type = pre.extracted.rural_type; state.collected._rural_type = pre.extracted.rural_type;
       if (pre.extracted.city) {
         // Rural + city both mentioned — confirm and start rural address flow
         state.collected.city = pre.extracted.city;
-        state._is_rural = true;
+        state._is_rural = true; state.collected._is_rural = true;
         state.collected.address_parts.area = pre.extracted.rural_part;
         const ruralVars = { ...vars, city: pre.extracted.city, rural_part: pre.extracted.rural_part };
         return { reply: fillTemplate('ASK_RURAL_DELIVERY_POINT', ruralVars), state: 'COLLECT_ADDRESS' };

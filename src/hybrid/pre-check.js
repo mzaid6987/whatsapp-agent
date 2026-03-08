@@ -335,6 +335,13 @@ function preCheck(message, currentState, collected, state) {
       return { intent: 'phone_clarification_in_city' };
     }
 
+    // Generic admin words — "taluqa", "tehsil", "zila", "district" are NOT city names
+    // Customer is describing the type of place, not giving a name
+    const GENERIC_ADMIN_WORDS = /^(taluqa|taluka|tehsil|tahsil|zila|zilla|district|ilaqa|ilaaka|markaz|sub\s*division|gaon|village|dehat|sheher|shehr|city)\s*$/i;
+    if (GENERIC_ADMIN_WORDS.test(l.trim())) {
+      return { intent: 'generic_admin_word', extracted: { word: l.trim() } };
+    }
+
     // Rural address detection (chak/village/gaon/goth/killi/dhoke/mauza)
     const rural = detectRuralAddress(msg);
     if (rural && rural.isRural) {
