@@ -406,7 +406,7 @@ async function webhookHandler(req, res) {
         let mediaSent = 0;
         for (const m of mediaFiles) {
           const mediaUrl = `${serverUrl}/media/${m.filename}`;
-          const caption = m.caption || product_name;
+          const caption = m.caption || null;
           const sendResult = m.type === 'image'
             ? await sendImage(fromPhone, mediaUrl, caption, phoneNumberId, accessToken)
             : await sendVideo(fromPhone, mediaUrl, caption, phoneNumberId, accessToken);
