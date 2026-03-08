@@ -171,6 +171,224 @@ app.get('/api/stats', requireAuth, (req, res) => {
   }
 });
 
+// ============= CHAT DIAGNOSTICS =============
+app.get('/api/diagnostics', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    const days = parseInt(req.query.days) || 7;
+    const issues = [];
+
+    // 1. STUCK CONVERSATIONS — same state repeated 3+ times in bot messages
+    const stuckRows = db.prepare(`
+      SELECT c.id, cu.phone, cu.name, c.state, c.message_count,
+        c.collected_json, c.created_at
+      FROM conversations c
+      JOIN customers cu ON cu.id = c.customer_id
+      WHERE c.created_at >= datetime('now','localtime','-${days} days')
+        AND c.is_active = 1
+        AND c.state NOT IN ('ORDER_CONFIRMED','IDLE','COMPLAINT')
+        AND c.spam_flag = 0
+    `).all();
+    for (const row of stuckRows) {
+      const msgs = db.prepare(`
+        SELECT m.content, m.direction, m.source,
+          json_extract(m.debug_json, '$.state_before') as state_before,
+          json_extract(m.debug_json, '$.state_after') as state_after
+        FROM messages m WHERE m.conversation_id = ?
+        ORDER BY m.created_at ASC
+      `).all(row.id);
+      // Count consecutive same-state bot replies
+      let maxRepeat = 0, curRepeat = 0, lastState = null;
+      for (const m of msgs) {
+        if (m.direction === 'outgoing') {
+          const st = m.state_after || m.state_before;
+          if (st === lastState) { curRepeat++; maxRepeat = Math.max(maxRepeat, curRepeat); }
+          else { curRepeat = 1; lastState = st; }
+        }
+      }
+      if (maxRepeat >= 3) {
+        issues.push({ type: 'stuck_loop', severity: 'high', conv_id: row.id,
+          phone: row.phone, name: row.name, state: row.state,
+          repeat_count: maxRepeat, msg_count: row.message_count,
+          detail: `Bot repeated same state ${maxRepeat}x — customer likely frustrated` });
+      }
+    }
+
+    // 2. ADDRESS FORMAT ISSUES — city duplicated, "near" on shops, "Pur" leak etc.
+    const addrRows = db.prepare(`
+      SELECT c.id, cu.phone, cu.name, c.collected_json, c.state
+      FROM conversations c
+      JOIN customers cu ON cu.id = c.customer_id
+      WHERE c.created_at >= datetime('now','localtime','-${days} days')
+        AND c.spam_flag = 0
+        AND c.collected_json LIKE '%address_parts%'
+    `).all();
+    for (const row of addrRows) {
+      try {
+        const col = JSON.parse(row.collected_json || '{}');
+        const ap = col.address_parts || {};
+        const city = (col.city || '').toLowerCase();
+        // Check city duplicated in area
+        if (ap.area && city && ap.area.toLowerCase() === city) {
+          issues.push({ type: 'address_city_as_area', severity: 'medium', conv_id: row.id,
+            phone: row.phone, name: row.name,
+            detail: `Area "${ap.area}" = City "${col.city}" — area should be specific locality` });
+        }
+        // Check landmark has city words leaking
+        if (ap.landmark && city) {
+          const cityWords = city.split(/\s+/);
+          const lmLower = ap.landmark.toLowerCase();
+          for (const w of cityWords) {
+            if (w.length >= 3 && lmLower.startsWith(w) && !lmLower.startsWith(city)) {
+              issues.push({ type: 'address_city_leak', severity: 'high', conv_id: row.id,
+                phone: row.phone, name: row.name,
+                detail: `Landmark "${ap.landmark}" has city word "${w}" leaked — city is "${col.city}"` });
+              break;
+            }
+          }
+        }
+        // Check "near" on shop delivery
+        if (col.address && /near\s+.*\b(fabric|shop|store|dukaan|bakery|cloth)\b/i.test(col.address)) {
+          issues.push({ type: 'address_near_shop', severity: 'medium', conv_id: row.id,
+            phone: row.phone, name: row.name,
+            detail: `Address has "near" before shop name: "${col.address}" — shops should be first without "near"` });
+        }
+        // Check incomplete address for non-terminal states
+        if (['COLLECT_ADDRESS'].includes(row.state) && !ap.area && !ap.landmark) {
+          issues.push({ type: 'address_empty', severity: 'low', conv_id: row.id,
+            phone: row.phone, name: row.name,
+            detail: `Still in COLLECT_ADDRESS with no area or landmark collected` });
+        }
+      } catch (e) { /* skip bad JSON */ }
+    }
+
+    // 3. DROP-OFF ANALYSIS — where customers stopped (not spam, not completed)
+    const dropoffs = db.prepare(`
+      SELECT c.state, COUNT(*) as cnt
+      FROM conversations c
+      WHERE c.created_at >= datetime('now','localtime','-${days} days')
+        AND c.spam_flag = 0
+        AND c.state NOT IN ('ORDER_CONFIRMED','IDLE')
+        AND c.is_active = 1
+      GROUP BY c.state
+      ORDER BY cnt DESC
+    `).all();
+
+    // 4. HIGH AI COST CHATS — above Rs.2 per conversation
+    const costRows = db.prepare(`
+      SELECT c.id, cu.phone, cu.name, c.message_count, c.state,
+        SUM(COALESCE(json_extract(m.debug_json, '$._cost_rs'), 0)) +
+        SUM(COALESCE(json_extract(m.debug_json, '$._media_cost_rs'), 0)) as total_cost
+      FROM conversations c
+      JOIN customers cu ON cu.id = c.customer_id
+      JOIN messages m ON m.conversation_id = c.id
+      WHERE c.created_at >= datetime('now','localtime','-${days} days')
+        AND c.spam_flag = 0
+      GROUP BY c.id
+      HAVING total_cost > 2
+      ORDER BY total_cost DESC
+      LIMIT 20
+    `).all();
+    for (const row of costRows) {
+      issues.push({ type: 'high_cost', severity: 'medium', conv_id: row.id,
+        phone: row.phone, name: row.name, state: row.state,
+        detail: `AI cost Rs.${row.total_cost.toFixed(2)} for ${row.message_count} msgs — state: ${row.state}` });
+    }
+
+    // 5. CUSTOMER FRUSTRATION — repeated similar messages from customer
+    const frustRows = db.prepare(`
+      SELECT c.id, cu.phone, cu.name, c.state, c.message_count
+      FROM conversations c
+      JOIN customers cu ON cu.id = c.customer_id
+      WHERE c.created_at >= datetime('now','localtime','-${days} days')
+        AND c.spam_flag = 0 AND c.message_count >= 6
+    `).all();
+    for (const row of frustRows) {
+      const custMsgs = db.prepare(`
+        SELECT content FROM messages
+        WHERE conversation_id = ? AND direction = 'incoming'
+        ORDER BY created_at ASC
+      `).all(row.id).map(m => m.content.toLowerCase().trim());
+      // Check if customer repeated similar message 3+ times
+      const seen = {};
+      for (const msg of custMsgs) {
+        const key = msg.replace(/[^a-z0-9\s]/g, '').substring(0, 30);
+        seen[key] = (seen[key] || 0) + 1;
+      }
+      const maxRepeat = Math.max(0, ...Object.values(seen));
+      if (maxRepeat >= 3) {
+        const repeatedMsg = Object.entries(seen).find(([k, v]) => v === maxRepeat)?.[0];
+        issues.push({ type: 'customer_frustrated', severity: 'high', conv_id: row.id,
+          phone: row.phone, name: row.name, state: row.state,
+          detail: `Customer repeated "${repeatedMsg}" ${maxRepeat}x — likely frustrated/stuck` });
+      }
+    }
+
+    // 6. AI OVERUSE — template could have handled but AI was called
+    const aiOveruse = db.prepare(`
+      SELECT c.id, cu.phone, cu.name,
+        SUM(CASE WHEN m.source = 'ai' THEN 1 ELSE 0 END) as ai_count,
+        SUM(CASE WHEN m.source = 'template' THEN 1 ELSE 0 END) as tmpl_count,
+        c.message_count
+      FROM conversations c
+      JOIN customers cu ON cu.id = c.customer_id
+      JOIN messages m ON m.conversation_id = c.id AND m.direction = 'outgoing'
+      WHERE c.created_at >= datetime('now','localtime','-${days} days')
+        AND c.spam_flag = 0 AND c.message_count >= 4
+      GROUP BY c.id
+      HAVING ai_count > tmpl_count * 2 AND ai_count >= 5
+      ORDER BY ai_count DESC
+      LIMIT 10
+    `).all();
+    for (const row of aiOveruse) {
+      issues.push({ type: 'ai_overuse', severity: 'low', conv_id: row.id,
+        phone: row.phone, name: row.name,
+        detail: `${row.ai_count} AI calls vs ${row.tmpl_count} templates in ${row.message_count} msgs — template ratio low` });
+    }
+
+    // 7. SUMMARY STATS
+    const totalChats = db.prepare(`SELECT COUNT(*) as c FROM conversations WHERE created_at >= datetime('now','localtime','-${days} days') AND spam_flag = 0`).get().c;
+    const totalOrders = db.prepare(`SELECT COUNT(*) as c FROM orders WHERE created_at >= datetime('now','localtime','-${days} days')`).get().c;
+    const totalAICost = db.prepare(`
+      SELECT COALESCE(SUM(COALESCE(json_extract(m.debug_json, '$._cost_rs'), 0)) +
+        SUM(COALESCE(json_extract(m.debug_json, '$._media_cost_rs'), 0)), 0) as cost
+      FROM messages m
+      JOIN conversations c ON c.id = m.conversation_id
+      WHERE c.created_at >= datetime('now','localtime','-${days} days') AND c.spam_flag = 0
+    `).get().cost;
+    const avgMsgsPerOrder = db.prepare(`
+      SELECT AVG(c.message_count) as avg_msgs
+      FROM conversations c
+      JOIN orders o ON o.conversation_id = c.id
+      WHERE c.created_at >= datetime('now','localtime','-${days} days')
+    `).get().avg_msgs || 0;
+
+    res.json({
+      period_days: days,
+      summary: {
+        total_chats: totalChats,
+        total_orders: totalOrders,
+        conversion_rate: totalChats > 0 ? ((totalOrders / totalChats) * 100).toFixed(1) : 0,
+        total_ai_cost: totalAICost.toFixed(2),
+        avg_msgs_per_order: avgMsgsPerOrder.toFixed(1),
+      },
+      dropoffs,
+      issues: issues.sort((a, b) => {
+        const sev = { high: 0, medium: 1, low: 2 };
+        return (sev[a.severity] || 3) - (sev[b.severity] || 3);
+      }),
+      issue_counts: {
+        high: issues.filter(i => i.severity === 'high').length,
+        medium: issues.filter(i => i.severity === 'medium').length,
+        low: issues.filter(i => i.severity === 'low').length,
+      }
+    });
+  } catch (e) {
+    console.error('[API] Diagnostics error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Analytics (comprehensive)
 app.get('/api/analytics', requireAuth, (req, res) => {
   try {
