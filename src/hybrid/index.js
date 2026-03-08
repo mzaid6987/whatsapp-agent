@@ -2707,6 +2707,19 @@ function handlePreCheck(pre, message, state, storeName, phone) {
     }
 
     case 'product_inquiry': {
+      // If customer previously asked for media (video/picture) and now names a product → send media
+      if (state._pending_media_type && pre.extracted?.product) {
+        const pendingType = state._pending_media_type;
+        state._pending_media_type = null;
+        state.product = pre.extracted.product;
+        state.collected.product = pre.extracted.product.short;
+        return {
+          reply: null,
+          state: state.current,
+          _media: { product_id: pre.extracted.product.id, type: pendingType, product_name: pre.extracted.product.short }
+        };
+      }
+      state._pending_media_type = null; // Clear if unrelated
       // If already in PRODUCT_INQUIRY with same product, let AI answer the specific question
       // Template just repeats price+features, AI actually answers "yh baal katti he?" type questions
       if (state.current === 'PRODUCT_INQUIRY' && state.product && pre.extracted?.product &&
@@ -2874,8 +2887,11 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       const mediaProduct = pre.extracted?.product || state.product;
       const mediaType = pre.extracted?.media_type || 'image';
       if (!mediaProduct) {
+        // Remember that customer asked for media — so when they name a product next, send media instead of product info
+        state._pending_media_type = mediaType;
         return { reply: 'Kis product ki ' + (mediaType === 'video' ? 'video' : 'picture') + ' chahiye? Product ka naam ya number bata dein 😊', state: state.current };
       }
+      state._pending_media_type = null;
       // Return special _media flag for webhook to pick up and send media files
       return {
         reply: null,
