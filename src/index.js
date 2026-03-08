@@ -1157,6 +1157,26 @@ app.delete('/api/auto-templates/:id', requireAuth, (req, res) => {
   }
 });
 
+app.post('/api/auto-templates/bulk-import', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    const templates = req.body;
+    if (!Array.isArray(templates)) return res.status(400).json({ error: 'Array expected' });
+    let added = 0, skipped = 0;
+    const insert = db.prepare('INSERT INTO auto_templates (state, product_id, keywords, response, times_seen, times_used, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    const check = db.prepare('SELECT id FROM auto_templates WHERE state = ? AND keywords = ? AND (product_id = ? OR (product_id IS NULL AND ? IS NULL))');
+    for (const t of templates) {
+      const existing = check.get(t.state, t.keywords, t.product_id, t.product_id);
+      if (existing) { skipped++; continue; }
+      insert.run(t.state, t.product_id || null, t.keywords, t.response, t.times_seen || 1, t.times_used || 0, t.is_active !== undefined ? t.is_active : 1);
+      added++;
+    }
+    res.json({ success: true, added, skipped, total: added + skipped });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---- TEST CHAT (Hybrid: Template + AI Fallback) ----
 
 app.post('/api/test-chat', requireAuth, async (req, res) => {
