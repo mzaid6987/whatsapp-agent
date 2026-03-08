@@ -42,12 +42,26 @@ function formatPrice(n) {
 }
 
 function formatSilentTimer(hours) {
-  if (!hours || hours < 0) return '';
-  if (hours < 1) return Math.round(hours * 60) + 'm';
-  if (hours < 24) return Math.round(hours) + 'h';
+  if (hours === null || hours === undefined || hours < 0) return '';
+  const totalMins = Math.floor(hours * 60);
+  if (totalMins < 1) return 'abhi';
+  if (totalMins < 60) return totalMins + 'm';
+  const h = Math.floor(hours);
+  const m = totalMins % 60;
+  if (hours < 24) return m > 0 ? h + 'h ' + m + 'm' : h + 'h';
   const days = Math.floor(hours / 24);
-  const remHours = Math.round(hours % 24);
+  const remHours = Math.floor(hours % 24);
   return days + 'd ' + remHours + 'h';
+}
+
+// Live silent timer — recalculates from last_msg_time
+// SQLite stores PKT (UTC+5) without timezone suffix, so we append it
+function calcSilentHoursLive(lastMsgTime) {
+  if (!lastMsgTime) return null;
+  const timeStr = lastMsgTime.includes('+') ? lastMsgTime : lastMsgTime + '+05:00';
+  const t = new Date(timeStr).getTime();
+  if (isNaN(t)) return null;
+  return (Date.now() - t) / (1000 * 60 * 60);
 }
 
 function getInitials(name) {
@@ -148,13 +162,17 @@ function renderChatList(convos) {
     if (isOrderState) labels.push('<span class="label-badge label-order">ORDER</span>');
     if (c.state === 'CANCEL_AFTER_CONFIRM') labels.push('<span class="label-badge label-cancel">CANCEL</span>');
     if (c.unreplied && !labels.length) labels.push(`<span class="label-badge label-unreplied">UNREPLIED ${Math.floor((c.unreplied_since || 0) / 60)}m</span>`);
-    // 24h+ silent customer tag
-    if (c.is_24h_silent) {
-      labels.push(`<span class="label-badge label-silent24">24h+ ${formatSilentTimer(c.silent_hours)}</span>`);
-    } else if (c.silent_hours !== null && c.silent_hours > 1 && !labels.length) {
-      // Show timer even before 24h (after 1h) so admin can see who's going silent
-      labels.push(`<span class="label-badge label-silent-pending">${formatSilentTimer(c.silent_hours)}</span>`);
+    // Silent customer timer — live calculated from last_msg_time
+    const liveHours = (c.last_msg_direction === 'outgoing' && c.last_msg_time) ? calcSilentHoursLive(c.last_msg_time) : null;
+    const liveIs24h = liveHours !== null && liveHours >= 24;
+    const showSilent = liveHours !== null && !c.spam_flag && !c.complaint_flag && !c.needs_human && !['ORDER_CONFIRMED','CANCEL_AFTER_CONFIRM','COMPLAINT'].includes(c.state);
+    if (showSilent && liveIs24h) {
+      labels.push(`<span class="label-badge label-silent24">24h+ ${formatSilentTimer(liveHours)}</span>`);
+    } else if (showSilent && liveHours >= 0) {
+      labels.push(`<span class="label-badge label-silent-pending">${formatSilentTimer(liveHours)}</span>`);
     }
+    // Update data attribute for filter
+    c._live_is_24h = showSilent && liveIs24h;
     const labelHtml = labels.join(' ');
 
     const itemClass = [
@@ -169,7 +187,7 @@ function renderChatList(convos) {
            data-filter-bot="${!c.needs_human && !c.spam_flag && !isComplaint}" data-filter-human="${!!c.needs_human && !isComplaint}"
            data-filter-order="${isOrderState}" data-filter-complaint="${isComplaint}"
            data-filter-cancel="${c.state === 'CANCEL_AFTER_CONFIRM'}"
-           data-filter-unreplied="${!!c.unreplied}" data-filter-spam="${!!c.spam_flag}" data-filter-silent24="${!!c.is_24h_silent}" data-name="${name.toLowerCase()}" data-phone="${c.phone || c.customer?.phone || ''}" data-date="${(c.created_at || '').slice(0, 10)}">
+           data-filter-unreplied="${!!c.unreplied}" data-filter-spam="${!!c.spam_flag}" data-filter-silent24="${!!c._live_is_24h}" data-name="${name.toLowerCase()}" data-phone="${c.phone || c.customer?.phone || ''}" data-date="${(c.created_at || '').slice(0, 10)}">
         <div class="chat-avatar">${initials}</div>
         <div class="chat-item-info">
           <div class="chat-item-top">
@@ -691,14 +709,18 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
     if (st === 'delivered') return '<span class="msg-ticks delivered" title="Delivered">&#10003;&#10003;</span>';
     return '<span class="msg-ticks sent" title="Sent">&#10003;</span>';
   })() : '';
-  // Silent timer — show on last outgoing message if customer hasn't replied
+  // Silent timer — show on last outgoing message if customer hasn't replied (live from message time)
   let silentTimerHtml = '';
-  if (lastMsgConv && isOut && lastMsgConv.silent_hours !== null && lastMsgConv.silent_hours > 0.5) {
-    const is24h = lastMsgConv.is_24h_silent;
-    const timerText = is24h
-      ? `24h+ silent (${formatSilentTimer(lastMsgConv.silent_hours)})`
-      : `Silent: ${formatSilentTimer(lastMsgConv.silent_hours)}`;
-    silentTimerHtml = `<div class="silent-timer-msg${is24h ? '' : ' pending'}">${timerText}</div>`;
+  if (lastMsgConv && isOut && lastMsgConv.last_msg_direction === 'outgoing' && lastMsgConv.last_msg_time) {
+    const excluded = lastMsgConv.spam_flag || lastMsgConv.complaint_flag || lastMsgConv.needs_human || ['ORDER_CONFIRMED','CANCEL_AFTER_CONFIRM','COMPLAINT'].includes(lastMsgConv.state);
+    if (!excluded) {
+      const liveH = calcSilentHoursLive(m.created_at);
+      const is24h = liveH >= 24;
+      const timerText = is24h
+        ? `24h+ silent (${formatSilentTimer(liveH)})`
+        : `Silent: ${formatSilentTimer(liveH)}`;
+      silentTimerHtml = `<div class="silent-timer-msg${is24h ? '' : ' pending'}">${timerText}</div>`;
+    }
   }
   return `
     <div class="msg-bubble ${bubbleClass}" data-msg-id="${m.id}" data-wa-id="${m.wa_message_id || ''}">
@@ -711,6 +733,13 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
     </div>
   `;
 }
+
+// Live timer refresh — re-render chat list every 30s to update silent timers
+setInterval(() => {
+  if (conversations && conversations.length > 0) {
+    renderChatList(conversations);
+  }
+}, 30000);
 
 // Polling — always runs every 5s (WS may not work on shared hosting)
 // Skip only if WS delivered a real message in last 15s

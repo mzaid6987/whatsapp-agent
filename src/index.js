@@ -385,7 +385,9 @@ app.get('/api/conversations', requireAuth, (req, res) => {
       if (c.spam_flag || c.complaint_flag || c.needs_human || SILENT_EXCLUDE_STATES.includes(c.state)) continue;
       // If last message was outgoing (bot/human sent) and customer hasn't replied
       if (c.last_msg_direction === 'outgoing' && c.last_msg_time) {
-        const lastTime = new Date(c.last_msg_time).getTime();
+        // SQLite stores localtime (PKT = UTC+5), append timezone for correct parsing
+        const timeStr = c.last_msg_time.includes('+') ? c.last_msg_time : c.last_msg_time + '+05:00';
+        const lastTime = new Date(timeStr).getTime();
         if (!isNaN(lastTime)) {
           const hoursSince = (now - lastTime) / (1000 * 60 * 60);
           c.silent_hours = Math.round(hoursSince * 10) / 10;
