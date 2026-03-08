@@ -655,7 +655,13 @@ function askNextField(state, storeName) {
       // Pre-fill from address_hint saved during COLLECT_PHONE
       if (state._address_hint && !state.collected.address_parts.area) {
         const hint = state._address_hint;
-        const hintLower = hint.toLowerCase();
+        let hintLower = hint.toLowerCase().trim();
+        // Strip city name from hint to avoid city words leaking into landmark/area
+        if (state.collected.city) {
+          const cityLower = state.collected.city.toLowerCase();
+          // Remove city from start or anywhere in hint
+          hintLower = hintLower.replace(new RegExp('\\b' + cityLower.replace(/\s+/g, '\\s*') + '\\b', 'gi'), '').trim();
+        }
         // Extract area (greedy — "main bazar" not just "bazar")
         const areaMatch = hintLower.match(/\b(main\s*baz[ae]ar|\w+\s+baz[ae]ar|baz[ae]ar|\w+\s+market|market|mohall?ah?\s+\w+|\w+\s+colony|\w+\s+town|\w+\s+road)\b/i);
         if (areaMatch) {
@@ -666,9 +672,9 @@ function askNextField(state, storeName) {
         if (shopMatch) {
           state.collected.address_parts.landmark = shopMatch[0].replace(/\b\w/g, c => c.toUpperCase());
         }
-        // Extract city/tehsil hint (leading words before shop/area keywords)
+        // Extract city/tehsil hint if city not already set
         if (!state.collected.city) {
-          const cityMatch = hintLower.match(/^(\w+(?:\s+\w+)?)\s+(?=\w+\s*(fabric|shop|store|dukaan|bakery|cloth|medical))/i);
+          const cityMatch = hint.toLowerCase().match(/^(\w+(?:\s+\w+)?)\s+(?=\w+\s*(fabric|shop|store|dukaan|bakery|cloth|medical))/i);
           if (cityMatch) {
             const possibleCity = cityMatch[1].replace(/\b\w/g, c => c.toUpperCase());
             if (!/\b(main|baz[ae]ar|market|mohall?ah?|colony|town|road|nagar|block|street|gali)\b/i.test(possibleCity)) {
