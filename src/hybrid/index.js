@@ -11,7 +11,7 @@ const { handleTemplateState, askNextField, buildOrderSummary, nextMissingState, 
 const { qualityGate } = require('./quality-gate');
 const { composePrompt } = require('../ai/prompt-composer');
 const { chat, AI_MODEL_NAME, AI_PRICING } = require('../ai/claude');
-const { getHonorific, PRODUCTS, deliveryTime } = require('./data');
+const { getHonorific, PRODUCTS, deliveryTime, productList } = require('./data');
 const { fillTemplate } = require('./templates');
 const { buildAddressString, validatePhone, extractCity, extractAllCities, extractPhone, extractArea, isLikelyName, hasAddressKeywords } = require('./extractors');
 const { getAreaSuggestions, matchArea } = require('./city-areas');
@@ -2827,6 +2827,23 @@ function handlePreCheck(pre, message, state, storeName, phone) {
     case 'number_pick': {
       // Upsell number pick — handled by handleTemplateState
       return null;
+    }
+
+    case 'info_before_product': {
+      // Customer gave name+phone in PRODUCT_SELECTION (e.g. "Aslam 03452198887")
+      // Store the data, then ask for product selection
+      if (pre.extracted?.name) state.collected.name = pre.extracted.name;
+      if (pre.extracted?.phone) {
+        const pv = validatePhone(pre.extracted.phone);
+        if (pv.valid) state.collected.phone = pv.phone;
+      }
+      state.current = 'PRODUCT_SELECTION';
+      const honorific = getHonorific(state.collected.name, state.gender);
+      const namePrefix = state.collected.name ? `${state.collected.name} ${honorific}` : honorific;
+      return {
+        reply: `${namePrefix}, shukriya! 😊 Konsa product order karna chahein ge?\n\n${productList()}\n\nNumber ya naam bata dein.`,
+        state: 'PRODUCT_SELECTION'
+      };
     }
 
     default:

@@ -183,10 +183,12 @@ function preCheck(message, currentState, collected, state) {
   // 1a-x. GREETING FAST-PATH — "kya haal", "kaise ho", "salam" + filler like "theek hai"
   // Must check BEFORE quality_question so "kya haal hain theek hai" isn't caught as quality
   // BUT: if message ALSO contains product/price content, skip greeting → let product detection handle
+  // SKIP: If message contains phone number (10-11 digits) → it's info submission, not greeting
+  const hasPhoneNumber = /\b0\d{10}\b/.test(msg) || /\d{10,11}/.test(msg.replace(/[\s-]/g, ''));
   const isGreetingPhrase = /\b(kya\s*ha+l|kia\s*ha+l|kesy\s*ho|kaise\s*ho|kaisy\s*ho|kese\s*ho)\b/i.test(l) ||
     (/\b(salam|slaam|salamu|aoa|assalam|walaikum|asalam|aslam)\b/i.test(l) && /\b(theek|thik|thk|tik)\s*(hai|he|h|hain)\b/i.test(l));
   const hasProductOrPriceContent = /\b(price|rate|qeemat|qimat|kitne\s*ka|kitny\s*ka|trimmer|trimer|order|chahiye|chahea|manga|lena)\b/i.test(l) || detectProduct(msg);
-  if (isGreetingPhrase && ['IDLE', 'GREETING', 'PRODUCT_SELECTION'].includes(currentState) && !hasProductOrPriceContent) {
+  if (isGreetingPhrase && ['IDLE', 'GREETING', 'PRODUCT_SELECTION'].includes(currentState) && !hasProductOrPriceContent && !hasPhoneNumber) {
     if (/\b(salam|slaam|salamu|aoa|assalam|walaikum|asalam|aslam)\b/i.test(l)) return { intent: 'greeting_salam' };
     return { intent: 'greeting_howru' };
   }
@@ -488,6 +490,24 @@ function preCheck(message, currentState, collected, state) {
         // Different product — switch
         return { intent: 'product_with_order', extracted: { product: prodMatch } };
       }
+    }
+  }
+
+  // 4z. NAME + PHONE in PRODUCT_SELECTION — customer gives info before selecting product
+  // e.g. "Aslam 03452198887" — store name+phone, then ask for product
+  if (currentState === 'PRODUCT_SELECTION') {
+    const phone = extractPhone(msg);
+    if (phone) {
+      const extracted = { phone };
+      // Extract name: text before the phone number (e.g. "Aslam" from "Aslam 03452198887")
+      const phonePart = msg.match(/0\d[\d\s-]{8,12}/)?.[0] || phone;
+      const beforePhone = msg.replace(phonePart, '').trim();
+      if (beforePhone && beforePhone.length >= 2 && beforePhone.length <= 40 &&
+          !/\b(salam|assalam|walaikum|aoa|hi|hello|hey)\b/i.test(beforePhone) &&
+          !/^\d+$/.test(beforePhone)) {
+        extracted.name = beforePhone.replace(/[^a-zA-Z\s]/g, '').trim();
+      }
+      return { intent: 'info_before_product', extracted };
     }
   }
 
@@ -868,9 +888,10 @@ function preCheck(message, currentState, collected, state) {
 
   // 8. GREETING — in IDLE/GREETING/PRODUCT_SELECTION states, use template instead of AI
   // Also detect greetings in COLLECT_* states so template responds + re-asks current field
+  // SKIP: If message contains phone number → it's info submission (e.g. "Aslam 03452198887" = name + phone, not greeting)
   const isGreetingState = ['IDLE', 'GREETING', 'PRODUCT_SELECTION', 'PRODUCT_INQUIRY', 'HAGGLING'].includes(currentState);
   const isCollectState = currentState.startsWith('COLLECT_');
-  if (isGreetingState || isCollectState) {
+  if ((isGreetingState || isCollectState) && !hasPhoneNumber) {
     const isSalam = /\b(salam|slaam|salamu|aoa|wsalam|wasalam)\b/i.test(l) || /assalam|walaikum|asalam|aslam|w\s*salam/i.test(l);
     const isCasual = /^(hi+|hey+|hello+|helo|yo)\s*[.!]?\s*$/i.test(l);
     const isHowRU = /\b(kesy|kaise|kaisy|kese|kaisy)\s*(ho|hai|hain|h)\b/i.test(l) || /\b(kya\s*ha+l|kia\s*ha+l)\b/i.test(l);
