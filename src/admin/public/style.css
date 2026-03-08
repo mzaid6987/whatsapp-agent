@@ -523,6 +523,41 @@ body:has(.chats-container) {
   font-weight: 600;
 }
 
+.label-silent24 {
+  background: #FF6B35;
+  color: #fff;
+  font-weight: 700;
+  animation: pulse-silent 2s infinite;
+}
+
+.label-silent-pending {
+  background: #FFF3CD;
+  color: #856404;
+  font-weight: 600;
+}
+
+@keyframes pulse-silent {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.silent-timer-msg {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  background: #FF6B35;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+}
+
+.silent-timer-msg.pending {
+  background: #FFF3CD;
+  color: #856404;
+}
+
 .unread-dot {
   width: 10px;
   height: 10px;

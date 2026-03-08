@@ -41,6 +41,15 @@ function formatPrice(n) {
   return 'Rs.' + n.toLocaleString();
 }
 
+function formatSilentTimer(hours) {
+  if (!hours || hours < 0) return '';
+  if (hours < 1) return Math.round(hours * 60) + 'm';
+  if (hours < 24) return Math.round(hours) + 'h';
+  const days = Math.floor(hours / 24);
+  const remHours = Math.round(hours % 24);
+  return days + 'd ' + remHours + 'h';
+}
+
 function getInitials(name) {
   if (!name) return '?';
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -139,6 +148,13 @@ function renderChatList(convos) {
     if (isOrderState) labels.push('<span class="label-badge label-order">ORDER</span>');
     if (c.state === 'CANCEL_AFTER_CONFIRM') labels.push('<span class="label-badge label-cancel">CANCEL</span>');
     if (c.unreplied && !labels.length) labels.push(`<span class="label-badge label-unreplied">UNREPLIED ${Math.floor((c.unreplied_since || 0) / 60)}m</span>`);
+    // 24h+ silent customer tag
+    if (c.is_24h_silent) {
+      labels.push(`<span class="label-badge label-silent24">24h+ ${formatSilentTimer(c.silent_hours)}</span>`);
+    } else if (c.silent_hours !== null && c.silent_hours > 1 && !labels.length) {
+      // Show timer even before 24h (after 1h) so admin can see who's going silent
+      labels.push(`<span class="label-badge label-silent-pending">${formatSilentTimer(c.silent_hours)}</span>`);
+    }
     const labelHtml = labels.join(' ');
 
     const itemClass = [
@@ -153,7 +169,7 @@ function renderChatList(convos) {
            data-filter-bot="${!c.needs_human && !c.spam_flag && !isComplaint}" data-filter-human="${!!c.needs_human && !isComplaint}"
            data-filter-order="${isOrderState}" data-filter-complaint="${isComplaint}"
            data-filter-cancel="${c.state === 'CANCEL_AFTER_CONFIRM'}"
-           data-filter-unreplied="${!!c.unreplied}" data-filter-spam="${!!c.spam_flag}" data-name="${name.toLowerCase()}" data-phone="${c.phone || c.customer?.phone || ''}" data-date="${(c.created_at || '').slice(0, 10)}">
+           data-filter-unreplied="${!!c.unreplied}" data-filter-spam="${!!c.spam_flag}" data-filter-silent24="${!!c.is_24h_silent}" data-name="${name.toLowerCase()}" data-phone="${c.phone || c.customer?.phone || ''}" data-date="${(c.created_at || '').slice(0, 10)}">
         <div class="chat-avatar">${initials}</div>
         <div class="chat-item-info">
           <div class="chat-item-top">
@@ -316,7 +332,7 @@ async function openChat(chatId) {
     // Race condition guard: if user clicked another chat while loading, discard
     if (seq !== _openChatSeq) return;
 
-    msgsEl.innerHTML = msgs.map(m => _renderMessageBubble(m, _m)).join('');
+    msgsEl.innerHTML = msgs.map((m, idx) => _renderMessageBubble(m, _m, idx === msgs.length - 1 ? conv : null)).join('');
 
     if (!msgs.length) {
       msgsEl.innerHTML = '<div style="text-align:center;color:#999;padding:20px;">No messages yet</div>';
@@ -629,7 +645,7 @@ async function _smartAppendMessages(chatId) {
 }
 
 // Extract message bubble HTML generation for reuse
-function _renderMessageBubble(m, _m) {
+function _renderMessageBubble(m, _m, lastMsgConv) {
   const isOut = m.direction === 'outgoing';
   const senderLabel = m.sender === 'bot' ? 'Bot' : m.sender === 'human' ? 'Human Agent' : '';
   const senderClass = m.sender === 'bot' ? 'bot-sender' : m.sender === 'human' ? 'human-sender' : 'customer-sender';
@@ -675,6 +691,15 @@ function _renderMessageBubble(m, _m) {
     if (st === 'delivered') return '<span class="msg-ticks delivered" title="Delivered">&#10003;&#10003;</span>';
     return '<span class="msg-ticks sent" title="Sent">&#10003;</span>';
   })() : '';
+  // Silent timer — show on last outgoing message if customer hasn't replied
+  let silentTimerHtml = '';
+  if (lastMsgConv && isOut && lastMsgConv.silent_hours !== null && lastMsgConv.silent_hours > 0.5) {
+    const is24h = lastMsgConv.is_24h_silent;
+    const timerText = is24h
+      ? `24h+ silent (${formatSilentTimer(lastMsgConv.silent_hours)})`
+      : `Silent: ${formatSilentTimer(lastMsgConv.silent_hours)}`;
+    silentTimerHtml = `<div class="silent-timer-msg${is24h ? '' : ' pending'}">${timerText}</div>`;
+  }
   return `
     <div class="msg-bubble ${bubbleClass}" data-msg-id="${m.id}" data-wa-id="${m.wa_message_id || ''}">
       ${senderLabel ? `<div class="msg-sender ${senderClass}">${senderLabel}${srcBadge}</div>` : ''}
@@ -682,6 +707,7 @@ function _renderMessageBubble(m, _m) {
       <div>${m.content}</div>
       ${feedbackHtml}
       ${tickHtml}
+      ${silentTimerHtml}
     </div>
   `;
 }

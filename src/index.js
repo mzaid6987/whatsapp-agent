@@ -375,6 +375,24 @@ app.get('/api/analytics', requireAuth, (req, res) => {
 app.get('/api/conversations', requireAuth, (req, res) => {
   try {
     const convos = conversationModel.getAll();
+    const now = Date.now();
+    // Excluded states for silent tracking
+    const SILENT_EXCLUDE_STATES = ['ORDER_CONFIRMED', 'CANCEL_AFTER_CONFIRM', 'COMPLAINT'];
+    for (const c of convos) {
+      c.silent_hours = null;
+      c.is_24h_silent = false;
+      // Skip: spam, complaint, human takeover, excluded states
+      if (c.spam_flag || c.complaint_flag || c.needs_human || SILENT_EXCLUDE_STATES.includes(c.state)) continue;
+      // If last message was outgoing (bot/human sent) and customer hasn't replied
+      if (c.last_msg_direction === 'outgoing' && c.last_msg_time) {
+        const lastTime = new Date(c.last_msg_time).getTime();
+        if (!isNaN(lastTime)) {
+          const hoursSince = (now - lastTime) / (1000 * 60 * 60);
+          c.silent_hours = Math.round(hoursSince * 10) / 10;
+          c.is_24h_silent = hoursSince >= 24;
+        }
+      }
+    }
     res.json(convos);
   } catch (e) {
     res.status(500).json({ error: e.message });
