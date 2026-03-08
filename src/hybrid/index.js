@@ -1665,6 +1665,18 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       }
     }
 
+    // SHOP DELIVERY auto-complete: if area + named landmark (shop/fabric/store/dukaan) → fill missing
+    if (state.current === 'COLLECT_ADDRESS' && !state.address_confirming) {
+      const ap = state.collected.address_parts;
+      if (ap.area && ap.landmark) {
+        const isShopDelivery = /\b(shop|dukaan|dukan|store|fabric|bakery|kiryana|medical|pharmacy|cloth|kapra|general|mart|karyana|hotel|restaurant|dhaba|office|workshop|godown)\b/i.test(ap.landmark);
+        if (isShopDelivery) {
+          if (!ap.street) ap.street = 'nahi_pata';
+          if (!ap.house) ap.house = 'nahi_pata';
+        }
+      }
+    }
+
     // ALWAYS check address completeness after AI call — not just when AI returned parts
     // This catches cases where AI fails to extract but accumulated parts are already complete
     if (state.current === 'COLLECT_ADDRESS' && !state.address_confirming) {
@@ -2747,14 +2759,33 @@ function handlePreCheck(pre, message, state, storeName, phone) {
     }
 
     case 'address_enough': {
-      // Customer says "btaya to" / "bas itna" — fill missing address parts with nahi_pata
+      // Customer says "btaya to" / "bas itna" / "yeh address hai" / "just likh do ajayega"
+      // Accept what we have, fill missing with nahi_pata, and add reassurance about delivery call
       const ap = state.collected.address_parts;
       if (!ap.house) ap.house = 'nahi_pata';
       if (!ap.landmark) ap.landmark = 'nahi_pata';
       if (!ap.street) ap.street = 'nahi_pata';
-      // Move to next field (skip remaining address questions)
+      // Move to next field (should go to address confirmation now)
       const nextField = askNextField(state, storeName);
       return nextField || { reply: fillTemplate('FALLBACK', vars), state: state.current };
+    }
+
+    case 'address_during_phone': {
+      // Customer gave address/city info during COLLECT_PHONE — save it, still ask phone
+      const ext = pre.extracted || {};
+      if (ext.city) {
+        state.collected.city = ext.city;
+      }
+      if (ext.address_hint) {
+        // Store hint for later use during COLLECT_ADDRESS
+        state._address_hint = ext.address_hint;
+      }
+      const honorific = getHonorific(state.collected.name, state.gender);
+      const savedMsg = ext.city ? `${ext.city} note kar liya` : 'Address note kar liya';
+      return {
+        reply: `${savedMsg} ${honorific} — pehle phone number bata dein? 📱`,
+        state: 'COLLECT_PHONE'
+      };
     }
 
     case 'same_phone': {

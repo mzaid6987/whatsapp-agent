@@ -183,8 +183,8 @@ const T = {
     "Koi baat nahi — qareeb koi landmark/mashoor jagah (masjid, school ya dukaan) hai? Naam bata dein 📍",
   ],
   CONFIRM_ADDRESS: [
-    "📍 Aapka address: {full_address}. Sahi hai? ✅",
-    "📍 Yeh address sahi hai? {full_address} ✅",
+    "📍 Aapka address: {full_address}. Sahi hai? Agar delivery company ko address mein koi issue ho to isi number pe call karein ge ✅",
+    "📍 Yeh address sahi hai? {full_address}. Agar courier ko kuch puchna ho to aapko call kar lein ge ✅",
   ],
 
   // ==========================================

@@ -652,6 +652,21 @@ function askNextField(state, storeName) {
     case 'COLLECT_DELIVERY_PHONE': return { reply: fillTemplate('ASK_DELIVERY_PHONE', vars), state: next };
     case 'COLLECT_CITY': return { reply: fillTemplate('ASK_CITY', vars), state: next };
     case 'COLLECT_ADDRESS': {
+      // Pre-fill from address_hint saved during COLLECT_PHONE
+      if (state._address_hint && !state.collected.address_parts.area) {
+        const hint = state._address_hint.toLowerCase();
+        // Try to extract area from common patterns
+        const areaMatch = hint.match(/\b(main\s*baz[ae]ar|bazar|bazaar|market|mohall?ah?\s+\w+|\w+\s+colony|\w+\s+town|\w+\s+road)\b/i);
+        if (areaMatch) {
+          state.collected.address_parts.area = areaMatch[0].replace(/\b\w/g, c => c.toUpperCase());
+        }
+        // Try to extract landmark (shop/fabric/store name)
+        const shopMatch = hint.match(/(\w[\w\s]*?)\s*(fabric|shop|store|dukaan|dukan|bakery|kiryana|medical)\b/i);
+        if (shopMatch) {
+          state.collected.address_parts.landmark = shopMatch[0].replace(/\b\w/g, c => c.toUpperCase());
+        }
+        delete state._address_hint;
+      }
       // Don't blindly reset to 'area' — check what's already collected
       const ap = state.collected.address_parts;
       // Backup rural detection: check collected._is_rural (persisted in DB), _rural_type, or rural pattern in area

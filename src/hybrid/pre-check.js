@@ -324,6 +324,25 @@ function preCheck(message, currentState, collected, state) {
     }
   }
 
+  // 2z. ADDRESS/CITY info given during COLLECT_PHONE — save it, don't lose it
+  // Customer says "Fath pur makki fabric main bazar" or "District Layyah" during phone collection
+  if (currentState === 'COLLECT_PHONE') {
+    // Detect city/district mention
+    const distMatch = l.match(/\b(?:dist(?:rict|c)?|distt?|zil+a)\s+(\w[\w\s]*)/i);
+    if (distMatch) {
+      const cityName = distMatch[1].trim().replace(/\b\w/g, c => c.toUpperCase());
+      return { intent: 'address_during_phone', extracted: { city: cityName } };
+    }
+    // Detect full address-like text (3+ words, has area-like words) — no phone number present
+    const hasPhone = /0\d{10}|03\d{8,}/.test(msg.replace(/\s/g, ''));
+    if (!hasPhone && l.trim().split(/\s+/).length >= 3) {
+      const hasAddressWords = /\b(bazar|bazaar|market|road|gali|street|block|mohall?ah?|colony|town|nagar|abad|pur|garh|sector|phase|scheme|plot|house|area|chowk|shop|fabric|store|dukaan|dukan)\b/i.test(l);
+      if (hasAddressWords) {
+        return { intent: 'address_during_phone', extracted: { address_hint: msg.trim() } };
+      }
+    }
+  }
+
   // 3. CITY — in city collection state
   if (currentState === 'COLLECT_CITY') {
     // 3-pre. "yh dono numbers he" / "dono number mere hain" / "both numbers are mine"
@@ -517,13 +536,25 @@ function preCheck(message, currentState, collected, state) {
     }
   }
 
-  // 4b1. "ALREADY TOLD" in COLLECT_ADDRESS — "btaya to", "bata dia", "bas itna", "upar likha he"
-  // Customer frustrated repeating — accept what we have, fill missing with nahi_pata
+  // 4b1. "ALREADY TOLD" / "JUST LIKH DO" / "YEH ADDRESS HAI" in COLLECT_ADDRESS
+  // Customer frustrated repeating OR says "this is the address" — accept what we have
   if (currentState === 'COLLECT_ADDRESS') {
-    const isAlreadyTold = /\b(btaya|bata\s*di[ay]?|bta\s*di[ay]?|likh[a]?\s*(he|hai|h|dia|diya)|upar\s*(likh|he|hai|dekh)|pehle\s*(bata|btaya|likha)|already\s*(told|given|sent))\b/i.test(l) ||
-      /\b(bas\s*(itna|yahi|yehi|bs)|itna\s*(he|hai|h|bas)|yahi\s*(he|hai|h)|ho\s*gaya|enough|kafi)\b/i.test(l) ||
-      /\b(rider\s*(call|puch|samajh)|aa\s*k[ae]r?\s*(puch|dekh|mil))\b/i.test(l);
+    const isAlreadyTold = /\b(btaya|bata\s*di[ay]?|bta\s*di[ay]?|likh[a]?\s*(he|hai|h|dia|diya|do|dy)|upar\s*(likh|he|hai|dekh)|pehle\s*(bata|btaya|likha)|already\s*(told|given|sent))\b/i.test(l) ||
+      /\b(bas\s*(itna|yahi|yehi|bs|likh)|itna\s*(he|hai|h|bas)|yahi\s*(he|hai|h)|ho\s*gaya|enough|kafi)\b/i.test(l) ||
+      /\b(rider\s*(call|puch|samajh)|aa\s*k[ae]r?\s*(puch|dekh|mil))\b/i.test(l) ||
+      /\b(just\s*likh|sirf\s*likh|likh\s*d[eoy]|likh\s*dy)\b/i.test(l) ||
+      /\b(aj[ay]+[ae]?g[ay]?|pohanch|pohch|aa?\s*ja[ey]+g[ay]?|mil\s*ja[ey]+g[ay]?)\b/i.test(l);
     if (isAlreadyTold) {
+      return { intent: 'address_enough' };
+    }
+  }
+
+  // 4b1b. "YEH DRESS/ADDRESS HAI" — customer confirms address ("yeah dress he" = "yeh address hai")
+  if (currentState === 'COLLECT_ADDRESS') {
+    const isThisAddress = /\b(ye+h?|ya+h?|yeah|yhi|yehi|yahi)\s*(dress|adress|address|ad+res+)\s*(he|hai|h|hae)?\b/i.test(l) ||
+      /\b(dress|adress|address)\s*(ye+h?i?|ya+h?i?|bs|bas)\s*(he|hai|h|hae)?\b/i.test(l) ||
+      /\b(ye+h?|ya+h?|yeah)\s*(he|hai|h|hae)\s*(dress|adress|address|mera\s*address)\b/i.test(l);
+    if (isThisAddress) {
       return { intent: 'address_enough' };
     }
   }
