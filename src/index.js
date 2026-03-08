@@ -1131,6 +1131,22 @@ app.get('/api/auto-templates', requireAuth, (req, res) => {
   }
 });
 
+// Hardcoded templates from templates.js
+app.get('/api/hardcoded-templates', requireAuth, (req, res) => {
+  try {
+    const { T } = require('./hybrid/templates');
+    const result = [];
+    for (const [key, variations] of Object.entries(T)) {
+      variations.forEach((text, i) => {
+        result.push({ key, index: i, response: text, variations: variations.length });
+      });
+    }
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.put('/api/auto-templates/:id', requireAuth, (req, res) => {
   try {
     const db = getDb();

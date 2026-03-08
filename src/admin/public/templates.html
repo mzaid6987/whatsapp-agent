@@ -3,13 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Auto Templates — WhatsApp Agent</title>
+  <title>All Templates — WhatsApp Agent</title>
   <link rel="stylesheet" href="/admin/style.css">
   <style>
-    .tpl-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
-    .tpl-stat { background:#fff; border-radius:10px; padding:16px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,.08); }
-    .tpl-stat .num { font-size:28px; font-weight:700; color:#25D366; }
-    .tpl-stat .label { font-size:12px; color:#667781; margin-top:4px; }
+    .tpl-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px,1fr)); gap:12px; margin-bottom:20px; }
+    .tpl-stat { background:#fff; border-radius:10px; padding:14px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    .tpl-stat .num { font-size:26px; font-weight:700; color:#25D366; }
+    .tpl-stat .label { font-size:11px; color:#667781; margin-top:4px; }
+    .tpl-tabs { display:flex; gap:0; margin-bottom:16px; border-bottom:2px solid #e0e0e0; }
+    .tpl-tab { padding:10px 20px; cursor:pointer; font-size:14px; font-weight:600; color:#667781; border-bottom:3px solid transparent; margin-bottom:-2px; transition:.2s; }
+    .tpl-tab.active { color:#25D366; border-bottom-color:#25D366; }
+    .tpl-tab .tab-count { background:#f0f2f5; color:#667781; padding:1px 7px; border-radius:10px; font-size:11px; margin-left:6px; }
+    .tpl-tab.active .tab-count { background:#e8f5e9; color:#25D366; }
     .tpl-filters { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
     .tpl-filters select, .tpl-filters input { padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-size:13px; background:#fff; }
     .tpl-filters input { flex:1; min-width:150px; }
@@ -23,12 +28,16 @@
     .tpl-state.product { background:#fff3e0; color:#e65100; }
     .tpl-state.haggling { background:#fce4ec; color:#c62828; }
     .tpl-state.collect { background:#f3e5f5; color:#7b1fa2; }
+    .tpl-state.order { background:#e8eaf6; color:#283593; }
+    .tpl-state.trust { background:#e0f7fa; color:#00695c; }
+    .tpl-state.complaint { background:#fce4ec; color:#c62828; }
+    .tpl-state.upsell { background:#fff8e1; color:#f57f17; }
     .tpl-state.other { background:#f5f5f5; color:#616161; }
     .tpl-keywords { display:flex; flex-wrap:wrap; gap:4px; }
     .tpl-kw { background:#e8f5e9; color:#2e7d32; padding:2px 6px; border-radius:4px; font-size:11px; }
-    .tpl-response { max-width:350px; white-space:pre-wrap; word-break:break-word; font-size:12px; color:#333; line-height:1.4; }
+    .tpl-response { max-width:400px; white-space:pre-wrap; word-break:break-word; font-size:12px; color:#333; line-height:1.4; }
     .tpl-response textarea { width:100%; min-height:60px; border:1px solid #ddd; border-radius:6px; padding:6px; font-size:12px; font-family:inherit; resize:vertical; }
-    .tpl-actions { display:flex; gap:4px; }
+    .tpl-actions { display:flex; gap:4px; flex-wrap:wrap; }
     .tpl-actions button { padding:4px 10px; border:none; border-radius:6px; cursor:pointer; font-size:11px; font-weight:600; }
     .btn-edit { background:#e3f2fd; color:#1565c0; }
     .btn-save { background:#e8f5e9; color:#2e7d32; }
@@ -40,6 +49,9 @@
     .tpl-badge.active { background:#e8f5e9; color:#2e7d32; }
     .tpl-badge.ready { background:#fff3e0; color:#e65100; }
     .tpl-badge.learning { background:#f5f5f5; color:#999; }
+    .tpl-badge.system { background:#e3f2fd; color:#1565c0; }
+    .tpl-vars { color:#9c27b0; font-weight:600; font-size:11px; }
+    .section-label { font-size:11px; color:#999; text-transform:uppercase; letter-spacing:1px; margin:20px 0 8px; font-weight:600; }
     @media(max-width:768px) {
       .tpl-table { display:block; }
       .tpl-table thead { display:none; }
@@ -47,6 +59,7 @@
       .tpl-table td { display:block; padding:4px 0; border:none; }
       .tpl-table td:before { content:attr(data-label); font-weight:600; color:#667781; font-size:11px; display:block; margin-bottom:2px; }
       .tpl-response { max-width:100%; }
+      .tpl-tab { padding:8px 12px; font-size:13px; }
     }
   </style>
 </head>
@@ -119,10 +132,16 @@
   </nav>
 
   <main class="main-content" style="padding:20px; max-width:1200px; margin:0 auto;">
-    <h2 style="margin:0 0 16px; font-size:20px;">Auto-Learned Templates</h2>
-    <p style="color:#667781; font-size:13px; margin:0 0 20px;">Bot ne AI responses se yeh patterns seekhe hain. 3+ baar dekhe gaye patterns active ho jaate hain aur AI ki jagah use hote hain (zero cost).</p>
+    <h2 style="margin:0 0 6px; font-size:20px;">All Templates</h2>
+    <p style="color:#667781; font-size:13px; margin:0 0 16px;">System templates (hardcoded) + AI-learned templates (auto). Sab ek jagah.</p>
 
     <div class="tpl-stats" id="tplStats"></div>
+
+    <div class="tpl-tabs">
+      <div class="tpl-tab active" data-tab="all" onclick="switchTab('all')">All <span class="tab-count" id="countAll">0</span></div>
+      <div class="tpl-tab" data-tab="system" onclick="switchTab('system')">System <span class="tab-count" id="countSystem">0</span></div>
+      <div class="tpl-tab" data-tab="auto" onclick="switchTab('auto')">AI-Learned <span class="tab-count" id="countAuto">0</span></div>
+    </div>
 
     <div class="tpl-filters">
       <select id="filterState" onchange="renderTable()">
@@ -130,23 +149,22 @@
       </select>
       <select id="filterStatus" onchange="renderTable()">
         <option value="">All Status</option>
-        <option value="active">Active (3+ seen)</option>
-        <option value="ready">Ready (enabled)</option>
+        <option value="system">System (hardcoded)</option>
+        <option value="active">AI Active (3+ seen)</option>
+        <option value="learning">AI Learning (&lt;3)</option>
         <option value="disabled">Disabled</option>
-        <option value="learning">Learning (<3)</option>
       </select>
-      <input type="text" id="filterSearch" placeholder="Search keywords or response..." oninput="renderTable()">
+      <input type="text" id="filterSearch" placeholder="Search response text..." oninput="renderTable()">
     </div>
 
     <table class="tpl-table">
       <thead>
         <tr>
-          <th>State</th>
-          <th>Keywords / Triggers</th>
+          <th>Type</th>
+          <th>State / Key</th>
           <th>Response</th>
-          <th>Seen</th>
-          <th>Used</th>
-          <th>Status</th>
+          <th>Variables</th>
+          <th>Stats</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -156,37 +174,132 @@
 
   <script src="/admin/app.js"></script>
   <script>
-let allTemplates = [];
+let allData = []; // combined: system + auto
+let currentTab = 'all';
 let editingId = null;
 
-async function loadTemplates() {
+// Category mapping for system template keys
+const KEY_CATEGORIES = {
+  GREETING_SALAM: 'GREETING', GREETING_CASUAL: 'GREETING', GREETING_HOWRU: 'GREETING',
+  GREETING_RETURNING_SALAM: 'GREETING', GREETING_RETURNING_CASUAL: 'GREETING',
+  PRODUCT_INQUIRY: 'PRODUCT_INQUIRY', PRODUCT_WITH_PRICE: 'PRODUCT_INQUIRY',
+  PRODUCT_WITH_ORDER: 'PRODUCT_INQUIRY', PRODUCT_WITH_ORDER_KNOWN_NAME: 'PRODUCT_INQUIRY',
+  PRODUCT_LIST: 'PRODUCT_LIST', PRODUCT_AMBIGUOUS: 'PRODUCT_LIST',
+  ORDER_WITHOUT_PRODUCT: 'PRODUCT_SELECTION', REORDER_NO_DATA: 'PRODUCT_SELECTION',
+  REORDER_WITH_DATA: 'PRODUCT_SELECTION',
+  ASK_NAME: 'COLLECT_NAME',
+  ASK_PHONE: 'COLLECT_PHONE', PHONE_INVALID_INCOMPLETE: 'COLLECT_PHONE', PHONE_INVALID_FORMAT: 'COLLECT_PHONE',
+  ASK_DELIVERY_PHONE: 'COLLECT_PHONE', ASK_DELIVERY_PHONE_NEW: 'COLLECT_PHONE',
+  ASK_CITY: 'COLLECT_CITY', REGION_NOT_CITY: 'COLLECT_CITY', UNKNOWN_CITY_ABBR: 'COLLECT_CITY',
+  ASK_RURAL_CITY: 'COLLECT_CITY', ASK_RURAL_CONFIRM: 'COLLECT_CITY', RURAL_CITY_NO: 'COLLECT_CITY',
+  ASK_RURAL_DELIVERY_POINT: 'COLLECT_CITY', ASK_RURAL_DELIVERY_INSIST: 'COLLECT_CITY',
+  ASK_RURAL_NEARBY_REFERENCE: 'COLLECT_CITY', ASK_ZILLA: 'COLLECT_CITY',
+  ASK_ADDRESS: 'COLLECT_ADDRESS', ASK_ADDRESS_AREA: 'COLLECT_ADDRESS',
+  ASK_ADDRESS_STREET: 'COLLECT_ADDRESS', ASK_ADDRESS_HOUSE: 'COLLECT_ADDRESS',
+  ASK_ADDRESS_LANDMARK: 'COLLECT_ADDRESS', ASK_ADDRESS_LANDMARK_NAME: 'COLLECT_ADDRESS',
+  ASK_ADDRESS_HOUSE_OR_LANDMARK: 'COLLECT_ADDRESS', CONFIRM_ADDRESS: 'COLLECT_ADDRESS',
+  ORDER_SUMMARY: 'ORDER_SUMMARY',
+  UPSELL_HOOK: 'UPSELL', UPSELL_SHOW: 'UPSELL', UPSELL_ADDED: 'UPSELL',
+  UPSELL_ASK_YESNO: 'UPSELL', UPSELL_PICK: 'UPSELL', UPSELL_DISCOUNT: 'UPSELL',
+  ORDER_CONFIRMED: 'ORDER_CONFIRMED',
+  HAGGLE_ROUND_1: 'HAGGLING', HAGGLE_ROUND_2: 'HAGGLING', HAGGLE_ROUND_3: 'HAGGLING',
+  HAGGLE_FINAL: 'HAGGLING', HAGGLE_NO_PRODUCT: 'HAGGLING',
+  TRUST_COD: 'TRUST', TRUST_QUALITY: 'TRUST', QUALITY_REASSURANCE: 'TRUST', TRUST_GENERAL: 'TRUST',
+  DELIVERY_WITH_CITY: 'DELIVERY', DELIVERY_GENERAL: 'DELIVERY', DELIVERY_POST_ORDER: 'DELIVERY',
+  COMPLAINT: 'COMPLAINT', COMPLAINT_FOLLOWUP: 'COMPLAINT',
+  THANKS_REPLY: 'THANKS', AFTER_ORDER: 'AFTER_ORDER',
+  WHAT_TO_CHANGE: 'CHANGE_REQUEST', CHANGE_NAME: 'CHANGE_REQUEST', CHANGE_PHONE: 'CHANGE_REQUEST',
+  CHANGE_ADDRESS: 'CHANGE_REQUEST', CHANGE_CITY: 'CHANGE_REQUEST',
+  CONFIRM_PROMPT: 'ORDER_SUMMARY',
+  FALLBACK: 'FALLBACK'
+};
+
+async function loadAll() {
   try {
-    allTemplates = await api('/api/auto-templates');
+    const [autoTpls, sysTpls] = await Promise.all([
+      api('/api/auto-templates'),
+      api('/api/hardcoded-templates')
+    ]);
+
+    allData = [];
+
+    // Add system templates
+    sysTpls.forEach((t, i) => {
+      const vars = (t.response.match(/\{[a-z_]+\}/g) || []);
+      allData.push({
+        id: 'sys-' + i,
+        type: 'system',
+        state: KEY_CATEGORIES[t.key] || t.key,
+        key: t.key,
+        response: t.response,
+        variables: vars,
+        variations: t.variations,
+        is_active: 1
+      });
+    });
+
+    // Add auto templates
+    autoTpls.forEach(t => {
+      allData.push({
+        id: 'auto-' + t.id,
+        dbId: t.id,
+        type: 'auto',
+        state: t.state,
+        key: null,
+        response: t.response,
+        keywords: t.keywords,
+        product_id: t.product_id,
+        times_seen: t.times_seen,
+        times_used: t.times_used,
+        is_active: t.is_active,
+        variables: []
+      });
+    });
+
     renderStats();
     populateStateFilter();
     renderTable();
   } catch (e) {
-    console.error('Failed to load templates:', e);
+    console.error('Load failed:', e);
   }
 }
 
 function renderStats() {
-  const total = allTemplates.length;
-  const active = allTemplates.filter(t => t.times_seen >= 3 && (t.is_active !== 0)).length;
-  const used = allTemplates.filter(t => t.times_used > 0).length;
-  const disabled = allTemplates.filter(t => t.is_active === 0).length;
+  const sys = allData.filter(t => t.type === 'system').length;
+  const auto = allData.filter(t => t.type === 'auto').length;
+  const autoActive = allData.filter(t => t.type === 'auto' && t.times_seen >= 3 && t.is_active !== 0).length;
+  const disabled = allData.filter(t => t.is_active === 0).length;
+  const states = new Set(allData.map(t => t.state)).size;
+
   document.getElementById('tplStats').innerHTML = `
-    <div class="tpl-stat"><div class="num">${total}</div><div class="label">Total Patterns</div></div>
-    <div class="tpl-stat"><div class="num" style="color:#25D366">${active}</div><div class="label">Active (ready to use)</div></div>
-    <div class="tpl-stat"><div class="num" style="color:#1565c0">${used}</div><div class="label">Actually Used</div></div>
+    <div class="tpl-stat"><div class="num">${allData.length}</div><div class="label">Total Templates</div></div>
+    <div class="tpl-stat"><div class="num" style="color:#1565c0">${sys}</div><div class="label">System (hardcoded)</div></div>
+    <div class="tpl-stat"><div class="num" style="color:#25D366">${auto}</div><div class="label">AI-Learned</div></div>
+    <div class="tpl-stat"><div class="num" style="color:#e65100">${autoActive}</div><div class="label">AI Active</div></div>
+    <div class="tpl-stat"><div class="num" style="color:#7b1fa2">${states}</div><div class="label">States Covered</div></div>
     <div class="tpl-stat"><div class="num" style="color:#c62828">${disabled}</div><div class="label">Disabled</div></div>
   `;
+
+  document.getElementById('countAll').textContent = allData.length;
+  document.getElementById('countSystem').textContent = sys;
+  document.getElementById('countAuto').textContent = auto;
 }
 
 function populateStateFilter() {
-  const states = [...new Set(allTemplates.map(t => t.state))].sort();
+  const states = [...new Set(allData.map(t => t.state))].sort();
   const sel = document.getElementById('filterState');
-  sel.innerHTML = '<option value="">All States</option>' + states.map(s => `<option value="${s}">${s}</option>`).join('');
+  sel.innerHTML = '<option value="">All States</option>' + states.map(s => {
+    const cnt = allData.filter(t => t.state === s).length;
+    return '<option value="' + s + '">' + s + ' (' + cnt + ')</option>';
+  }).join('');
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tpl-tab').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === tab);
+  });
+  renderTable();
 }
 
 function getStateClass(state) {
@@ -194,13 +307,11 @@ function getStateClass(state) {
   if (state === 'GREETING') return 'greeting';
   if (state.includes('PRODUCT') || state === 'HAGGLING') return 'product';
   if (state.startsWith('COLLECT')) return 'collect';
+  if (state.includes('ORDER')) return 'order';
+  if (state === 'TRUST') return 'trust';
+  if (state === 'COMPLAINT') return 'complaint';
+  if (state === 'UPSELL') return 'upsell';
   return 'other';
-}
-
-function getStatusBadge(t) {
-  if (t.is_active === 0) return '<span class="tpl-badge" style="background:#fce4ec;color:#c62828">DISABLED</span>';
-  if (t.times_seen >= 3) return '<span class="tpl-badge active">ACTIVE</span>';
-  return '<span class="tpl-badge learning">LEARNING (' + t.times_seen + '/3)</span>';
 }
 
 function renderTable() {
@@ -208,36 +319,95 @@ function renderTable() {
   const statusFilter = document.getElementById('filterStatus').value;
   const search = document.getElementById('filterSearch').value.toLowerCase();
 
-  let filtered = allTemplates;
+  let filtered = allData;
+
+  // Tab filter
+  if (currentTab === 'system') filtered = filtered.filter(t => t.type === 'system');
+  else if (currentTab === 'auto') filtered = filtered.filter(t => t.type === 'auto');
+
+  // State filter
   if (stateFilter) filtered = filtered.filter(t => t.state === stateFilter);
-  if (statusFilter === 'active') filtered = filtered.filter(t => t.times_seen >= 3 && t.is_active !== 0);
-  else if (statusFilter === 'ready') filtered = filtered.filter(t => t.is_active !== 0);
+
+  // Status filter
+  if (statusFilter === 'system') filtered = filtered.filter(t => t.type === 'system');
+  else if (statusFilter === 'active') filtered = filtered.filter(t => t.type === 'auto' && t.times_seen >= 3 && t.is_active !== 0);
+  else if (statusFilter === 'learning') filtered = filtered.filter(t => t.type === 'auto' && t.times_seen < 3);
   else if (statusFilter === 'disabled') filtered = filtered.filter(t => t.is_active === 0);
-  else if (statusFilter === 'learning') filtered = filtered.filter(t => t.times_seen < 3);
-  if (search) filtered = filtered.filter(t => t.keywords.toLowerCase().includes(search) || t.response.toLowerCase().includes(search));
+
+  // Search
+  if (search) filtered = filtered.filter(t => {
+    return t.response.toLowerCase().includes(search) ||
+      (t.key || '').toLowerCase().includes(search) ||
+      (t.keywords || '').toLowerCase().includes(search) ||
+      t.state.toLowerCase().includes(search);
+  });
 
   const body = document.getElementById('tplBody');
   body.innerHTML = filtered.map(t => {
-    const kws = JSON.parse(t.keywords || '[]');
-    const inactive = t.is_active === 0 ? ' tpl-inactive' : '';
     const isEditing = editingId === t.id;
+    const inactive = t.is_active === 0 ? ' tpl-inactive' : '';
 
-    return `<tr class="${inactive}" id="row-${t.id}">
-      <td data-label="State"><span class="tpl-state ${getStateClass(t.state)}">${t.state}</span>${t.product_id ? '<br><small style="color:#999">Product #' + t.product_id + '</small>' : ''}</td>
-      <td data-label="Keywords"><div class="tpl-keywords">${kws.map(k => '<span class="tpl-kw">' + k + '</span>').join('')}</div></td>
-      <td data-label="Response"><div class="tpl-response">${isEditing
-        ? '<textarea id="edit-' + t.id + '">' + escHtml(t.response) + '</textarea>'
-        : escHtml(t.response)}</div></td>
-      <td data-label="Seen">${t.times_seen}</td>
-      <td data-label="Used">${t.times_used}</td>
-      <td data-label="Status">${getStatusBadge(t)}</td>
-      <td data-label="Actions"><div class="tpl-actions">${isEditing
-        ? '<button class="btn-save" onclick="saveEdit(' + t.id + ')">Save</button><button class="btn-cancel" onclick="cancelEdit()">Cancel</button>'
-        : '<button class="btn-edit" onclick="startEdit(' + t.id + ')">Edit</button>' +
-          '<button class="btn-toggle" onclick="toggleActive(' + t.id + ',' + (t.is_active === 0 ? 1 : 0) + ')">' + (t.is_active === 0 ? 'Enable' : 'Disable') + '</button>' +
-          '<button class="btn-del" onclick="deleteTpl(' + t.id + ')">Del</button>'
-      }</div></td>
-    </tr>`;
+    // Type badge
+    const typeBadge = t.type === 'system'
+      ? '<span class="tpl-badge system">SYSTEM</span>'
+      : (t.is_active === 0
+        ? '<span class="tpl-badge" style="background:#fce4ec;color:#c62828">DISABLED</span>'
+        : (t.times_seen >= 3
+          ? '<span class="tpl-badge active">AI ACTIVE</span>'
+          : '<span class="tpl-badge learning">LEARNING ' + (t.times_seen || 0) + '/3</span>'));
+
+    // State/Key display
+    const stateDisplay = '<span class="tpl-state ' + getStateClass(t.state) + '">' + t.state + '</span>' +
+      (t.key ? '<br><small style="color:#888">' + t.key + '</small>' : '') +
+      (t.product_id ? '<br><small style="color:#999">Product #' + t.product_id + '</small>' : '');
+
+    // Response
+    const responseDisplay = isEditing
+      ? '<textarea id="edit-' + t.id + '">' + escHtml(t.response) + '</textarea>'
+      : escHtml(t.response);
+
+    // Variables / Keywords
+    let varsDisplay = '';
+    if (t.type === 'system' && t.variables.length) {
+      varsDisplay = t.variables.map(v => '<span class="tpl-vars">' + v + '</span>').join(' ');
+    } else if (t.type === 'auto' && t.keywords) {
+      try {
+        const kws = JSON.parse(t.keywords);
+        varsDisplay = '<div class="tpl-keywords">' + kws.map(k => '<span class="tpl-kw">' + k + '</span>').join('') + '</div>';
+      } catch(e) {}
+    }
+
+    // Stats
+    let statsDisplay = '';
+    if (t.type === 'system') {
+      statsDisplay = t.variations + ' variation' + (t.variations > 1 ? 's' : '');
+    } else {
+      statsDisplay = 'Seen: ' + (t.times_seen || 0) + '<br>Used: ' + (t.times_used || 0);
+    }
+
+    // Actions
+    let actions = '';
+    if (t.type === 'auto') {
+      if (isEditing) {
+        actions = '<button class="btn-save" onclick="saveEdit(\'' + t.id + '\',' + t.dbId + ')">Save</button>' +
+          '<button class="btn-cancel" onclick="cancelEdit()">Cancel</button>';
+      } else {
+        actions = '<button class="btn-edit" onclick="startEdit(\'' + t.id + '\')">Edit</button>' +
+          '<button class="btn-toggle" onclick="toggleActive(' + t.dbId + ',' + (t.is_active === 0 ? 1 : 0) + ')">' + (t.is_active === 0 ? 'Enable' : 'Disable') + '</button>' +
+          '<button class="btn-del" onclick="deleteTpl(' + t.dbId + ',\'' + t.id + '\')">Del</button>';
+      }
+    } else {
+      actions = '<span style="color:#999;font-size:11px">Code mein hai</span>';
+    }
+
+    return '<tr class="' + inactive + '" id="row-' + t.id + '">' +
+      '<td data-label="Type">' + typeBadge + '</td>' +
+      '<td data-label="State">' + stateDisplay + '</td>' +
+      '<td data-label="Response"><div class="tpl-response">' + responseDisplay + '</div></td>' +
+      '<td data-label="Variables">' + varsDisplay + '</td>' +
+      '<td data-label="Stats">' + statsDisplay + '</td>' +
+      '<td data-label="Actions"><div class="tpl-actions">' + actions + '</div></td>' +
+      '</tr>';
   }).join('');
 }
 
@@ -257,14 +427,14 @@ function cancelEdit() {
   renderTable();
 }
 
-async function saveEdit(id) {
+async function saveEdit(id, dbId) {
   const ta = document.getElementById('edit-' + id);
   if (!ta) return;
   const newResponse = ta.value.trim();
   if (!newResponse) return;
   try {
-    await api('/api/auto-templates/' + id, { method: 'PUT', body: JSON.stringify({ response: newResponse }) });
-    const tpl = allTemplates.find(t => t.id === id);
+    await api('/api/auto-templates/' + dbId, { method: 'PUT', body: JSON.stringify({ response: newResponse }) });
+    const tpl = allData.find(t => t.id === id);
     if (tpl) tpl.response = newResponse;
     editingId = null;
     renderTable();
@@ -273,10 +443,10 @@ async function saveEdit(id) {
   }
 }
 
-async function toggleActive(id, newVal) {
+async function toggleActive(dbId, newVal) {
   try {
-    await api('/api/auto-templates/' + id, { method: 'PUT', body: JSON.stringify({ is_active: newVal }) });
-    const tpl = allTemplates.find(t => t.id === id);
+    await api('/api/auto-templates/' + dbId, { method: 'PUT', body: JSON.stringify({ is_active: newVal }) });
+    const tpl = allData.find(t => t.dbId === dbId);
     if (tpl) tpl.is_active = newVal;
     renderStats();
     renderTable();
@@ -285,11 +455,11 @@ async function toggleActive(id, newVal) {
   }
 }
 
-async function deleteTpl(id) {
+async function deleteTpl(dbId, id) {
   if (!confirm('Delete this template?')) return;
   try {
-    await api('/api/auto-templates/' + id, { method: 'DELETE' });
-    allTemplates = allTemplates.filter(t => t.id !== id);
+    await api('/api/auto-templates/' + dbId, { method: 'DELETE' });
+    allData = allData.filter(t => t.id !== id);
     renderStats();
     renderTable();
   } catch (e) {
@@ -297,7 +467,7 @@ async function deleteTpl(id) {
   }
 }
 
-loadTemplates();
+loadAll();
   </script>
 </body>
 </html>
