@@ -754,8 +754,16 @@ function preCheck(message, currentState, collected, state) {
       if (bulkCity) extracted.city = bulkCity;
 
       // Address text — "address:", "mohallah:", "gali:", etc. (separator REQUIRED to avoid matching "address pe bhi call")
-      const addrMatch = msg.match(/\baddress\s*[:\.\-=]\s*(.+)/i);
-      if (addrMatch) extracted.address_text = addrMatch[1].trim().split(/\n/)[0].trim();
+      const addrMatch = msg.match(/\baddre(?:ss|es|s)\s*[:\.\-=]\s*(.+)/i);
+      if (addrMatch) {
+        let addrText = addrMatch[1].trim().split(/\n/)[0].trim();
+        // Strip trailing form labels like "City :", "Phone :", "Number :"
+        addrText = addrText.replace(/\s*\b(city|phone|number|mobile|contact|naam|name|province|state)\s*[:\.\-=]?\s*$/i, '').trim();
+        // Strip leading form template text
+        addrText = addrText.replace(/^(for\s+order\s+kindly\s+.*?details\s*[:\.\-=]?\s*)/i, '').trim();
+        addrText = addrText.replace(/^addre(?:ss|es|s)\s*[:\.\-=]\s*/i, '').trim();
+        if (addrText.length > 3) extracted.address_text = addrText;
+      }
 
       // Mohallah/area — build address from labeled fields
       const addressParts = [];

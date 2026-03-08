@@ -2301,10 +2301,10 @@ function handlePreCheck(pre, message, state, storeName, phone) {
           state.collected.address_parts.area = ext.address_text;
           // Check if bulk address is already detailed enough (has house/office/flat/plot number + area)
           const addrLower = ext.address_text.toLowerCase();
-          const hasHouseNum = /\b(house|makan|ghar|flat|apartment|apt|office|plot|floor|ground\s*floor)\s*(no\.?|number|#)?\s*\d/i.test(ext.address_text) ||
-            /\b(no\.?|#)\s*\d+\s*[a-z]?\b/i.test(ext.address_text) ||
+          const hasHouseNum = /\b(house|makan|ghar|flat|apartment|apt|office|plot|floor|ground\s*floor)\s*(no\.?|number|#)?\s*[a-z0-9]/i.test(ext.address_text) ||
+            /\b(no\.?|#)\s*[a-z]?\s*\d+/i.test(ext.address_text) ||
             /\b\d+\s*-?\s*[a-z]\b/i.test(addrLower);
-          const hasArea = /\b(phase|block|sector|colony|town|society|scheme|bahria|dha|gulberg|model|cantt|saddar|johar|north|south|east|west)\b/i.test(ext.address_text);
+          const hasArea = /\b(phase|block|sector|colony|town|society|scheme|bahria|dha|gulberg|gulshan|iqbal|model|cantt|saddar|johar|north|south|east|west|garden|nazimabad|clifton|defence)\b/i.test(ext.address_text);
           if (hasHouseNum && hasArea) {
             // Address is complete — set final address directly to skip COLLECT_ADDRESS
             const city = ext.city || state.collected.city;
