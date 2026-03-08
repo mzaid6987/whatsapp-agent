@@ -1367,6 +1367,14 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     // City (AI might extract, code validates)
     if (extracted.city) {
       state.collected.city = extracted.city;
+      // If rural part was stored from previous rural_no_city, mark as rural now
+      if (state._rural_part) {
+        state.collected.address_parts = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };
+        state.collected.address_parts.area = state._rural_part;
+        state._is_rural = true;
+        delete state._rural_part;
+        delete state._rural_type;
+      }
     }
 
     // --- SMART FILL: extract extra fields from combined messages ---

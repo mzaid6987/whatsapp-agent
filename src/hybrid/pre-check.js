@@ -441,7 +441,7 @@ function preCheck(message, currentState, collected, state) {
     const looksLikeName = words.length >= 1 && words.length <= 3 &&
       /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 2 && trimmed.length <= 40;
     const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|discont|discoutn|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|dedo|kardo|krdo|chahiye|chahie|mangta|bhejo|trimmer|cutter|remover|nebulizer|duster|spray)\b/i.test(l);
-    const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm)\s*[.!]?\s*$/i.test(l);
+    const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm|ha+n|hn|hanji|hnji|han\s*ji)\s*[.!]?\s*$/i.test(l);
     const isAddressLabel = /^(address|city|phone|number|mobile|area|mohalla|colony|gali|street|house|flat|landmark)\s*$/i.test(l);
     // Check if text matches a product keyword — "baal katny vala" is product demand, not name
     const isProductKeyword = detectProduct(msg) !== null;
