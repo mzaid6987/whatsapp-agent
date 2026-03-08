@@ -439,6 +439,16 @@ async function webhookHandler(req, res) {
           result.reply = mediaLabel + result.reply;
         }
         markAsRead(messageId, phoneNumberId, accessToken);
+        // Update DB message with media label
+        if (result.db_conversation_id) {
+          try {
+            const { getDb } = require('../db');
+            getDb().prepare(`
+              UPDATE messages SET content = ?
+              WHERE id = (SELECT id FROM messages WHERE conversation_id = ? AND direction = 'outgoing' ORDER BY created_at DESC LIMIT 1)
+            `).run(result.reply, result.db_conversation_id);
+          } catch (e) { /* non-critical */ }
+        }
       } else if (!hasTextReply) {
         // No media uploaded + explicit request — tell customer
         result.reply = `Abhi ${product_name} ki ${type === 'video' ? 'video' : 'picture'} available nahi hai. Lekin product bohat acha hai 😊 Order karna hai?`;
@@ -504,6 +514,16 @@ async function webhookHandler(req, res) {
         // Prepend media info to reply for admin log
         const batchLabel = `[📎 ${batchSent} video${batchSent > 1 ? 's' : ''} sent: ${sentNames.join(', ')}]\n`;
         result.reply = batchLabel + (result.reply || '');
+        // Update DB message with media label so admin sees it in chat view
+        if (result.db_conversation_id) {
+          try {
+            const { getDb } = require('../db');
+            getDb().prepare(`
+              UPDATE messages SET content = ?
+              WHERE id = (SELECT id FROM messages WHERE conversation_id = ? AND direction = 'outgoing' ORDER BY created_at DESC LIMIT 1)
+            `).run(result.reply, result.db_conversation_id);
+          } catch (e) { console.error('[WA Media Batch] DB update failed:', e.message); }
+        }
       }
     }
 
