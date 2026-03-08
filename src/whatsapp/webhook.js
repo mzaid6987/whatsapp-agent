@@ -424,7 +424,9 @@ async function webhookHandler(req, res) {
           ? `Yeh rahi ${product_name} ki video 😊 ${followUpAction}`.trim()
           : `Yeh rahi ${product_name} ki ${mediaFiles.length > 1 ? 'pictures' : 'picture'} 😊 ${followUpAction}`.trim();
         await sendMessage(fromPhone, followUp, phoneNumberId, accessToken);
-        result.reply = followUp; // For logging
+        // Log with media info — so admin can see what was sent
+        const mediaLabel = `[📎 ${mediaSent} ${type}${mediaSent > 1 ? 's' : ''} sent: ${product_name}]\n`;
+        result.reply = mediaLabel + followUp;
         markAsRead(messageId, phoneNumberId, accessToken);
       } else {
         // No media uploaded yet
