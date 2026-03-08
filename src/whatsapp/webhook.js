@@ -416,10 +416,13 @@ async function webhookHandler(req, res) {
             console.error(`[WA Media] FAILED to send ${m.type} ${m.filename}: ${sendResult.error}`);
           }
         }
-        // Send follow-up text
+        // Send follow-up text — context-aware for upsell states
+        const isUpsellState = result.state === 'UPSELL_SHOW' || result.state === 'UPSELL_HOOK';
+        const isPostOrder = result.state === 'ORDER_CONFIRMED';
+        const followUpAction = isUpsellState ? 'Add karna hai order mein?' : (isPostOrder ? '' : 'Order karna hai?');
         const followUp = type === 'video'
-          ? `Yeh rahi ${product_name} ki video 😊 Order karna hai?`
-          : `Yeh rahi ${product_name} ki ${mediaFiles.length > 1 ? 'pictures' : 'picture'} 😊 Order karna hai?`;
+          ? `Yeh rahi ${product_name} ki video 😊 ${followUpAction}`.trim()
+          : `Yeh rahi ${product_name} ki ${mediaFiles.length > 1 ? 'pictures' : 'picture'} 😊 ${followUpAction}`.trim();
         await sendMessage(fromPhone, followUp, phoneNumberId, accessToken);
         result.reply = followUp; // For logging
         markAsRead(messageId, phoneNumberId, accessToken);

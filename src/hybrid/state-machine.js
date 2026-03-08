@@ -320,6 +320,19 @@ function handleTemplateState(message, state, storeName, preIntent) {
 
     // ===== UPSELL HOOK =====
     case 'UPSELL_HOOK': {
+      // Media request — "picture dikhao", "photo bhejo" — check BEFORE yes/no
+      const isMediaReqHook = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye)\b/i.test(l) ||
+        /\b(video|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye)\b/i.test(l) ||
+        /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid)\b/i.test(l) ||
+        /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(l);
+      if (isMediaReqHook) {
+        const mediaProduct = detectProduct(message) || state.product;
+        const mediaType = /\b(video|vid|reel)\b/i.test(l) ? 'video' : 'image';
+        if (mediaProduct) {
+          return { reply: null, state: 'UPSELL_HOOK', _media: { product_id: mediaProduct.id, type: mediaType, product_name: mediaProduct.short } };
+        }
+        return { reply: 'Kis product ki ' + (mediaType === 'video' ? 'video' : 'picture') + ' chahiye? Product ka naam ya number bata dein 😊', state: 'UPSELL_HOOK' };
+      }
       // Delivery time query — answer it, then continue upsell
       if (/\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|aye?\s*ga)|kitne?\s*din|delivery|tracking|kb\s*tk|kb\s*ayga)\b/i.test(l)) {
         const delReply = fillTemplate('DELIVERY_POST_ORDER', vars);
@@ -342,6 +355,21 @@ function handleTemplateState(message, state, storeName, preIntent) {
 
     // ===== UPSELL SHOW =====
     case 'UPSELL_SHOW': {
+      // Media request — "picture dikhao", "photo bhejo" — check BEFORE yes/no
+      // This handles "Han lekin picture to dikhao" (picture takes priority over yes)
+      const isMediaReqShow = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye|to)\b/i.test(l) ||
+        /\b(video|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye|to)\b/i.test(l) ||
+        /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid)\b/i.test(l) ||
+        /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(l) ||
+        /\bpicture\s+to\s+dikha/i.test(l);
+      if (isMediaReqShow) {
+        const mediaProduct = detectProduct(message) || state._pending_upsell || state.product;
+        const mediaType = /\b(video|vid|reel)\b/i.test(l) ? 'video' : 'image';
+        if (mediaProduct) {
+          return { reply: null, state: 'UPSELL_SHOW', _media: { product_id: mediaProduct.id, type: mediaType, product_name: mediaProduct.short } };
+        }
+        return { reply: 'Kis product ki ' + (mediaType === 'video' ? 'video' : 'picture') + ' chahiye? Product ka naam ya number bata dein 😊', state: 'UPSELL_SHOW' };
+      }
       if (no) {
         // If pending upsell and customer says no → skip just the pending, confirm order
         if (state._pending_upsell) {
@@ -349,10 +377,15 @@ function handleTemplateState(message, state, storeName, preIntent) {
         }
         return confirmOrder(state, storeName);
       }
-      // YES to pending upsell — add it to order
+      // YES to pending upsell — add it to order with upsell price
       if (yes && state._pending_upsell) {
-        const up = state._pending_upsell;
+        const up = { ...state._pending_upsell };
+        // Apply upsell discount price (same logic as line 441+)
+        const baseUpsellP = Math.max((up.upsell_price || up.price) - 500, 499);
+        const extraOff = (state._upsell_haggle >= 2) ? 100 : 0;
+        up.price = Math.max(baseUpsellP - extraOff, 399);
         state._pending_upsell = null;
+        delete state._upsell_haggle;
         if (!(state.products || []).length) state.products = [state.product];
         state.products.push(up);
         return confirmOrder(state, storeName, `Done! ${up.short} bhi add ho gaya.\n\n`);
@@ -470,6 +503,20 @@ function handleTemplateState(message, state, storeName, preIntent) {
 
     // ===== ORDER CONFIRMED =====
     case 'ORDER_CONFIRMED': {
+      // Media request — "picture dikhao" after order confirmed
+      const isMediaReqConf = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye|to)\b/i.test(l) ||
+        /\b(video|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye|to)\b/i.test(l) ||
+        /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid)\b/i.test(l) ||
+        /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(l) ||
+        /\bpicture\s+to\s+dikha/i.test(l);
+      if (isMediaReqConf) {
+        const mediaProduct = detectProduct(message) || state.product;
+        const mediaType = /\b(video|vid|reel)\b/i.test(l) ? 'video' : 'image';
+        if (mediaProduct) {
+          return { reply: null, state: 'ORDER_CONFIRMED', _media: { product_id: mediaProduct.id, type: mediaType, product_name: mediaProduct.short } };
+        }
+        return { reply: 'Kis product ki ' + (mediaType === 'video' ? 'video' : 'picture') + ' chahiye? Product ka naam ya number bata dein 😊', state: 'ORDER_CONFIRMED' };
+      }
       // Cancel request after confirmation — parcel dispatch ho chuka
       const isCancel = /\b(cancel|cancl|cance?l|cansel)\b/i.test(l) ||
         /\b(order\s*)?(cancel|band|khatam|wapis|wapas|vapas|vapsi|return)\s*(kr|kar|karo|krdo|kardo|krna|karna)?\b/i.test(l) ||

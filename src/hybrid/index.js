@@ -769,6 +769,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         tokens_in: 0, tokens_out: 0,
         response_ms: Date.now() - startTime,
         db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+        _media: tmplResult._media || null,
       };
     }
   }
