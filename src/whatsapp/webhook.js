@@ -403,13 +403,17 @@ async function webhookHandler(req, res) {
 
       if (mediaFiles.length > 0) {
         console.log(`[WA Media] Sending ${mediaFiles.length} ${type}(s) for product ${product_name} to ${fromPhone}`);
+        let mediaSent = 0;
         for (const m of mediaFiles) {
           const mediaUrl = `${serverUrl}/media/${m.filename}`;
           const caption = m.caption || product_name;
-          if (m.type === 'image') {
-            await sendImage(fromPhone, mediaUrl, caption, phoneNumberId, accessToken);
+          const sendResult = m.type === 'image'
+            ? await sendImage(fromPhone, mediaUrl, caption, phoneNumberId, accessToken)
+            : await sendVideo(fromPhone, mediaUrl, caption, phoneNumberId, accessToken);
+          if (sendResult.success) {
+            mediaSent++;
           } else {
-            await sendVideo(fromPhone, mediaUrl, caption, phoneNumberId, accessToken);
+            console.error(`[WA Media] FAILED to send ${m.type} ${m.filename}: ${sendResult.error}`);
           }
         }
         // Send follow-up text
