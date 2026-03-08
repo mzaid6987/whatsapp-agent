@@ -770,6 +770,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         response_ms: Date.now() - startTime,
         db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
         _media: tmplResult._media || null,
+        _media_batch: tmplResult._media_batch || null,
       };
     }
   }
@@ -1209,6 +1210,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         response_ms: Date.now() - startTime,
         db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
         _media: preResult._media || null,
+        _media_batch: preResult._media_batch || null,
       };
     }
   }
@@ -2234,7 +2236,9 @@ function handlePreCheck(pre, message, state, storeName, phone) {
     case 'product_list': {
       state.current = 'PRODUCT_SELECTION';
       const nextVars = buildVars(state, storeName);
-      return { reply: fillTemplate('PRODUCT_LIST', nextVars), state: 'PRODUCT_SELECTION' };
+      // Send all product videos along with the list
+      const _allVideos = PRODUCTS.map(p => ({ product_id: p.id, type: 'video', product_name: p.short }));
+      return { reply: fillTemplate('PRODUCT_LIST', nextVars), state: 'PRODUCT_SELECTION', _media_batch: _allVideos };
     }
 
     case 'order_without_product': {
@@ -2766,7 +2770,9 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       }
       state.current = 'PRODUCT_INQUIRY';
       const nextVars = buildVars(state, storeName);
-      return { reply: fillTemplate('PRODUCT_INQUIRY', nextVars), state: 'PRODUCT_INQUIRY' };
+      // Auto-send product video with inquiry response
+      const _piMedia = state.product ? { product_id: state.product.id, type: 'video', product_name: state.product.short } : null;
+      return { reply: fillTemplate('PRODUCT_INQUIRY', nextVars), state: 'PRODUCT_INQUIRY', _media: _piMedia };
     }
 
     case 'product_with_order': {

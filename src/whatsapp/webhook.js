@@ -395,11 +395,17 @@ async function webhookHandler(req, res) {
       result.ai_cost_rs = existingCost + mediaCost.cost_rs;
     }
 
-    // Handle media request — send product images/videos
+    // Handle media request — send product images/videos (single product)
     if (result._media) {
       const { product_id, type, product_name } = result._media;
       const mediaFiles = mediaModel.getByProduct(product_id, type);
       const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
+      const hasTextReply = !!result.reply; // Product inquiry has reply text, explicit media request has null
+
+      // If there's a text reply (product inquiry auto-video), send text FIRST
+      if (hasTextReply) {
+        await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
+      }
 
       if (mediaFiles.length > 0) {
         console.log(`[WA Media] Sending ${mediaFiles.length} ${type}(s) for product ${product_name} to ${fromPhone}`);
@@ -416,24 +422,30 @@ async function webhookHandler(req, res) {
             console.error(`[WA Media] FAILED to send ${m.type} ${m.filename}: ${sendResult.error}`);
           }
         }
-        // Send follow-up text — context-aware for upsell states
-        const isUpsellState = result.state === 'UPSELL_SHOW' || result.state === 'UPSELL_HOOK';
-        const isPostOrder = result.state === 'ORDER_CONFIRMED';
-        const followUpAction = isUpsellState ? 'Add karna hai order mein?' : (isPostOrder ? '' : 'Order karna hai?');
-        const followUp = type === 'video'
-          ? `Yeh rahi ${product_name} ki video 😊 ${followUpAction}`.trim()
-          : `Yeh rahi ${product_name} ki ${mediaFiles.length > 1 ? 'pictures' : 'picture'} 😊 ${followUpAction}`.trim();
-        await sendMessage(fromPhone, followUp, phoneNumberId, accessToken);
-        // Log with media info — so admin can see what was sent
-        const mediaLabel = `[📎 ${mediaSent} ${type}${mediaSent > 1 ? 's' : ''} sent: ${product_name}]\n`;
-        result.reply = mediaLabel + followUp;
+        if (!hasTextReply) {
+          // Explicit media request — send follow-up text
+          const isUpsellState = result.state === 'UPSELL_SHOW' || result.state === 'UPSELL_HOOK';
+          const isPostOrder = result.state === 'ORDER_CONFIRMED';
+          const followUpAction = isUpsellState ? 'Add karna hai order mein?' : (isPostOrder ? '' : 'Order karna hai?');
+          const followUp = type === 'video'
+            ? `Yeh rahi ${product_name} ki video 😊 ${followUpAction}`.trim()
+            : `Yeh rahi ${product_name} ki ${mediaFiles.length > 1 ? 'pictures' : 'picture'} 😊 ${followUpAction}`.trim();
+          await sendMessage(fromPhone, followUp, phoneNumberId, accessToken);
+          const mediaLabel = `[📎 ${mediaSent} ${type}${mediaSent > 1 ? 's' : ''} sent: ${product_name}]\n`;
+          result.reply = mediaLabel + followUp;
+        } else {
+          // Auto-video with product info — prepend media label to existing reply for log
+          const mediaLabel = `[📎 ${mediaSent} ${type}${mediaSent > 1 ? 's' : ''} sent: ${product_name}]\n`;
+          result.reply = mediaLabel + result.reply;
+        }
         markAsRead(messageId, phoneNumberId, accessToken);
-      } else {
-        // No media uploaded yet
+      } else if (!hasTextReply) {
+        // No media uploaded + explicit request — tell customer
         result.reply = `Abhi ${product_name} ki ${type === 'video' ? 'video' : 'picture'} available nahi hai. Lekin product bohat acha hai 😊 Order karna hai?`;
         await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
         markAsRead(messageId, phoneNumberId, accessToken);
       }
+      // If hasTextReply + no media files → text was already sent above, nothing more to do
     }
 
     // Send reply back to WhatsApp
@@ -460,6 +472,38 @@ async function webhookHandler(req, res) {
         }
       } else {
         console.error(`[WA] Send failed to ${fromPhone}:`, sendResult.error);
+      }
+    }
+
+    // Handle batch media — send videos for multiple products AFTER text reply
+    // (product list text goes first, then all videos follow)
+    if (result._media_batch && result._media_batch.length > 0) {
+      const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
+      let batchSent = 0;
+      const sentNames = [];
+      for (const item of result._media_batch) {
+        const mediaFiles = mediaModel.getByProduct(item.product_id, item.type);
+        if (mediaFiles.length > 0) {
+          // Send first video/image only per product (not all duplicates)
+          const m = mediaFiles[0];
+          const mediaUrl = `${serverUrl}/media/${m.filename}`;
+          const caption = item.product_name;
+          const sendResult = m.type === 'image'
+            ? await sendImage(fromPhone, mediaUrl, caption, phoneNumberId, accessToken)
+            : await sendVideo(fromPhone, mediaUrl, caption, phoneNumberId, accessToken);
+          if (sendResult.success) {
+            batchSent++;
+            sentNames.push(item.product_name);
+          } else {
+            console.error(`[WA Media Batch] FAILED ${m.type} for ${item.product_name}: ${sendResult.error}`);
+          }
+        }
+      }
+      if (batchSent > 0) {
+        console.log(`[WA Media Batch] Sent ${batchSent} videos to ${fromPhone}: ${sentNames.join(', ')}`);
+        // Prepend media info to reply for admin log
+        const batchLabel = `[📎 ${batchSent} video${batchSent > 1 ? 's' : ''} sent: ${sentNames.join(', ')}]\n`;
+        result.reply = batchLabel + (result.reply || '');
       }
     }
 

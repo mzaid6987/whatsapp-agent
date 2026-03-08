@@ -346,7 +346,9 @@ function handleTemplateState(message, state, storeName, preIntent) {
           return `${i + 1}. ${p.short} — ${fmtPrice(upsellPrice)}`;
         }).join('\n');
         const uVars = { ...vars, upsell_list: uList };
-        return { reply: fillTemplate('UPSELL_SHOW', uVars), state: 'UPSELL_SHOW' };
+        // Send videos of upsell candidate products
+        const _upsellVideos = state.upsell_candidates.map(p => ({ product_id: p.id, type: 'video', product_name: p.short }));
+        return { reply: fillTemplate('UPSELL_SHOW', uVars), state: 'UPSELL_SHOW', _media_batch: _upsellVideos };
       }
       if (no) {
         return confirmOrder(state, storeName);
