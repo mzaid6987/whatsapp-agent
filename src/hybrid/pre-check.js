@@ -181,9 +181,9 @@ function preCheck(message, currentState, collected, state) {
   }
 
   // 1a. MEDIA REQUEST — "picture dikhao", "photo bhejo", "video dikhao", "image send karo"
-  const isMediaReq = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|bhej|send|de|do|dena|dikhao|bhejo|dikhado|bhejdo|chahiye)\b/i.test(l) ||
-    /\b(video|vid|reel)\s*(dikha|bhej|send|de|do|dena|dikhao|bhejo|dikhado|bhejdo|chahiye)\b/i.test(l) ||
-    /\b(dikha|bhej|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid)\b/i.test(l) ||
+  const isMediaReq = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|bhejdo|send|de|do|dena|chahiye)\b/i.test(l) ||
+    /\b(video|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye)\b/i.test(l) ||
+    /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid)\b/i.test(l) ||
     /\b(kaise?\s*(dikhta|lagta|hota)|kaisa\s*(hai|he|h|dikhta|lagta))\b/i.test(l) ||
     /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(l);
   if (isMediaReq) {

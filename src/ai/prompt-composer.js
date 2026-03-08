@@ -57,6 +57,7 @@ DETECT INTENT (ek return kar):
 - "greeting" — salam/hi/hello
 - "product_inquiry" — kisi product ke baare mein pucha (extracted mein product_name daal)
 - "product_with_order" — product + order dono mention (extracted.product_name + extracted.wants_order=true)
+- "media_request" — picture/photo/video dikhao/bhejo (extracted.product_name daal + extracted.media_type = "image" ya "video")
 - "order_intent" — order karna chahta hai lekin product nahi bataya
 - "price_ask" — price/rate pucha
 - "product_list" — sab products dikhao
@@ -86,6 +87,7 @@ ${ctx.product.desc ? `Detail: ${ctx.product.desc}` : ''}` : `Koi product select 
 DETECT INTENT:
 - "yes" / "order_intent" — CLEAR order intent hai (e.g. "haan order kardo", "ji mangwana hai", "book kardo")
 - "product_inquiry" — aur pooch raha ya dusra product (extracted.product_name daal)
+- "media_request" — picture/photo/video dikhao/bhejo (extracted.product_name daal + extracted.media_type = "image" ya "video")
 - "haggle" — discount manga
 - "trust_question" — COD/quality/exchange pucha
 - "delivery_query" — delivery time pucha
@@ -122,6 +124,7 @@ IMPORTANT: Jab product list dikhani ho → HAMESHA intro line ke saath bhejo (e.
 DETECT INTENT:
 - "product_inquiry" — kisi product ke baare mein pucha (extracted.product_name daal)
 - "product_with_order" — product + order dono (extracted.product_name ZAROOR daal + extracted.wants_order=true)
+- "media_request" — picture/photo/video dikhao/bhejo (extracted.product_name daal + extracted.media_type = "image" ya "video")
 - "unknown" — samajh nahi aaya
 
 RESPONSE: Product list dikha ke pucho konsa chahiye. Agar customer kisi feature ke baare mein puche (steel, electric, etc.) → neeche features dekh ke sahi product batao.

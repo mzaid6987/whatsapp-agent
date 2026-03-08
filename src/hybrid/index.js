@@ -13,7 +13,7 @@ const { composePrompt } = require('../ai/prompt-composer');
 const { chat, AI_MODEL_NAME, AI_PRICING } = require('../ai/claude');
 const { getHonorific, PRODUCTS, deliveryTime, productList } = require('./data');
 const { fillTemplate } = require('./templates');
-const { buildAddressString, validatePhone, extractCity, extractAllCities, extractPhone, extractArea, isLikelyName, hasAddressKeywords } = require('./extractors');
+const { buildAddressString, validatePhone, extractCity, extractAllCities, extractPhone, extractArea, isLikelyName, hasAddressKeywords, detectProduct } = require('./extractors');
 const { getAreaSuggestions, matchArea } = require('./city-areas');
 const { getDb } = require('../db');
 
@@ -1820,6 +1820,24 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         response_ms: Date.now() - startTime,
         db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
       };
+    }
+
+    // Handle media_request from AI — customer asked for picture/video
+    if (aiIntent === 'media_request') {
+      const mediaProductName = extracted.product_name || extracted.product;
+      const mediaProduct = mediaProductName ? detectProduct(mediaProductName) : state.product;
+      const mediaType = extracted.media_type || 'image';
+      if (mediaProduct) {
+        return {
+          reply: null,
+          state: state.current,
+          _media: { product_id: mediaProduct.id, type: mediaType, product_name: mediaProduct.short },
+          response_ms: Date.now() - startTime,
+          db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+        };
+      }
+      // No product identified — ask which product
+      return returnAi({ reply: `Kis product ki ${mediaType === 'video' ? 'video' : 'picture'} chahiye? Product ka naam ya number bata dein 😊`, state: state.current });
     }
 
     // Handle haggle state updates — only from valid states (not during data collection)
