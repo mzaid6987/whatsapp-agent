@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Media — WhatsApp Agent</title>
+  <link rel="stylesheet" href="/admin/style.css">
+  <style>
+    .media-product { background:#fff; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    .media-product-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .media-product-header h3 { margin:0; font-size:16px; color:#1a1a1a; }
+    .media-product-header .price { color:#25D366; font-weight:600; }
+    .media-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; }
+    .media-card { position:relative; border-radius:8px; overflow:hidden; background:#f5f5f5; border:1px solid #e5e5e5; }
+    .media-card img, .media-card video { width:100%; height:140px; object-fit:cover; display:block; }
+    .media-card .media-info { padding:8px; font-size:12px; color:#667781; }
+    .media-card .media-type { display:inline-block; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:600; text-transform:uppercase; }
+    .media-card .media-type.image { background:#e3f2fd; color:#1976d2; }
+    .media-card .media-type.video { background:#fce4ec; color:#c62828; }
+    .media-card .delete-btn { position:absolute; top:6px; right:6px; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:26px; height:26px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; }
+    .media-card .delete-btn:hover { background:rgba(220,38,38,.9); }
+    .upload-zone { border:2px dashed #d1d5db; border-radius:8px; padding:20px; text-align:center; cursor:pointer; transition:border-color .2s; min-height:140px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .upload-zone:hover { border-color:#25D366; }
+    .upload-zone svg { width:32px; height:32px; color:#9ca3af; margin-bottom:8px; }
+    .upload-zone p { margin:0; font-size:13px; color:#667781; }
+    .caption-input { width:100%; border:1px solid #e5e5e5; border-radius:4px; padding:4px 8px; font-size:12px; margin-top:4px; }
+    .upload-form { display:none; margin-top:12px; padding:16px; background:#f9fafb; border-radius:8px; }
+    .upload-form.active { display:block; }
+    .upload-form select, .upload-form input[type="file"] { margin-bottom:8px; }
+    .media-count { font-size:12px; color:#9ca3af; margin-left:8px; }
+    .no-media { color:#9ca3af; font-size:13px; text-align:center; padding:20px; }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="bot-status on" id="botStatus" onclick="toggleBot()">
+        <span class="bot-status-dot"></span>
+        <span id="botStatusText">BOT ON</span>
+      </div>
+      <span class="header-title">WhatsApp Agent</span>
+    </div>
+    <div class="header-right">
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- NAV BAR -->
+  <nav class="nav-bar">
+    <a href="/admin/" class="nav-item" data-page="chats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/orders.html" class="nav-item" data-page="orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      Orders
+    </a>
+    <a href="/admin/products.html" class="nav-item" data-page="products">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      Products
+    </a>
+    <a href="/admin/media.html" class="nav-item active" data-page="media">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Media
+    </a>
+    <a href="/admin/settings.html" class="nav-item" data-page="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- MOBILE NAV -->
+  <nav class="mobile-nav">
+    <a href="/admin/" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/orders.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      Orders
+    </a>
+    <a href="/admin/media.html" class="mobile-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Media
+    </a>
+    <a href="/admin/settings.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="page-header">
+      <h2>Product Media</h2>
+    </div>
+
+    <div id="mediaContainer">
+      <div style="padding:40px;text-align:center;color:#667781;">Loading...</div>
+    </div>
+  </main>
+
+  <script src="/admin/app.js"></script>
+  <script>
+    let products = [];
+    let allMedia = [];
+
+    async function loadData() {
+      try {
+        const [pRes, mRes] = await Promise.all([
+          fetch('/api/products', { credentials: 'include' }),
+          fetch('/api/media', { credentials: 'include' })
+        ]);
+        if (pRes.redirected || mRes.redirected) return location.href = '/admin/login.html';
+        products = await pRes.json();
+        allMedia = await mRes.json();
+        render();
+      } catch (e) {
+        document.getElementById('mediaContainer').innerHTML = '<p style="color:red;">Error loading data</p>';
+      }
+    }
+
+    function render() {
+      const c = document.getElementById('mediaContainer');
+      if (!products.length) { c.innerHTML = '<p class="no-media">No products found</p>'; return; }
+
+      c.innerHTML = products.map(p => {
+        const media = allMedia.filter(m => m.product_id === p.id);
+        const images = media.filter(m => m.type === 'image');
+        const videos = media.filter(m => m.type === 'video');
+        return `
+          <div class="media-product">
+            <div class="media-product-header">
+              <h3>${p.short_name || p.name} <span class="media-count">(${images.length} images, ${videos.length} videos)</span></h3>
+              <span class="price">Rs.${p.price.toLocaleString()}</span>
+            </div>
+            <div class="media-grid">
+              ${media.map(m => `
+                <div class="media-card">
+                  ${m.type === 'image'
+                    ? `<img src="/media/${m.filename}" alt="${m.original_name}" loading="lazy">`
+                    : `<video src="/media/${m.filename}" preload="metadata" onclick="this.paused?this.play():this.pause()"></video>`
+                  }
+                  <button class="delete-btn" onclick="deleteMedia(${m.id})" title="Delete">x</button>
+                  <div class="media-info">
+                    <span class="media-type ${m.type}">${m.type}</span>
+                    ${m.caption ? ` <span>${m.caption}</span>` : ''}
+                  </div>
+                </div>
+              `).join('')}
+              <div class="upload-zone" onclick="showUpload(${p.id}, this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <p>Upload Image/Video</p>
+              </div>
+            </div>
+            <div class="upload-form" id="upload-${p.id}">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <select id="type-${p.id}" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;">
+                  <option value="image">Image</option>
+                  <option value="video">Video</option>
+                </select>
+                <input type="file" id="file-${p.id}" accept="image/*,video/*" style="font-size:13px;">
+                <input type="text" id="caption-${p.id}" placeholder="Caption (optional)" class="caption-input" style="width:200px;">
+                <button class="btn btn-primary" onclick="uploadMedia(${p.id})" style="padding:6px 16px;font-size:13px;">Upload</button>
+                <button class="btn btn-outline" onclick="hideUpload(${p.id})" style="padding:6px 12px;font-size:13px;">Cancel</button>
+              </div>
+              <div id="upload-status-${p.id}" style="margin-top:8px;font-size:12px;color:#667781;"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function showUpload(productId) {
+      document.querySelectorAll('.upload-form').forEach(f => f.classList.remove('active'));
+      document.getElementById(`upload-${productId}`).classList.add('active');
+    }
+
+    function hideUpload(productId) {
+      document.getElementById(`upload-${productId}`).classList.remove('active');
+    }
+
+    async function uploadMedia(productId) {
+      const fileInput = document.getElementById(`file-${productId}`);
+      const type = document.getElementById(`type-${productId}`).value;
+      const caption = document.getElementById(`caption-${productId}`).value;
+      const statusEl = document.getElementById(`upload-status-${productId}`);
+
+      if (!fileInput.files[0]) { statusEl.textContent = 'Please select a file'; return; }
+
+      const file = fileInput.files[0];
+      // Size limit: 16MB for images, 64MB for videos
+      const maxSize = type === 'image' ? 16 * 1024 * 1024 : 64 * 1024 * 1024;
+      if (file.size > maxSize) {
+        statusEl.textContent = `File too large. Max ${type === 'image' ? '16MB' : '64MB'}`;
+        return;
+      }
+
+      statusEl.textContent = 'Uploading...';
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('product_id', productId);
+      formData.append('type', type);
+      formData.append('caption', caption);
+
+      try {
+        const res = await fetch('/api/media/upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          statusEl.textContent = 'Uploaded!';
+          fileInput.value = '';
+          document.getElementById(`caption-${productId}`).value = '';
+          hideUpload(productId);
+          await loadData();
+        } else {
+          statusEl.textContent = 'Error: ' + (data.error || 'Unknown');
+        }
+      } catch (e) {
+        statusEl.textContent = 'Upload failed: ' + e.message;
+      }
+    }
+
+    async function deleteMedia(id) {
+      if (!confirm('Delete this media?')) return;
+      try {
+        await fetch(`/api/media/${id}`, { method: 'DELETE', credentials: 'include' });
+        await loadData();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

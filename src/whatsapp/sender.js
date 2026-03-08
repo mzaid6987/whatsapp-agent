@@ -84,4 +84,76 @@ function toInternational(phone) {
   return digits;
 }
 
-module.exports = { sendMessage, markAsRead, toInternational };
+/**
+ * Send an image message via URL.
+ * @param {string} to — Recipient phone (international format)
+ * @param {string} imageUrl — Public URL of the image
+ * @param {string} caption — Optional caption text
+ * @param {string} phoneNumberId — WhatsApp Business phone number ID
+ * @param {string} accessToken — Meta access token
+ */
+async function sendImage(to, imageUrl, caption, phoneNumberId, accessToken) {
+  const url = `${GRAPH_API}/${phoneNumberId}/messages`;
+  try {
+    const body = {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'image',
+      image: { link: imageUrl },
+    };
+    if (caption) body.image.caption = caption;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('[WA SendImage] Error:', data.error?.message || JSON.stringify(data));
+      return { success: false, error: data.error?.message || 'Unknown error' };
+    }
+    return { success: true, messageId: data.messages?.[0]?.id };
+  } catch (err) {
+    console.error('[WA SendImage] Network error:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Send a video message via URL.
+ * @param {string} to — Recipient phone (international format)
+ * @param {string} videoUrl — Public URL of the video
+ * @param {string} caption — Optional caption text
+ * @param {string} phoneNumberId — WhatsApp Business phone number ID
+ * @param {string} accessToken — Meta access token
+ */
+async function sendVideo(to, videoUrl, caption, phoneNumberId, accessToken) {
+  const url = `${GRAPH_API}/${phoneNumberId}/messages`;
+  try {
+    const body = {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'video',
+      video: { link: videoUrl },
+    };
+    if (caption) body.video.caption = caption;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('[WA SendVideo] Error:', data.error?.message || JSON.stringify(data));
+      return { success: false, error: data.error?.message || 'Unknown error' };
+    }
+    return { success: true, messageId: data.messages?.[0]?.id };
+  } catch (err) {
+    console.error('[WA SendVideo] Network error:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+module.exports = { sendMessage, sendImage, sendVideo, markAsRead, toInternational };

@@ -168,6 +168,19 @@ CREATE TABLE IF NOT EXISTS processed_webhooks (
   message_id      TEXT PRIMARY KEY,
   created_at      TEXT DEFAULT (datetime('now','localtime'))
 );
+
+-- Product Media (images/videos per product)
+CREATE TABLE IF NOT EXISTS product_media (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id      INTEGER NOT NULL,
+  type            TEXT NOT NULL CHECK(type IN ('image','video')),
+  filename        TEXT NOT NULL,
+  original_name   TEXT,
+  caption         TEXT,
+  sort_order      INTEGER DEFAULT 0,
+  created_at      TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_media_product ON product_media(product_id, type);
 `;
 
 module.exports = { SCHEMA };

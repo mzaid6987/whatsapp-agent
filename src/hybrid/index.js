@@ -1181,13 +1181,16 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       state.current = preResult.state;
       if (state.product) state.collected.product = state.product.short;
 
-      state.messages.push({ role: 'user', content: message });
-      state.messages.push({ role: 'assistant', content: preResult.reply });
-      if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+      // Media request: reply may be null (media sent separately by webhook)
+      if (preResult.reply) {
+        state.messages.push({ role: 'user', content: message });
+        state.messages.push({ role: 'assistant', content: preResult.reply });
+        if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+      }
 
-      const reply = qualityGate(preResult.reply);
+      const reply = preResult.reply ? qualityGate(preResult.reply) : null;
       const stateBefore = state.current;
-      saveMessages(dbConv, message, reply, pre.intent, 'pre-check', state, {
+      saveMessages(dbConv, message, reply || '(media sent)', pre.intent, 'pre-check', state, {
         needs_human: preResult.needs_human || false,
         debug: { path: 'PATH2_PRE_CHECK', intent: pre.intent, extracted: pre.extracted || null, state_before: stateBefore, state_after: preResult.state, collected: { ...state.collected } },
       });
@@ -1204,6 +1207,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         tokens_in: 0, tokens_out: 0,
         response_ms: Date.now() - startTime,
         db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+        _media: preResult._media || null,
       };
     }
   }
@@ -2843,6 +2847,21 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       return {
         reply: `${namePrefix}, shukriya! 😊 Konsa product order karna chahein ge?\n\n${productList()}\n\nNumber ya naam bata dein.`,
         state: 'PRODUCT_SELECTION'
+      };
+    }
+
+    case 'media_request': {
+      // Customer asked for picture/video — flag for webhook to send media
+      const mediaProduct = pre.extracted?.product || state.product;
+      const mediaType = pre.extracted?.media_type || 'image';
+      if (!mediaProduct) {
+        return { reply: 'Kis product ki ' + (mediaType === 'video' ? 'video' : 'picture') + ' chahiye? Product ka naam ya number bata dein 😊', state: state.current };
+      }
+      // Return special _media flag for webhook to pick up and send media files
+      return {
+        reply: null,
+        state: state.current,
+        _media: { product_id: mediaProduct.id, type: mediaType, product_name: mediaProduct.short }
       };
     }
 

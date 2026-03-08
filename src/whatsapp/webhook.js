@@ -5,7 +5,7 @@
  * POST /webhook — Incoming messages from WhatsApp users
  */
 
-const { sendMessage, markAsRead, toInternational } = require('./sender');
+const { sendMessage, sendImage, sendVideo, markAsRead, toInternational } = require('./sender');
 const { transcribeVoice, analyzeImage } = require('./media-handler');
 const hybrid = require('../hybrid');
 const settingsModel = require('../db/models/settings');
@@ -13,6 +13,7 @@ const { getDb } = require('../db');
 const customerModel = require('../db/models/customer');
 const conversationModel = require('../db/models/conversation');
 const messageModel = require('../db/models/message');
+const mediaModel = require('../db/models/media');
 
 // Broadcast function — injected from index.js
 let _broadcast = () => {};
@@ -394,8 +395,40 @@ async function webhookHandler(req, res) {
       result.ai_cost_rs = existingCost + mediaCost.cost_rs;
     }
 
+    // Handle media request — send product images/videos
+    if (result._media) {
+      const { product_id, type, product_name } = result._media;
+      const mediaFiles = mediaModel.getByProduct(product_id, type);
+      const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
+
+      if (mediaFiles.length > 0) {
+        console.log(`[WA Media] Sending ${mediaFiles.length} ${type}(s) for product ${product_name} to ${fromPhone}`);
+        for (const m of mediaFiles) {
+          const mediaUrl = `${serverUrl}/media/${m.filename}`;
+          const caption = m.caption || product_name;
+          if (m.type === 'image') {
+            await sendImage(fromPhone, mediaUrl, caption, phoneNumberId, accessToken);
+          } else {
+            await sendVideo(fromPhone, mediaUrl, caption, phoneNumberId, accessToken);
+          }
+        }
+        // Send follow-up text
+        const followUp = type === 'video'
+          ? `Yeh rahi ${product_name} ki video 😊 Order karna hai?`
+          : `Yeh rahi ${product_name} ki ${mediaFiles.length > 1 ? 'pictures' : 'picture'} 😊 Order karna hai?`;
+        await sendMessage(fromPhone, followUp, phoneNumberId, accessToken);
+        result.reply = followUp; // For logging
+        markAsRead(messageId, phoneNumberId, accessToken);
+      } else {
+        // No media uploaded yet
+        result.reply = `Abhi ${product_name} ki ${type === 'video' ? 'video' : 'picture'} available nahi hai. Lekin product bohat acha hai 😊 Order karna hai?`;
+        await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
+        markAsRead(messageId, phoneNumberId, accessToken);
+      }
+    }
+
     // Send reply back to WhatsApp
-    if (result.reply) {
+    if (result.reply && !result._media) {
       const sendResult = await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
       if (sendResult.success) {
         console.log(`[WA] → ${fromPhone}: "${result.reply.substring(0, 80)}..."`);

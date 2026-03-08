@@ -180,6 +180,18 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'trust_question' };
   }
 
+  // 1a. MEDIA REQUEST — "picture dikhao", "photo bhejo", "video dikhao", "image send karo"
+  const isMediaReq = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|bhej|send|de|do|dena|dikhao|bhejo|dikhado|bhejdo|chahiye)\b/i.test(l) ||
+    /\b(video|vid|reel)\s*(dikha|bhej|send|de|do|dena|dikhao|bhejo|dikhado|bhejdo|chahiye)\b/i.test(l) ||
+    /\b(dikha|bhej|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid)\b/i.test(l) ||
+    /\b(kaise?\s*(dikhta|lagta|hota)|kaisa\s*(hai|he|h|dikhta|lagta))\b/i.test(l) ||
+    /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(l);
+  if (isMediaReq) {
+    // Check if asking for a specific product's media
+    const mediaProduct = detectProduct(msg);
+    return { intent: 'media_request', extracted: { product: mediaProduct || null, media_type: /\b(video|vid|reel)\b/i.test(l) ? 'video' : 'image' } };
+  }
+
   // 1a-x. GREETING FAST-PATH — "kya haal", "kaise ho", "salam" + filler like "theek hai"
   // Must check BEFORE quality_question so "kya haal hain theek hai" isn't caught as quality
   // BUT: if message ALSO contains product/price content, skip greeting → let product detection handle

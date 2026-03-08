@@ -25,6 +25,8 @@ const orderModel = require('./db/models/order');
 const productModel = require('./db/models/product');
 const settingsModel = require('./db/models/settings');
 const cacheModel = require('./db/models/cache');
+const mediaModel = require('./db/models/media');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -932,6 +934,170 @@ app.get('/api/cache/stats', requireAuth, (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ---- PRODUCT MEDIA API ----
+const MEDIA_DIR = path.join(__dirname, '..', 'uploads', 'media');
+// Ensure media directory exists
+if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR, { recursive: true });
+
+// Serve media files publicly (WhatsApp needs to access these URLs)
+app.use('/media', express.static(MEDIA_DIR));
+
+// List all media (grouped by product)
+app.get('/api/media', requireAuth, (req, res) => {
+  try {
+    const all = mediaModel.getAll();
+    res.json(all);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get media for specific product
+app.get('/api/media/product/:id', requireAuth, (req, res) => {
+  try {
+    const media = mediaModel.getByProduct(parseInt(req.params.id));
+    res.json(media);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Upload media file
+app.post('/api/media/upload', requireAuth, (req, res) => {
+  try {
+    const contentType = req.headers['content-type'] || '';
+    if (!contentType.includes('multipart/form-data')) {
+      return res.status(400).json({ error: 'multipart/form-data required' });
+    }
+
+    // Parse multipart manually using raw buffer
+    const chunks = [];
+    req.on('data', chunk => chunks.push(chunk));
+    req.on('end', () => {
+      try {
+        const buf = Buffer.concat(chunks);
+        const boundary = contentType.split('boundary=')[1];
+        if (!boundary) return res.status(400).json({ error: 'No boundary found' });
+
+        // Parse parts
+        const parts = parseMultipart(buf, boundary);
+        const filePart = parts.find(p => p.filename);
+        const productId = parts.find(p => p.name === 'product_id')?.data?.toString().trim();
+        const mediaType = parts.find(p => p.name === 'type')?.data?.toString().trim();
+        const caption = parts.find(p => p.name === 'caption')?.data?.toString().trim() || '';
+
+        if (!filePart || !productId || !mediaType) {
+          return res.status(400).json({ error: 'Missing file, product_id, or type' });
+        }
+        if (!['image', 'video'].includes(mediaType)) {
+          return res.status(400).json({ error: 'type must be image or video' });
+        }
+
+        // Generate unique filename
+        const ext = path.extname(filePart.filename).toLowerCase() || (mediaType === 'image' ? '.jpg' : '.mp4');
+        const filename = `p${productId}_${Date.now()}${ext}`;
+        const filepath = path.join(MEDIA_DIR, filename);
+
+        // Write file
+        fs.writeFileSync(filepath, filePart.data);
+
+        // Save to DB
+        const media = mediaModel.create({
+          product_id: parseInt(productId),
+          type: mediaType,
+          filename,
+          original_name: filePart.filename,
+          caption: caption || null,
+        });
+
+        res.json({ success: true, media });
+      } catch (e) {
+        console.error('[Media Upload] Parse error:', e.message);
+        res.status(500).json({ error: e.message });
+      }
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Delete media
+app.delete('/api/media/:id', requireAuth, (req, res) => {
+  try {
+    const media = mediaModel.remove(parseInt(req.params.id));
+    if (media) {
+      // Delete file from disk
+      const filepath = path.join(MEDIA_DIR, media.filename);
+      if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Update media caption
+app.put('/api/media/:id', requireAuth, (req, res) => {
+  try {
+    const { caption } = req.body;
+    mediaModel.updateCaption(parseInt(req.params.id), caption || '');
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Simple multipart parser (no external dependency)
+function parseMultipart(buf, boundary) {
+  const parts = [];
+  const boundaryBuf = Buffer.from('--' + boundary);
+  const endBuf = Buffer.from('--' + boundary + '--');
+
+  let pos = 0;
+  // Skip preamble — find first boundary
+  pos = bufIndexOf(buf, boundaryBuf, pos);
+  if (pos === -1) return parts;
+  pos += boundaryBuf.length + 2; // skip boundary + \r\n
+
+  while (pos < buf.length) {
+    // Check for end boundary
+    if (buf.slice(pos - 2, pos - 2 + endBuf.length).equals(endBuf)) break;
+
+    // Find header end (\r\n\r\n)
+    const headerEnd = bufIndexOf(buf, Buffer.from('\r\n\r\n'), pos);
+    if (headerEnd === -1) break;
+
+    const headers = buf.slice(pos, headerEnd).toString();
+    const dataStart = headerEnd + 4;
+
+    // Find next boundary
+    const nextBoundary = bufIndexOf(buf, boundaryBuf, dataStart);
+    if (nextBoundary === -1) break;
+
+    const data = buf.slice(dataStart, nextBoundary - 2); // -2 for \r\n before boundary
+
+    // Parse headers
+    const nameMatch = headers.match(/name="([^"]+)"/);
+    const filenameMatch = headers.match(/filename="([^"]+)"/);
+
+    parts.push({
+      name: nameMatch?.[1] || null,
+      filename: filenameMatch?.[1] || null,
+      data,
+    });
+
+    pos = nextBoundary + boundaryBuf.length + 2; // skip boundary + \r\n
+  }
+  return parts;
+}
+
+function bufIndexOf(buf, search, start) {
+  for (let i = start || 0; i <= buf.length - search.length; i++) {
+    if (buf.slice(i, i + search.length).equals(search)) return i;
+  }
+  return -1;
+}
 
 // ---- TEST CHAT (Hybrid: Template + AI Fallback) ----
 
