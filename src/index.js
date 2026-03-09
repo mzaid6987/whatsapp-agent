@@ -1010,14 +1010,17 @@ app.post('/api/conversations/:id/undo-complaint', requireAuth, (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const db = getDb();
-    db.prepare('UPDATE conversations SET complaint_flag = 0, state = ? WHERE id = ?').run('IDLE', id);
+    // Restore correct state — ORDER_CONFIRMED if order exists, otherwise IDLE
+    const hasOrder = db.prepare('SELECT COUNT(*) as cnt FROM orders WHERE conversation_id = ?').get(id)?.cnt > 0;
+    const newState = hasOrder ? 'ORDER_CONFIRMED' : 'IDLE';
+    db.prepare('UPDATE conversations SET complaint_flag = 0, state = ? WHERE id = ?').run(newState, id);
     // Remove from complaints tracker
     const complaint = complaintModel.findByConversation(id);
     if (complaint) {
       db.prepare('DELETE FROM complaint_remarks WHERE complaint_id = ?').run(complaint.id);
       db.prepare('DELETE FROM complaints WHERE id = ?').run(complaint.id);
     }
-    res.json({ success: true, state: 'IDLE' });
+    res.json({ success: true, state: newState });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
