@@ -389,90 +389,99 @@ async function openChat(chatId) {
 
 let _currentOrder = null;
 let _currentConvForOrder = null;
+let _orderPanelOpen = false;
+
+function toggleOrderPanel() {
+  const details = document.getElementById('orderDetails');
+  const chevron = document.getElementById('orderChevron');
+  _orderPanelOpen = !_orderPanelOpen;
+  details.style.display = _orderPanelOpen ? 'block' : 'none';
+  chevron.style.transform = _orderPanelOpen ? 'rotate(180deg)' : '';
+}
 
 async function loadOrderPanel(chatId) {
   const panel = document.getElementById('orderPanel');
   const conv = conversations.find(c => c.id === chatId);
   _currentConvForOrder = conv;
+  _orderPanelOpen = false;
+  document.getElementById('orderDetails').style.display = 'none';
+  document.getElementById('orderChevron').style.transform = '';
   panel.style.display = 'block';
 
   try {
     const order = await api(`/api/conversations/${chatId}/order`);
     _currentOrder = order;
+    const strip = document.getElementById('orderStrip');
+    const badge = document.getElementById('orderStatusBadge');
+    const statusColors = { confirmed:'#16A34A', processing:'#D97706', shipped:'#2563EB', delivered:'#059669', returned:'#DC2626', cancelled:'#9CA3AF' };
 
     if (order) {
-      // Has order — show order view
-      panel.style.background = '#f0fdf4';
-      document.getElementById('orderPanelTitle').textContent = 'ORDER SUMMARY';
+      strip.style.background = '#f0fdf4';
+      document.getElementById('orderPanelTitle').textContent = 'ORDER';
       document.getElementById('orderPanelTitle').style.color = '#16A34A';
-      document.getElementById('orderEditForm').style.display = 'none';
-      document.getElementById('orderView').style.display = 'block';
-      document.getElementById('orderEditBtn').textContent = 'Edit';
+      badge.textContent = (order.status || '').toUpperCase();
+      badge.style.background = (statusColors[order.status] || '#888') + '20';
+      badge.style.color = statusColors[order.status] || '#888';
+      badge.style.display = '';
       document.getElementById('orderEditBtn').style.display = '';
       document.getElementById('orderCreateBtn').style.display = 'none';
+
+      const items = order.items || [];
+      const itemStr = items.map(i => `${i.name || i.short} x${i.qty || 1}`).join(', ');
+      document.getElementById('ovSummary').textContent = `${order.order_id} | ${order.customer_name || '-'} | ${order.customer_city || '-'} | ${itemStr} | Rs.${order.grand_total || 0}`;
 
       document.getElementById('ovOrderId').textContent = order.order_id || '-';
       document.getElementById('ovName').textContent = order.customer_name || '-';
       document.getElementById('ovPhone').textContent = order.customer_phone || '-';
       document.getElementById('ovCity').textContent = order.customer_city || '-';
       document.getElementById('ovAddress').textContent = order.customer_address || '-';
-      const items = order.items || [];
       document.getElementById('ovItems').textContent = items.map(i => `${i.name || i.short} x${i.qty || 1} (Rs.${i.price})`).join(', ') || '-';
       document.getElementById('ovTotal').textContent = `Rs.${order.grand_total || 0}`;
-
-      const badge = document.getElementById('orderStatusBadge');
-      const statusColors = { confirmed:'#16A34A', processing:'#D97706', shipped:'#2563EB', delivered:'#059669', returned:'#DC2626', cancelled:'#9CA3AF' };
-      badge.textContent = (order.status || '').toUpperCase();
-      badge.style.background = (statusColors[order.status] || '#888') + '20';
-      badge.style.color = statusColors[order.status] || '#888';
-      badge.style.display = '';
     } else {
-      // No order — show collected info
-      panel.style.background = '#fffbeb';
-      document.getElementById('orderPanelTitle').textContent = 'COLLECTED INFO';
+      strip.style.background = '#fffbeb';
+      document.getElementById('orderPanelTitle').textContent = 'INFO';
       document.getElementById('orderPanelTitle').style.color = '#D97706';
-      document.getElementById('orderStatusBadge').style.display = 'none';
-      document.getElementById('orderEditBtn').textContent = 'Edit';
+      badge.style.display = 'none';
       document.getElementById('orderEditBtn').style.display = '';
       document.getElementById('orderCreateBtn').style.display = '';
-      document.getElementById('orderEditForm').style.display = 'none';
-      document.getElementById('orderView').style.display = 'block';
 
       const col = conv ? JSON.parse(conv.collected_json || '{}') : {};
       const prod = conv?.product_json ? JSON.parse(conv.product_json) : null;
       const prods = conv?.products_json ? JSON.parse(conv.products_json) : [];
+      const name = col.name || conv?.customer_name || '-';
+      const city = col.city || '-';
+      let prodStr = '-';
+      if (prods.length) prodStr = prods.map(p => p.short || p.name).join(', ');
+      else if (prod) prodStr = prod.short || prod.name;
+      else if (col.product) prodStr = col.product;
 
+      document.getElementById('ovSummary').textContent = `${name} | ${city} | ${prodStr}`;
       document.getElementById('ovOrderId').textContent = '-';
-      document.getElementById('ovName').textContent = col.name || conv?.customer_name || '-';
+      document.getElementById('ovName').textContent = name;
       document.getElementById('ovPhone').textContent = col.phone || conv?.phone || '-';
-      document.getElementById('ovCity').textContent = col.city || '-';
+      document.getElementById('ovCity').textContent = city;
       document.getElementById('ovAddress').textContent = col.address || (col.address_parts ? Object.values(col.address_parts).filter(Boolean).join(', ') : '-');
-      if (prods.length) {
-        document.getElementById('ovItems').textContent = prods.map(p => `${p.short || p.name} (Rs.${p.price})`).join(', ');
-      } else if (prod) {
-        document.getElementById('ovItems').textContent = `${prod.short || prod.name} (Rs.${prod.price})`;
-      } else {
-        document.getElementById('ovItems').textContent = col.product || '-';
-      }
+      document.getElementById('ovItems').textContent = prodStr;
       document.getElementById('ovTotal').textContent = '-';
     }
+    document.getElementById('orderEditForm').style.display = 'none';
+    document.getElementById('orderView').style.display = 'block';
   } catch (e) {
     panel.style.display = 'none';
     _currentOrder = null;
   }
 }
 
-function toggleOrderEdit() {
+function toggleOrderEdit(e) {
+  if (e) e.stopPropagation();
   const view = document.getElementById('orderView');
   const form = document.getElementById('orderEditForm');
-  const btn = document.getElementById('orderEditBtn');
   if (form.style.display === 'none') {
-    // Pre-fill from order or collected info
+    if (!_orderPanelOpen) { _orderPanelOpen = true; document.getElementById('orderDetails').style.display = 'block'; document.getElementById('orderChevron').style.transform = 'rotate(180deg)'; }
     const conv = _currentConvForOrder;
     const col = conv ? JSON.parse(conv.collected_json || '{}') : {};
     const prod = conv?.product_json ? JSON.parse(conv.product_json) : null;
     const prods = conv?.products_json ? JSON.parse(conv.products_json) : [];
-
     if (_currentOrder) {
       document.getElementById('oeName').value = _currentOrder.customer_name || '';
       document.getElementById('oePhone').value = _currentOrder.customer_phone || '';
@@ -488,17 +497,14 @@ function toggleOrderEdit() {
       document.getElementById('oeAddress').value = col.address || (col.address_parts ? Object.values(col.address_parts).filter(Boolean).join(', ') : '');
       const itemsList = prods.length ? prods : (prod ? [prod] : []);
       document.getElementById('oeItems').value = itemsList.map(p => `${p.short || p.name} x1 @ Rs.${p.price}`).join(', ');
-      const total = itemsList.reduce((s, p) => s + (p.price || 0), 0);
-      document.getElementById('oeTotal').value = total || '';
+      document.getElementById('oeTotal').value = itemsList.reduce((s, p) => s + (p.price || 0), 0) || '';
       document.getElementById('oeStatus').value = 'confirmed';
     }
     view.style.display = 'none';
     form.style.display = 'block';
-    btn.textContent = 'Cancel';
   } else {
     view.style.display = 'block';
     form.style.display = 'none';
-    btn.textContent = 'Edit';
   }
 }
 
