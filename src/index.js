@@ -43,7 +43,7 @@ function logError(type, error) {
     type,
     message: error.message || String(error),
     stack: error.stack?.split('\n').slice(0, 3).join('\n'),
-    time: new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' }),
+    time: new Date().toLocaleString(),
     timestamp: Date.now()
   };
   errorLog.unshift(entry);
@@ -51,11 +51,7 @@ function logError(type, error) {
   console.error(`[${type}] ${entry.message}`);
 }
 
-// Catch uncaught exceptions — log but don't crash
-process.on('uncaughtException', (err) => {
-  logError('UNCAUGHT_EXCEPTION', err);
-  console.error('[FATAL] Uncaught Exception:', err);
-});
+// Log unhandled rejections (don't catch uncaughtException — let hosting auto-restart)
 process.on('unhandledRejection', (reason) => {
   logError('UNHANDLED_REJECTION', reason instanceof Error ? reason : new Error(String(reason)));
 });
@@ -79,7 +75,7 @@ app.get('/health', (req, res) => {
     heap_mb: Math.round(mem.heapUsed / 1024 / 1024),
     db: dbOk ? 'connected' : 'error',
     errors_recent: errorLog.length,
-    timestamp: new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })
+    timestamp: new Date().toLocaleString()
   });
 });
 
@@ -211,7 +207,7 @@ app.get('/api/monitoring', requireAuth, (req, res) => {
     getDb().prepare('SELECT 1').get();
     dbOk = true;
     // Get DB file size
-    const dbPath = path.join(__dirname, '..', 'data', 'bot.db');
+    const dbPath = path.join(__dirname, '..', 'data', 'agent.db');
     if (fs.existsSync(dbPath)) dbSize = Math.round(fs.statSync(dbPath).size / 1024 / 1024 * 10) / 10;
   } catch (e) { /* */ }
 
@@ -883,7 +879,7 @@ app.get('/api/conversations/:id/debug-export', requireAuth, (req, res) => {
 
     const { AI_MODEL, AI_MODEL_NAME, AI_PRICING } = require('./ai/claude');
     let report = '=== CHAT DEBUG LOG ===\n';
-    report += `Export Time: ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}\n`;
+    report += `Export Time: ${new Date().toLocaleString()}\n`;
     report += `AI Model: ${AI_MODEL_NAME} (${AI_MODEL})\n`;
     report += `Customer: ${customer?.name || 'Unknown'} | Phone: ${customer?.phone || 'N/A'}\n`;
     report += `State: ${conv?.state || 'N/A'} | Messages: ${msgs.length}\n`;
