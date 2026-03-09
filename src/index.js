@@ -941,7 +941,7 @@ app.delete('/api/conversations/:id', requireAuth, (req, res) => {
     }
     // Clear customer name/city so smartfill doesn't prefill stale data
     if (convo?.customer_id) {
-      db.prepare('UPDATE customers SET name = NULL, city = NULL, last_address = NULL WHERE id = ?').run(convo.customer_id);
+      db.prepare('UPDATE customers SET name = NULL, city = NULL, last_address = NULL, wa_profile_name = NULL WHERE id = ?').run(convo.customer_id);
     }
     // Clear in-memory conversation state so bot doesn't remember old data
     if (customerPhone) {
