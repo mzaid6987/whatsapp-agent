@@ -229,7 +229,7 @@ app.get('/api/monitoring', requireAuth, (req, res) => {
       status: dbOk ? 'ok' : 'degraded',
       uptime_human: formatUptime(uptime),
       uptime_seconds: Math.floor(uptime / 1000),
-      started_at: new Date(SERVER_START_TIME).toLocaleString('en-PK', { timeZone: 'Asia/Karachi' }),
+      started_at: new Date(SERVER_START_TIME).toLocaleString(),
       node_version: process.version,
       platform: process.platform
     },
@@ -1862,7 +1862,6 @@ app.get('/', (req, res) => res.redirect('/admin/'));
 
 // ---- DEPLOY INFO ENDPOINT ----
 const { execSync } = require('child_process');
-const SERVER_START_TIME = new Date().toISOString();
 
 app.get('/api/deploy-info', requireAuth, (req, res) => {
   try {
@@ -1878,7 +1877,7 @@ app.get('/api/deploy-info', requireAuth, (req, res) => {
       commit_date: commitDate,
       commit_author: commitAuthor,
       total_commits: totalCommits,
-      server_started: SERVER_START_TIME,
+      server_started: new Date(SERVER_START_TIME).toISOString(),
     });
   } catch (e) {
     res.json({ error: e.message });
