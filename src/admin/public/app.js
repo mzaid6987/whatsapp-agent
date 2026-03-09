@@ -472,16 +472,71 @@ async function loadOrderPanel(chatId) {
   }
 }
 
-function toggleOrderEdit(e) {
+let _allProducts = null;
+async function getProducts() {
+  if (!_allProducts) _allProducts = await api('/api/products') || [];
+  return _allProducts;
+}
+
+function buildProductSelect(selectedId) {
+  const prods = _allProducts || [];
+  return `<select onchange="recalcOrderTotal()" style="flex:1; padding:3px 4px; border:1px solid #ddd; border-radius:4px; font-size:11px;">
+    <option value="">-- Select Product --</option>
+    ${prods.map(p => `<option value="${p.id}" data-price="${p.price}" data-name="${p.name}" ${p.id == selectedId ? 'selected' : ''}>${p.name} — Rs.${p.price}</option>`).join('')}
+  </select>`;
+}
+
+function addProductRow(productId, qty) {
+  const container = document.getElementById('oeProductRows');
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex; gap:4px; align-items:center; margin-bottom:3px;';
+  row.innerHTML = `
+    ${buildProductSelect(productId || '')}
+    <input type="number" value="${qty || 1}" min="1" onchange="recalcOrderTotal()" style="width:40px; padding:3px 4px; border:1px solid #ddd; border-radius:4px; font-size:11px; text-align:center;" placeholder="Qty">
+    <button onclick="this.parentElement.remove(); recalcOrderTotal();" type="button" style="padding:2px 6px; border:none; background:#fee; color:#c00; border-radius:4px; cursor:pointer; font-size:11px;">x</button>
+  `;
+  container.appendChild(row);
+}
+
+function recalcOrderTotal() {
+  const rows = document.querySelectorAll('#oeProductRows > div');
+  let total = 0;
+  rows.forEach(row => {
+    const sel = row.querySelector('select');
+    const qty = parseInt(row.querySelector('input[type="number"]').value) || 1;
+    const opt = sel.options[sel.selectedIndex];
+    const price = parseInt(opt?.dataset?.price) || 0;
+    total += price * qty;
+  });
+  document.getElementById('oeTotal').value = total;
+}
+
+function getSelectedItems() {
+  const rows = document.querySelectorAll('#oeProductRows > div');
+  const items = [];
+  rows.forEach(row => {
+    const sel = row.querySelector('select');
+    const qty = parseInt(row.querySelector('input[type="number"]').value) || 1;
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt?.value) return;
+    items.push({ id: parseInt(opt.value), name: opt.dataset.name, price: parseInt(opt.dataset.price) || 0, qty });
+  });
+  return items;
+}
+
+async function toggleOrderEdit(e) {
   if (e) e.stopPropagation();
   const view = document.getElementById('orderView');
   const form = document.getElementById('orderEditForm');
   if (form.style.display === 'none') {
     if (!_orderPanelOpen) { _orderPanelOpen = true; document.getElementById('orderDetails').style.display = 'block'; document.getElementById('orderChevron').style.transform = 'rotate(180deg)'; }
+    await getProducts();
     const conv = _currentConvForOrder;
     const col = conv ? JSON.parse(conv.collected_json || '{}') : {};
     const prod = conv?.product_json ? JSON.parse(conv.product_json) : null;
     const prods = conv?.products_json ? JSON.parse(conv.products_json) : [];
+    document.getElementById('oeProductRows').innerHTML = '';
+
     if (_currentOrder) {
       document.getElementById('oeName').value = _currentOrder.customer_name || '';
       document.getElementById('oePhone').value = _currentOrder.customer_phone || '';
@@ -489,16 +544,18 @@ function toggleOrderEdit(e) {
       document.getElementById('oeAddress').value = _currentOrder.customer_address || '';
       document.getElementById('oeTotal').value = _currentOrder.grand_total || 0;
       document.getElementById('oeStatus').value = _currentOrder.status || 'confirmed';
-      document.getElementById('oeItems').value = (_currentOrder.items || []).map(i => `${i.name || i.short} x${i.qty || 1} @ Rs.${i.price}`).join(', ');
+      const items = _currentOrder.items || [];
+      if (items.length) { items.forEach(i => addProductRow(i.id, i.qty || 1)); }
+      else addProductRow();
     } else {
       document.getElementById('oeName').value = col.name || conv?.customer_name || '';
       document.getElementById('oePhone').value = col.phone || conv?.phone || '';
       document.getElementById('oeCity').value = col.city || '';
       document.getElementById('oeAddress').value = col.address || (col.address_parts ? Object.values(col.address_parts).filter(Boolean).join(', ') : '');
-      const itemsList = prods.length ? prods : (prod ? [prod] : []);
-      document.getElementById('oeItems').value = itemsList.map(p => `${p.short || p.name} x1 @ Rs.${p.price}`).join(', ');
-      document.getElementById('oeTotal').value = itemsList.reduce((s, p) => s + (p.price || 0), 0) || '';
       document.getElementById('oeStatus').value = 'confirmed';
+      const itemsList = prods.length ? prods : (prod ? [prod] : []);
+      if (itemsList.length) { itemsList.forEach(p => addProductRow(p.id, 1)); recalcOrderTotal(); }
+      else addProductRow();
     }
     view.style.display = 'none';
     form.style.display = 'block';
@@ -509,9 +566,9 @@ function toggleOrderEdit(e) {
 }
 
 async function saveOrder() {
+  const items = getSelectedItems();
   try {
     if (_currentOrder) {
-      // Update existing order
       const updated = await api(`/api/orders/${_currentOrder.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
@@ -521,11 +578,11 @@ async function saveOrder() {
           customer_address: document.getElementById('oeAddress').value,
           grand_total: parseInt(document.getElementById('oeTotal').value) || 0,
           status: document.getElementById('oeStatus').value,
+          items: items,
         })
       });
       if (updated) loadOrderPanel(currentChatId);
     } else {
-      // Create new order
       const result = await api('/api/orders/create', {
         method: 'POST',
         body: JSON.stringify({
@@ -535,7 +592,7 @@ async function saveOrder() {
           customer_city: document.getElementById('oeCity').value,
           customer_address: document.getElementById('oeAddress').value,
           grand_total: parseInt(document.getElementById('oeTotal').value) || 0,
-          items_text: document.getElementById('oeItems').value,
+          items: items,
         })
       });
       if (result) loadOrderPanel(currentChatId);

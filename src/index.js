@@ -676,17 +676,9 @@ app.patch('/api/orders/:id', requireAuth, (req, res) => {
 app.post('/api/orders/create', requireAuth, (req, res) => {
   try {
     const db = getDb();
-    const { conversation_id, customer_name, customer_phone, customer_city, customer_address, grand_total, items_text } = req.body;
-    // Get customer_id from conversation
+    const { conversation_id, customer_name, customer_phone, customer_city, customer_address, grand_total, items } = req.body;
     const conv = conversation_id ? db.prepare('SELECT customer_id FROM conversations WHERE id = ?').get(conversation_id) : null;
     const customerId = conv?.customer_id;
-    // Parse items text into array
-    const items = items_text ? items_text.split(',').map(s => {
-      const t = s.trim();
-      const priceMatch = t.match(/Rs\.?\s*(\d+)/i);
-      const qtyMatch = t.match(/x(\d+)/i);
-      return { name: t.replace(/x\d+.*$/i, '').replace(/@.*$/,'').trim(), qty: qtyMatch ? parseInt(qtyMatch[1]) : 1, price: priceMatch ? parseInt(priceMatch[1]) : 0 };
-    }) : [];
     const order = orderModel.create({
       conversation_id: conversation_id || null,
       customer_id: customerId || 0,
