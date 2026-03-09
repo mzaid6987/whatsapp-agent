@@ -934,14 +934,21 @@ app.delete('/api/conversations/:id', requireAuth, (req, res) => {
     db.prepare('DELETE FROM messages WHERE conversation_id = ?').run(id);
     db.prepare('DELETE FROM orders WHERE conversation_id = ?').run(id);
     db.prepare('DELETE FROM conversations WHERE id = ?').run(id);
-    // Decrement customer order stats so smartfill doesn't prefill stale data
-    if (convo?.customer_id && orderCount > 0) {
-      db.prepare('UPDATE customers SET total_orders = MAX(0, total_orders - ?), total_revenue = MAX(0, total_revenue - ?) WHERE id = ?')
-        .run(orderCount, orderTotal, convo.customer_id);
-    }
-    // Clear customer name/city so smartfill doesn't prefill stale data
+    // If customer has no other conversations left, delete the customer record entirely
+    // Otherwise just clear stale data fields
     if (convo?.customer_id) {
-      db.prepare('UPDATE customers SET name = NULL, city = NULL, last_address = NULL, wa_profile_name = NULL WHERE id = ?').run(convo.customer_id);
+      const otherConvos = db.prepare('SELECT COUNT(*) as cnt FROM conversations WHERE customer_id = ?').get(convo.customer_id)?.cnt || 0;
+      if (otherConvos === 0) {
+        db.prepare('DELETE FROM customers WHERE id = ?').run(convo.customer_id);
+        console.log(`[Delete] Customer #${convo.customer_id} deleted (no conversations left)`);
+      } else {
+        // Has other conversations — just clear name/city/stats for this deleted chat
+        if (orderCount > 0) {
+          db.prepare('UPDATE customers SET total_orders = MAX(0, total_orders - ?), total_revenue = MAX(0, total_revenue - ?) WHERE id = ?')
+            .run(orderCount, orderTotal, convo.customer_id);
+        }
+        db.prepare('UPDATE customers SET name = NULL, city = NULL, last_address = NULL, wa_profile_name = NULL WHERE id = ?').run(convo.customer_id);
+      }
     }
     // Clear in-memory conversation state so bot doesn't remember old data
     if (customerPhone) {
