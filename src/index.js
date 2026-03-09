@@ -1899,6 +1899,18 @@ function startFollowUpScheduler() {
       if (migrated.changes > 0) console.log(`[DB] Migrated ${migrated.changes} WhatsApp profile names from customer.name to wa_profile_name`);
     } catch (e) { console.error('[DB] wa_profile_name migration error:', e.message); }
 
+    // Fix conversations with orders stuck in wrong state
+    try {
+      const db = getDb();
+      const fixed = db.prepare(`
+        UPDATE conversations SET state = 'ORDER_CONFIRMED'
+        WHERE id IN (SELECT DISTINCT conversation_id FROM orders)
+        AND state NOT IN ('ORDER_CONFIRMED','CANCEL_AFTER_CONFIRM')
+        AND complaint_flag = 0
+      `).run();
+      if (fixed.changes > 0) console.log(`[DB] Fixed ${fixed.changes} order conversation states`);
+    } catch (e) { /* ignore */ }
+
     console.log('[DB] Ready');
 
     // Start follow-up scheduler
