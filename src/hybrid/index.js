@@ -2266,7 +2266,25 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       }
       if (parcelData.address) {
         state.collected.address_parts = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };
-        state.collected.address_parts.area = parcelData.address;
+        // Smart parse: split "Daal hotel, Pindi bypass road" into landmark + area
+        const addrParts = parcelData.address.split(/,\s*/);
+        if (addrParts.length >= 2) {
+          // First part is likely landmark (hotel/shop/building), rest is area/road
+          const first = addrParts[0].trim();
+          const rest = addrParts.slice(1).join(', ').trim();
+          const isLandmark = /\b(hotel|shop|dukaan|store|fabric|bakery|masjid|school|hospital|plaza|tower|market|chowk|petrol|pump|office)\b/i.test(first);
+          if (isLandmark) {
+            state.collected.address_parts.landmark = first;
+            state.collected.address_parts.area = rest;
+          } else {
+            state.collected.address_parts.area = parcelData.address;
+          }
+        } else {
+          state.collected.address_parts.area = parcelData.address;
+        }
+        // Mark as complete — parcel address is trusted, don't ask for more details
+        if (!state.collected.address_parts.street) state.collected.address_parts.street = 'nahi_pata';
+        if (!state.collected.address_parts.house) state.collected.address_parts.house = 'nahi_pata';
         parts.push(`Address: ${parcelData.address}`);
       }
       const honorific = getHonorific(state.collected.name, state.gender);
@@ -2278,6 +2296,20 @@ function handlePreCheck(pre, message, state, storeName, phone) {
         state._parcel_confirming = true;
       }
       return { reply: confirmText, state: state.current };
+    }
+
+    case 'parcel_confirmed': {
+      // Customer confirmed parcel info — proceed to next missing field
+      delete state._parcel_confirming;
+      const nfp = askNextField(state, storeName);
+      if (nfp) return { reply: nfp.reply, state: nfp.state };
+      return { reply: fillTemplate('FALLBACK', vars), state: state.current };
+    }
+
+    case 'parcel_rejected': {
+      // Customer rejected parcel info — ask what's wrong
+      delete state._parcel_confirming;
+      return { reply: `Kya galat hai ${getHonorific(state.collected.name, state.gender)}? Naam, phone ya address — jo bhi galat ho bata dein, correct kar deta hun 😊`, state: state.current };
     }
 
     case 'parcel_image_confirm': {

@@ -77,6 +77,16 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'greeting' };
   }
 
+  // 0a2. PARCEL CONFIRMING — customer confirming parcel info ("G", "yes", "sahi hai")
+  if (state && state._parcel_confirming) {
+    if (isYes(l) || /^(g|k|ok|ji|ha+n|hn|hm+|sahi|theek|thik|bilkul|confirm|done)$/i.test(l.trim())) {
+      return { intent: 'parcel_confirmed', extracted: state._parcel_data || {} };
+    }
+    if (isNo(l) || /^(nahi|nhi|no|galat|nope|na+h|cancel)$/i.test(l.trim())) {
+      return { intent: 'parcel_rejected' };
+    }
+  }
+
   // 0b. SPAM DETECTION — messages with URLs from unknown senders = spam/scam
   // Ramzan packages, free data, phishing links etc. — don't waste AI tokens
   const hasUrl = /https?:\/\/|www\.|\.com\b|\.online\b|\.site\b|\.pk\b|\.buzz\b|\.top\b|\.live\b|\.html\b|\.org\b|\.net\b|clkbitz|lnkbits/i.test(l);
@@ -98,18 +108,24 @@ function preCheck(message, currentState, collected, state) {
   // e.g. "[Image: [Parcel Info] Name: Ahmed, Phone: 03001234567, Address: House 5 Street 3, City: Lahore]"
   const parcelMatch = msg.match(/\[Parcel Info\]\s*(.+?)(?:\]|$)/i);
   if (parcelMatch) {
-    const info = parcelMatch[1];
+    // Clean Vision AI text — strip AI descriptions like "Yeh product...", "Yeh tasveer..."
+    let info = parcelMatch[1]
+      .replace(/\.\s*Yeh\s+(product|tasveer|parcel|image|order).*/i, '') // strip AI description
+      .replace(/\.\s*(Is|Isme|Ye|Product).*/i, '')                       // other AI suffixes
+      .trim();
     const extracted = {};
     const nameM = info.match(/Name:\s*([^,\]]+)/i);
     const phoneM = info.match(/Phone:\s*([^,\]]+)/i);
-    const addressM = info.match(/Address:\s*([^,\]]+(?:,\s*[^,\]]+)*)/i);
-    const cityM = info.match(/City:\s*([^,\]]+)/i);
+    // Address: capture between "Address:" and "City:" (if City exists)
+    const addressM = info.match(/Address:\s*(.+?)(?=,?\s*City:|$)/i);
+    // City: capture just the city name (1-3 words, stop at period/comma/bracket)
+    const cityM = info.match(/City:\s*([A-Za-z\s]+?)(?:\.|,|\]|$)/i);
     if (nameM) extracted.name = nameM[1].trim();
     if (phoneM) {
       const ph = phoneM[1].trim().replace(/[\s-]/g, '');
       if (/^0\d{10}$/.test(ph)) extracted.phone = ph;
     }
-    if (addressM) extracted.address = addressM[1].trim();
+    if (addressM) extracted.address = addressM[1].trim().replace(/,\s*$/, '');
     if (cityM) extracted.city = cityM[1].trim();
     if (Object.keys(extracted).length > 0) {
       return { intent: 'parcel_image', extracted };
