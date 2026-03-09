@@ -817,6 +817,21 @@ function preCheck(message, currentState, collected, state) {
       }
       // Name before phone number — "Sardar Shaukat 03001234567 address here..."
       // Match 1-3 capitalized words right before phone number
+      // Parcel-label format: "[Name] Number/No : [phone] Addrees/Address : [address] City : [city]"
+      // Common in Pakistan courier labels — name at start, then labeled fields with ":"
+      if (!extracted.name) {
+        const parcelLabel = msg.match(/^(.+?)\s*(?:Number|No|Phone|Mobile)\s*[:\.\-]\s*(?:\+?92|0)?3\d{2}[\s\-]?\d{7}/i);
+        if (parcelLabel) {
+          let nameCandidate = parcelLabel[1].trim();
+          // Strip single-letter prefix like "M " (Mr/Mrs abbreviation)
+          nameCandidate = nameCandidate.replace(/^[A-Za-z][\.\s]\s*/, '').trim();
+          const isAlpha = /^[A-Za-z\s]{2,40}$/.test(nameCandidate) && nameCandidate.split(/\s+/).length <= 4;
+          const isNotAddr = !/\b(flat|house|block|street|gali|office|plot|floor|sector|phase|colony)\b/i.test(nameCandidate);
+          if (isAlpha && isNotAddr && nameCandidate.length >= 3) {
+            extracted.name = nameCandidate;
+          }
+        }
+      }
       if (!extracted.name) {
         const nameBeforePhone = msg.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+(?:\+?92|0)3\d{9}/);
         if (nameBeforePhone) {
@@ -875,8 +890,8 @@ function preCheck(message, currentState, collected, state) {
       const addrMatch = msg.match(/\baddre(?:ss|es|s)\s*[:\.\-=]\s*(.+)/i);
       if (addrMatch) {
         let addrText = addrMatch[1].trim().split(/\n/)[0].trim();
-        // Strip trailing form labels like "City :", "Phone :", "Number :"
-        addrText = addrText.replace(/\s*\b(city|phone|number|mobile|contact|naam|name|province|state)\s*[:\.\-=]?\s*$/i, '').trim();
+        // Strip everything from "City :" / "Phone :" / "Number :" onwards (label + value)
+        addrText = addrText.replace(/\s*\b(city|phone|number|mobile|contact|naam|name|province|state)\s*[:\.\-=]\s*.*/i, '').trim();
         // Strip leading form template text
         addrText = addrText.replace(/^(for\s+order\s+kindly\s+.*?details\s*[:\.\-=]?\s*)/i, '').trim();
         addrText = addrText.replace(/^addre(?:ss|es|s)\s*[:\.\-=]\s*/i, '').trim();
@@ -941,7 +956,12 @@ function preCheck(message, currentState, collected, state) {
       if (!extracted.city) {
         const cityMatch = msg.match(/\bcity\s*[:\.\-=]\s*(.+)/i);
         if (cityMatch) {
-          extracted.city = normalizeCity(cityMatch[1].trim().split(/\n/)[0].trim());
+          let cityVal = cityMatch[1].trim().split(/\n/)[0].trim();
+          // Strip phone numbers that may trail city name (e.g. "farooqabad 03002978745")
+          cityVal = cityVal.replace(/\s*(?:\+?92|0)?3\d{2}[\s\-]?\d{7}/g, '').trim();
+          // Strip trailing labels (e.g. "Province : Punjab")
+          cityVal = cityVal.replace(/\s*\b(province|state|district|tehsil)\s*[:\.\-=]\s*.*/i, '').trim();
+          if (cityVal.length >= 2) extracted.city = normalizeCity(cityVal);
         }
       }
 
