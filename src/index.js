@@ -1535,13 +1535,24 @@ app.all('/deploy', (req, res) => {
 
 // ---- SILENT FOLLOW-UP SCHEDULER ----
 // Sends a one-time voice note follow-up after 3 minutes of customer silence
+// IMPORTANT: Only sends to conversations created AFTER the feature was activated (followup_activated_at)
 const FOLLOWUP_INTERVAL_MS = 30 * 1000;   // Check every 30 seconds
 const FOLLOWUP_SILENCE_MIN = 3;            // Trigger after 3 minutes silent
 const FOLLOWUP_VOICE_FILE = 'followup-voice.mp3';
-const SILENT_EXCLUDE_STATES_FU = ['ORDER_CONFIRMED', 'CANCEL_AFTER_CONFIRM', 'COMPLAINT', 'IDLE'];
+const SILENT_EXCLUDE_STATES_FU = ['ORDER_CONFIRMED', 'CANCEL_AFTER_CONFIRM', 'COMPLAINT', 'IDLE', 'UPSELL_HOOK', 'UPSELL_SHOW'];
 
 function startFollowUpScheduler() {
-  console.log('[FOLLOWUP] Scheduler started — checking every 30s for 3min+ silent chats');
+  // Record activation timestamp — only conversations created AFTER this time get follow-ups
+  // This prevents flooding old silent chats when the feature is first deployed
+  let activatedAt = settingsModel.get('followup_activated_at', '');
+  if (!activatedAt) {
+    activatedAt = new Date().toISOString();
+    settingsModel.set('followup_activated_at', activatedAt);
+    console.log(`[FOLLOWUP] Feature activated at ${activatedAt} — only new chats will get follow-ups`);
+  }
+  const activatedMs = new Date(activatedAt).getTime();
+
+  console.log('[FOLLOWUP] Scheduler started — checking every 30s for 3min+ silent chats (since ' + activatedAt + ')');
 
   setInterval(async () => {
     try {
@@ -1554,7 +1565,7 @@ function startFollowUpScheduler() {
       // Get all active conversations with last outgoing message
       const convos = db.prepare(`
         SELECT c.id, c.state, c.spam_flag, c.complaint_flag, c.needs_human,
-               c.followup_sent, cu.phone,
+               c.followup_sent, c.created_at as conv_created_at, cu.phone,
                (SELECT direction FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_direction,
                (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_time
         FROM conversations c
@@ -1572,6 +1583,13 @@ function startFollowUpScheduler() {
         if (c.last_msg_direction !== 'outgoing') continue;
         if (!c.last_msg_time) continue;
 
+        // Skip conversations created BEFORE follow-up feature was activated
+        if (c.conv_created_at) {
+          const convTimeStr = c.conv_created_at.includes('+') ? c.conv_created_at : c.conv_created_at + '+05:00';
+          const convCreated = new Date(convTimeStr).getTime();
+          if (!isNaN(convCreated) && convCreated < activatedMs) continue;
+        }
+
         // Calculate silence duration
         const timeStr = c.last_msg_time.includes('+') ? c.last_msg_time : c.last_msg_time + '+05:00';
         const lastTime = new Date(timeStr).getTime();
@@ -1580,18 +1598,24 @@ function startFollowUpScheduler() {
         const minutesSilent = (now - lastTime) / (1000 * 60);
         if (minutesSilent < FOLLOWUP_SILENCE_MIN) continue;
 
+        // Don't send if customer was silent for too long (>60 min) — likely abandoned
+        if (minutesSilent > 60) {
+          db.prepare('UPDATE conversations SET followup_sent = 1 WHERE id = ?').run(c.id);
+          continue;
+        }
+
         // Send voice note follow-up (one time only)
         const intlPhone = toInternational(c.phone);
         const audioUrl = `${serverUrl}/media/${FOLLOWUP_VOICE_FILE}`;
 
-        console.log(`[FOLLOWUP] Sending voice note to ${c.phone} (silent ${Math.round(minutesSilent)}min, conv #${c.id})`);
+        console.log(`[FOLLOWUP] Sending voice note to ${c.phone} (silent ${Math.round(minutesSilent)}min, state: ${c.state}, conv #${c.id})`);
         const result = await sendAudio(intlPhone, audioUrl, phoneNumberId, accessToken);
 
         if (result.success) {
           // Mark as followed up so it won't send again
           db.prepare('UPDATE conversations SET followup_sent = 1 WHERE id = ?').run(c.id);
           // Save message to DB
-          messageModel.create(c.id, 'outgoing', 'bot', '[Voice Follow-up Sent]', { source: 'followup_scheduler' });
+          messageModel.create(c.id, 'outgoing', 'bot', '[🎤 Voice Follow-up Sent]', { source: 'followup_scheduler' });
           conversationModel.updateLastMessage(c.id, '[Voice Follow-up]');
           broadcast({ type: 'new_message', conversationId: c.id });
           console.log(`[FOLLOWUP] Sent successfully to ${c.phone}`);

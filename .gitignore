@@ -3,4 +3,5 @@ node_modules/
 data/*.db
 temp/
 uploads/
+!uploads/media/followup-voice.mp3
 *.log
