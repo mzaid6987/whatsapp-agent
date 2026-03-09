@@ -700,7 +700,7 @@ function askNextField(state, storeName) {
       if (isRural && !isRuralHome) {
         if (ap.area && ap.landmark) {
           // Rural address complete — confirm
-          const addrStr = buildAddressString(ap);
+          const addrStr = buildAddressString(ap, state.collected.city);
           state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
           state.address_confirming = true;
           const confirmReply = fillTemplate('CONFIRM_ADDRESS', { ...vars, full_address: state.collected.address });
@@ -716,7 +716,7 @@ function askNextField(state, storeName) {
 
       // All 4 parts filled (including landmark) — address is complete, confirm it
       if (ap.area && (ap.street || ap.street === 'nahi_pata') && (ap.house || ap.house === 'nahi_pata') && (ap.landmark || ap.landmark === 'nahi_pata')) {
-        const addrStr = buildAddressString(ap);
+        const addrStr = buildAddressString(ap, state.collected.city);
         state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
         state.address_confirming = true;
         const confirmReply = fillTemplate('CONFIRM_ADDRESS', { ...vars, full_address: state.collected.address });

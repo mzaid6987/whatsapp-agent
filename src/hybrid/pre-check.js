@@ -573,8 +573,10 @@ function preCheck(message, currentState, collected, state) {
   // 4b1. "ALREADY TOLD" / "JUST LIKH DO" / "YEH ADDRESS HAI" in COLLECT_ADDRESS
   // Customer frustrated repeating OR says "this is the address" — accept what we have
   if (currentState === 'COLLECT_ADDRESS') {
-    const isAlreadyTold = /\b(btaya|bata\s*di[ay]?|bta\s*di[ay]?|likh[a]?\s*(he|hai|h|dia|diya|do|dy)|upar\s*(likh|he|hai|dekh)|pehle\s*(bata|btaya|likha)|already\s*(told|given|sent))\b/i.test(l) ||
-      /\b(bas\s*(itna|yahi|yehi|bs|likh)|itna\s*(he|hai|h|bas)|yahi\s*(he|hai|h)|ho\s*gaya|enough|kafi)\b/i.test(l) ||
+    const isAlreadyTold = /\b(btaya|bata\s*di[ay]?|bta\s*di[ay]?|bta\s*to\s*d[ei]a|bata\s*to\s*d[ei]a|likh[a]?\s*(he|hai|h|dia|diya|do|dy)|upar\s*(likh|he|hai|dekh)|pehle\s*(bata|btaya|likha)|already\s*(told|given|sent))\b/i.test(l) ||
+      /\b(bas\s*(itna|yahi|yehi|bs|likh)|itna\s*(he|hai|h|bas)|yahi\s*(he|hai|h)|yehi\s*(he|hai|h)|ho\s*gaya|enough|kafi)\b/i.test(l) ||
+      /\b(ye+h?i?\s*(he|hai|h)\s*(jo|address|sab|sb)?|ya+h?i?\s*(he|hai|h)\s*(jo|address|sab|sb)?)\b/i.test(l) ||
+      /\b(de?\s*to\s*d[ei]a|d[ei]a\s*(he|hai|h|to|na)|dey?\s*dia|dey?\s*diya)\b/i.test(l) ||
       /\b(rider\s*(call|puch|samajh)|aa\s*k[ae]r?\s*(puch|dekh|mil))\b/i.test(l) ||
       /\b(just\s*likh|sirf\s*likh|likh\s*d[eoy]|likh\s*dy)\b/i.test(l) ||
       /\b(aj[ay]+[ae]?g[ay]?|pohanch|pohch|aa?\s*ja[ey]+g[ay]?|mil\s*ja[ey]+g[ay]?)\b/i.test(l);

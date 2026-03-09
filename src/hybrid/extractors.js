@@ -577,8 +577,10 @@ function normalizeAddressText(text) {
     .replace(/\s{2,}/g, ' ').trim();
 }
 
-function buildAddressString(parts) {
+function buildAddressString(parts, city) {
   const skip = v => !v || v === 'nahi_pata' || ['null', 'undefined', 'none', 'n/a', 'missing'].includes(String(v).toLowerCase().trim());
+  // Skip area if it's the same as city (prevents "farooq abad, Farooq Abad" duplication)
+  const areaDupsCity = city && parts.area && parts.area.toLowerCase().replace(/\s+/g, '') === city.toLowerCase().replace(/\s+/g, '');
   const pieces = [];
   if (parts.house && !skip(parts.house)) {
     // Normalize and clean house text
@@ -628,18 +630,18 @@ function buildAddressString(parts) {
   if (isRural) {
     // Rural format: Landmark, Chak/Gaon (area), Tehsil, Zilla
     if (landmarkText) pieces.push(landmarkText);
-    if (parts.area) pieces.push(parts.area);
+    if (parts.area && !areaDupsCity) pieces.push(parts.area);
     if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
     if (parts.zilla) pieces.push('Zilla ' + parts.zilla);
   } else if (isShopDelivery || isDeliveryPoint) {
     // Shop/delivery point format: Landmark (shop name), Area, City
     if (landmarkText) pieces.push(landmarkText);
-    if (parts.area) pieces.push(parts.area);
+    if (parts.area && !areaDupsCity) pieces.push(parts.area);
     if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
     if (parts.zilla) pieces.push('Zilla ' + parts.zilla);
   } else {
     // Urban format: House, Street, Area, near Landmark
-    if (parts.area) pieces.push(parts.area);
+    if (parts.area && !areaDupsCity) pieces.push(parts.area);
     if (landmarkText) pieces.push(landmarkText);
     if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
     if (parts.zilla) pieces.push('Zilla ' + parts.zilla);

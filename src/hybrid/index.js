@@ -831,7 +831,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
 
     if (flexYes) {
       state.address_confirming = false;
-      const addrStr = buildAddressString(state.collected.address_parts);
+      const addrStr = buildAddressString(state.collected.address_parts, state.collected.city);
       state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
       // Add alt phone note in address if delivery_phone is a DIFFERENT number
       const dp = state.collected.delivery_phone;
@@ -1140,6 +1140,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
 
       // Check address completeness
       const hasArea = !!ap.area;
+      const hasStreet = ap.street && ap.street !== 'nahi_pata';
       const hasHouse = ap.house && ap.house !== 'nahi_pata';
       const houseUnknown = ap.house === 'nahi_pata';
       const hasLandmark = !!ap.landmark;
@@ -1148,17 +1149,19 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const hasZilla = !!ap.zilla;
       // Rural home delivery = full address + zilla (like urban but with zilla)
       // Rural TCS = area + landmark(delivery point) + zilla
-      // Urban = area + house + landmark
+      // Urban detailed (area + street + house) = complete without landmark — don't force customer
+      // Urban basic (area + house but no street) = need landmark for rider reference
       const addrComplete = isRural
         ? (isRuralHome
           ? (hasArea && (hasHouse || houseUnknown) && hasLandmark && hasZilla)
           : (hasArea && hasLandmark && hasZilla))
-        : (hasArea && (hasHouse || houseUnknown) && hasLandmark);
+        : (hasArea && (hasHouse || houseUnknown) && (hasLandmark || (hasStreet && hasHouse)));
 
       if (addrComplete) {
-        // Address complete → confirm
+        // Address complete → confirm. Fill missing landmark if we're skipping it
+        if (!ap.landmark) ap.landmark = 'nahi_pata';
         state.address_confirming = true;
-        const fullAddrParts = buildAddressString(ap);
+        const fullAddrParts = buildAddressString(ap, state.collected.city);
         const cityLabel = state.collected.city || '';
         const fullAddr = cityLabel ? fullAddrParts + ', ' + cityLabel : fullAddrParts;
         const honorific = getHonorific(state.collected.name, state.gender);
@@ -1619,9 +1622,12 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         // "nahi" for house → set nahi_pata (not null — means customer said they don't know)
         ap.house = isRefusal(newParts.house) ? 'nahi_pata' : newParts.house;
       }
-      if (valid(newParts.landmark) && !isRefusal(newParts.landmark)) {
-        // If already have a landmark from bulk_info, combine (don't overwrite)
-        if (ap.landmark && ap.landmark !== newParts.landmark) {
+      if (valid(newParts.landmark)) {
+        if (isRefusal(newParts.landmark)) {
+          // "nahi_pata" for landmark → set nahi_pata (means customer/AI says no landmark — accept it, don't loop)
+          if (!ap.landmark) ap.landmark = 'nahi_pata';
+        } else if (ap.landmark && ap.landmark !== 'nahi_pata' && ap.landmark !== newParts.landmark) {
+          // If already have a landmark from bulk_info, combine (don't overwrite)
           const existLower = ap.landmark.toLowerCase();
           const newLower = newParts.landmark.toLowerCase();
           if (!existLower.includes(newLower) && !newLower.includes(existLower)) {
@@ -1723,6 +1729,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     if (state.current === 'COLLECT_ADDRESS' && !state.address_confirming) {
       const ap = state.collected.address_parts;
       const hasArea = !!ap.area;
+      const hasStreet = ap.street && ap.street !== 'nahi_pata';
       const hasHouse = ap.house && ap.house !== 'nahi_pata';
       const houseUnknown = ap.house === 'nahi_pata';
       const hasLandmark = !!ap.landmark;
@@ -1731,17 +1738,21 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const hasZilla = !!ap.zilla;
       // Rural home delivery = full address + zilla
       // Rural TCS = area + landmark(delivery point) + zilla
-      // Urban = area + house + landmark
+      // Urban detailed (area + street + house) = complete without landmark — don't force customer
+      // Urban basic (area + house but no street) = need landmark for rider reference
       const addrComplete = isRural
         ? (isRuralHome
           ? (hasArea && (hasHouse || houseUnknown) && hasLandmark && hasZilla)
           : (hasArea && hasLandmark && hasZilla))
-        : (hasArea && (hasHouse || houseUnknown) && hasLandmark);
+        : (hasArea && (hasHouse || houseUnknown) && (hasLandmark || (hasStreet && hasHouse)));
 
       if (addrComplete) {
+        // Fill missing landmark if complete without it (detailed address with street+house)
+        if (!ap.landmark) ap.landmark = 'nahi_pata';
         // Address complete — check if AI asked a relevant follow-up (landmark, street, etc.)
-        // If yes, use AI reply (smarter) instead of template confirmation
-        const aiAskedFollowUp = aiResult && aiResult.reply &&
+        // But ONLY if address is NOT detailed (has street+house) — detailed = don't force landmark
+        const isDetailedAddr = hasStreet && hasHouse;
+        const aiAskedFollowUp = !isDetailedAddr && aiResult && aiResult.reply &&
           /\b(landmark|mashoor|mashoor\s*jag[ah]|nearby|qareeb|qareebi|nazdee?k|koi\s*(jag[ah]|dukaan|masjid|school|hospital|chowk)|konsa|konsi|kis\s*ke?\s*paas|reference|pehchan)\b/i.test(aiResult.reply);
 
         if (aiAskedFollowUp) {
@@ -1752,7 +1763,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
           if (NAMED_LANDMARK) {
             // Landmark has a specific name — skip AI follow-up, go to confirmation
             state.address_confirming = true;
-            const fullAddrParts = buildAddressString(ap);
+            const fullAddrParts = buildAddressString(ap, state.collected.city);
             const cityLabel = state.collected.city || '';
             const fullAddr = cityLabel ? fullAddrParts + ', ' + cityLabel : fullAddrParts;
             const honorific = getHonorific(state.collected.name, state.gender);
@@ -1798,7 +1809,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
 
         // No follow-up from AI → show template confirmation
         state.address_confirming = true;
-        const fullAddrParts = buildAddressString(ap);
+        const fullAddrParts = buildAddressString(ap, state.collected.city);
         const cityLabel = state.collected.city || '';
         const fullAddr = cityLabel ? fullAddrParts + ', ' + cityLabel : fullAddrParts;
         const honorific = getHonorific(state.collected.name, state.gender);
@@ -2379,7 +2390,7 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       if (isCollectionState || state.address_confirming) {
         if (state.address_confirming) {
           // During address confirmation — answer + re-show confirmation
-          const addrStr = buildAddressString(state.collected.address_parts);
+          const addrStr = buildAddressString(state.collected.address_parts, state.collected.city);
           const cityLabel = state.collected.city || '';
           const fullAddr = cityLabel ? addrStr + ', ' + cityLabel : addrStr;
           return { reply: botReply + ` 📍 Yeh address sahi hai? ${fullAddr} ✅`, state: state.current };
@@ -2414,9 +2425,8 @@ function handlePreCheck(pre, message, state, storeName, phone) {
     case 'product_list': {
       state.current = 'PRODUCT_SELECTION';
       const nextVars = buildVars(state, storeName);
-      // Send all product videos along with the list
-      const _allVideos = PRODUCTS.map(p => ({ product_id: p.id, type: 'video', product_name: p.short }));
-      return { reply: fillTemplate('PRODUCT_LIST', nextVars), state: 'PRODUCT_SELECTION', _media_batch: _allVideos };
+      // Show text list only — videos sent only when customer explicitly asks (media_request/media_request_all)
+      return { reply: fillTemplate('PRODUCT_LIST', nextVars), state: 'PRODUCT_SELECTION' };
     }
 
     case 'order_without_product': {
