@@ -2309,6 +2309,11 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       return { reply: null, state: state.current, skip: true };
     }
 
+    case 'product_not_available': {
+      // Customer asked for a product we don't carry
+      return { reply: fillTemplate('PRODUCT_NOT_AVAILABLE', vars), state: state.current };
+    }
+
     case 'image_not_recognized': {
       // Image sent but Vision couldn't match it to any product
       const imgReply = state.product

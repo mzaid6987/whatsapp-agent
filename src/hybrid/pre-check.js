@@ -1265,6 +1265,17 @@ function preCheck(message, currentState, collected, state) {
     }
   }
 
+  // Product-like request but no match → "product not available"
+  // Detect if customer is asking for a product we don't carry
+  if (!product && !isCollectionState) {
+    const isProductRequest = /\b(h[ae]?[iy]?\s*k[iy]?a?\s*$|milta|milt[ie]|available|stock|rakh?t[eiy]|pass|paas)\b/i.test(l) ||
+      /\b(chahiye|chahea|order\s*kr|mangwa|lena|bhej\s*do)\b/i.test(l);
+    const hasProductWord = /\b(roller|wax\s*roller|hair\s*dryer|dryer|blower|iron|straightener|curler|steamer|juicer|blender|mixer|fryer|toaster|kettle|heater|cooler|fan|camera|watch|phone|charger|cable|headphone|earphone|speaker|power\s*bank|led|bulb|torch|scale|thermometer)\b/i.test(l);
+    if (hasProductWord || (isProductRequest && msg.split(/\s+/).length <= 8)) {
+      return { intent: 'product_not_available' };
+    }
+  }
+
   // No match → let AI handle
   return null;
 }

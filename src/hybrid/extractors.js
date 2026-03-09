@@ -58,6 +58,20 @@ function detectProduct(msg) {
     }
     if (score > bestScore) { bestScore = score; bestProduct = p; }
   }
+  // Weak match guard: if only 1 generic keyword matched, check if customer used
+  // significant words that DON'T match the product — means they want something else
+  if (bestProduct && bestScore === 1) {
+    const FILLER_WORDS = new Set(['h','he','hai','ha','hain','k','ke','ka','ki','ko','me','mein','mai','pe','par','se','ye','yeh','yh','ya','ap','aap','pass','paas','sir','madam','ji','bhi','or','aur','to','toh','kya','kia','nhi','nahi','na','bas','sirf','order','krna','karna','kro','karo','mangwa','mangwana','lena','chahiye','chahea','mjy','mujhe','hm','hum','ny','ne','tha','thi','the','mjhe']);
+    const msgWords = l.replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length >= 2 && !FILLER_WORDS.has(w));
+    // Check how many of customer's significant words are NOT in any product keywords
+    const allKwFlat = new Set();
+    for (const p of PRODUCTS) for (const k of p.kw) for (const w of k.split(/\s+/)) allKwFlat.add(w);
+    const unmatchedWords = msgWords.filter(w => !allKwFlat.has(w));
+    // If customer used 1+ significant unmatched words (like "roller"), weak match is likely wrong
+    if (unmatchedWords.length >= 1 && msgWords.length >= 2) {
+      return null; // Let it fall through to "product not available"
+    }
+  }
   if (bestProduct) return bestProduct;
 
   // Check by number (1-10)

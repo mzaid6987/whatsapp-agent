@@ -325,6 +325,13 @@ const T = {
   ],
 
   // ==========================================
+  // PRODUCT NOT AVAILABLE
+  // ==========================================
+  PRODUCT_NOT_AVAILABLE: [
+    "{honorific}, yeh product hamare paas filhal available nahi hai 😊 Yeh products hain hamare paas:\n\n{product_list}\n\nIn mein se kuch pasand aaye to bata dein!",
+  ],
+
+  // ==========================================
   // FALLBACK
   // ==========================================
   FALLBACK: [
