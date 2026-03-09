@@ -74,7 +74,7 @@ function setAdminUnread(id, value) {
 
 function getAll(limit = 100) {
   return getDb().prepare(`
-    SELECT c.*, cu.phone, cu.name as customer_name,
+    SELECT c.*, cu.phone, cu.name as customer_name, cu.wa_profile_name,
       (SELECT direction FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_direction,
       (SELECT sender FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_sender,
       (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_time
@@ -86,7 +86,7 @@ function getAll(limit = 100) {
 
 function getActive() {
   return getDb().prepare(`
-    SELECT c.*, cu.phone, cu.name as customer_name
+    SELECT c.*, cu.phone, cu.name as customer_name, cu.wa_profile_name
     FROM conversations c
     JOIN customers cu ON cu.id = c.customer_id
     WHERE c.is_active = 1

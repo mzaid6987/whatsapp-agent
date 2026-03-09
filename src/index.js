@@ -1641,6 +1641,12 @@ function startFollowUpScheduler() {
       console.log('[DB] Added followup_sent column');
     } catch (e) { /* column already exists */ }
 
+    // Add wa_profile_name column to customers if not exists
+    try {
+      getDb().prepare("ALTER TABLE customers ADD COLUMN wa_profile_name TEXT DEFAULT NULL").run();
+      console.log('[DB] Added wa_profile_name column');
+    } catch (e) { /* column already exists */ }
+
     console.log('[DB] Ready');
 
     // Start follow-up scheduler

@@ -37,7 +37,7 @@ function findOrCreate(phone) {
 }
 
 function update(id, fields) {
-  const allowed = ['name', 'gender', 'city', 'last_address', 'total_orders', 'total_spent', 'is_blocked', 'needs_human', 'notes'];
+  const allowed = ['name', 'gender', 'city', 'last_address', 'total_orders', 'total_spent', 'is_blocked', 'needs_human', 'notes', 'wa_profile_name'];
   const sets = [];
   const values = [];
   for (const [key, val] of Object.entries(fields)) {

@@ -147,7 +147,9 @@ function renderChatList(convos) {
   listEl.innerHTML = convos.map(c => {
     const phone = formatPhone(c.phone || c.customer?.phone || '');
     const custName = c.customer_name || c.customer?.name || '';
-    const name = custName ? `${custName} (${phone})` : (phone || 'Unknown');
+    const waName = c.wa_profile_name || '';
+    const displayName = custName || waName;
+    const name = displayName ? `${displayName} (${phone})` : (phone || 'Unknown');
     const initials = getInitials(name);
     const isOrderState = ['ORDER_CONFIRMED', 'UPSELL_HOOK', 'UPSELL_SHOW'].includes(c.state);
     const statusIcon = c.needs_human ? '<span class="status-icon">&#128100;</span>' :
@@ -291,8 +293,9 @@ async function openChat(chatId) {
   if (chatViewEl) chatViewEl.classList.add('show'); // mobile
 
   // Update header
-  document.getElementById('chatViewAvatar').textContent = getInitials(conv.customer_name || conv.customer?.name);
-  document.getElementById('chatViewName').textContent = conv.customer_name || conv.customer?.name || formatPhone(conv.phone || '') || 'Unknown';
+  const _chatName = conv.customer_name || conv.customer?.name || conv.wa_profile_name || '';
+  document.getElementById('chatViewAvatar').textContent = getInitials(_chatName || conv.phone);
+  document.getElementById('chatViewName').textContent = _chatName || formatPhone(conv.phone || '') || 'Unknown';
   document.getElementById('chatViewMeta').textContent =
     formatPhone(conv.phone || conv.customer?.phone) + ' - ' +
     (conv.needs_human ? 'Human Assigned' : 'Bot Handling') +

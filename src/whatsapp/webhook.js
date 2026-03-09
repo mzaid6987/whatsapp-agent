@@ -294,7 +294,8 @@ async function webhookHandler(req, res) {
     if (!botEnabled) {
       // Bot disabled — save incoming message to DB but don't reply
       const customer = customerModel.findOrCreate(fromPhone);
-      if (contactName && !customer.name) customerModel.update(customer.id, { name: contactName });
+      // Save WhatsApp profile name separately — don't overwrite customer.name (that's for COLLECT_NAME)
+      if (contactName) customerModel.update(customer.id, { wa_profile_name: contactName });
       const convo = conversationModel.getOrCreateActive(customer.id, 'nureva');
       messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
       conversationModel.updateLastMessage(convo.id, messageText);
