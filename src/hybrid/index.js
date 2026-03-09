@@ -1710,6 +1710,19 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       }
     }
 
+    // FORCE-ACCEPT COUNTER — if customer has sent 3+ messages in COLLECT_ADDRESS and we have area,
+    // accept whatever we have. Don't frustrate the customer by asking more questions.
+    if (state.current === 'COLLECT_ADDRESS' && !state.address_confirming) {
+      state._addr_msg_count = (state._addr_msg_count || 0) + 1;
+      const ap = state.collected.address_parts;
+      if (state._addr_msg_count >= 3 && ap.area) {
+        if (!ap.street) ap.street = 'nahi_pata';
+        if (!ap.house) ap.house = 'nahi_pata';
+        if (!ap.landmark) ap.landmark = 'nahi_pata';
+        console.log(`[Address] Force-accept after ${state._addr_msg_count} messages — area: ${ap.area}`);
+      }
+    }
+
     // "Rider call krle" / "bas itna he" = customer wants to stop address collection → accept as-is
     if (state.current === 'COLLECT_ADDRESS' && !state.address_confirming) {
       const addrDoneSignal = /\b(rider\s*(call|aa|a\s*kr|ajaye|aa\s*jaye|ko\s*bol|phone)|bas\s*(itna|yahi|yehi)|call\s*kr\s*(le|lena|do|dena)|aa\s*kr\s*(call|puch|pooch)|vaha\s*aa|wahan\s*aa|address\s*(bas|itna|yahi))\b/i.test(message);
