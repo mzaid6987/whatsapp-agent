@@ -969,6 +969,40 @@ app.get('/api/complaints/:id/remarks', requireAuth, (req, res) => {
   }
 });
 
+// Backfill complaints from existing conversations with complaint_flag=1
+app.post('/api/complaints/backfill', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    const convos = db.prepare(`
+      SELECT c.id as conv_id, c.customer_id, c.last_message, c.created_at,
+        cu.name, cu.phone,
+        (SELECT p.name FROM products p WHERE p.id = c.product_id) as product_name
+      FROM conversations c
+      LEFT JOIN customers cu ON cu.id = c.customer_id
+      WHERE c.complaint_flag = 1
+    `).all();
+
+    let added = 0;
+    for (const conv of convos) {
+      const existing = complaintModel.findByConversation(conv.conv_id);
+      if (!existing) {
+        complaintModel.create({
+          conversation_id: conv.conv_id,
+          customer_id: conv.customer_id,
+          customer_name: conv.name || null,
+          customer_phone: conv.phone || null,
+          product_name: conv.product_name || null,
+          description: conv.last_message || null,
+        });
+        added++;
+      }
+    }
+    res.json({ success: true, total_flagged: convos.length, added });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Delete conversation (keeps orders + auto_templates/learnings)
 app.delete('/api/conversations/:id', requireAuth, (req, res) => {
   try {
