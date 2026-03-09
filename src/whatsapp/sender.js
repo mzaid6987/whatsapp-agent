@@ -156,4 +156,36 @@ async function sendVideo(to, videoUrl, caption, phoneNumberId, accessToken) {
   }
 }
 
-module.exports = { sendMessage, sendImage, sendVideo, markAsRead, toInternational };
+/**
+ * Send an audio message via URL (plays as voice note in WhatsApp).
+ * @param {string} to — Recipient phone (international format)
+ * @param {string} audioUrl — Public URL of the audio file (mp3/ogg)
+ * @param {string} phoneNumberId — WhatsApp Business phone number ID
+ * @param {string} accessToken — Meta access token
+ */
+async function sendAudio(to, audioUrl, phoneNumberId, accessToken) {
+  const url = `${GRAPH_API}/${phoneNumberId}/messages`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to,
+        type: 'audio',
+        audio: { link: audioUrl },
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('[WA SendAudio] Error:', data.error?.message || JSON.stringify(data));
+      return { success: false, error: data.error?.message || 'Unknown error' };
+    }
+    return { success: true, messageId: data.messages?.[0]?.id };
+  } catch (err) {
+    console.error('[WA SendAudio] Network error:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+module.exports = { sendMessage, sendImage, sendVideo, sendAudio, markAsRead, toInternational };

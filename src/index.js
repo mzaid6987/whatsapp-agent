@@ -13,7 +13,7 @@ const { WebSocketServer } = require('ws');
 const http = require('http');
 const hybrid = require('./hybrid');
 const { webhookVerify, webhookHandler, setBroadcast } = require('./whatsapp/webhook');
-const { sendMessage, toInternational } = require('./whatsapp/sender');
+const { sendMessage, sendAudio, toInternational } = require('./whatsapp/sender');
 
 // DB modules
 const { initDb, getDb } = require('./db');
@@ -1533,12 +1533,94 @@ app.all('/deploy', (req, res) => {
   }
 });
 
+// ---- SILENT FOLLOW-UP SCHEDULER ----
+// Sends a one-time voice note follow-up after 3 minutes of customer silence
+const FOLLOWUP_INTERVAL_MS = 30 * 1000;   // Check every 30 seconds
+const FOLLOWUP_SILENCE_MIN = 3;            // Trigger after 3 minutes silent
+const FOLLOWUP_VOICE_FILE = 'followup-voice.mp3';
+const SILENT_EXCLUDE_STATES_FU = ['ORDER_CONFIRMED', 'CANCEL_AFTER_CONFIRM', 'COMPLAINT', 'IDLE'];
+
+function startFollowUpScheduler() {
+  console.log('[FOLLOWUP] Scheduler started — checking every 30s for 3min+ silent chats');
+
+  setInterval(async () => {
+    try {
+      const db = getDb();
+      const accessToken = settingsModel.get('meta_whatsapp_token', '');
+      const phoneNumberId = settingsModel.get('meta_phone_number_id', '');
+      const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
+      if (!accessToken || !phoneNumberId) return;
+
+      // Get all active conversations with last outgoing message
+      const convos = db.prepare(`
+        SELECT c.id, c.state, c.spam_flag, c.complaint_flag, c.needs_human,
+               c.followup_sent, cu.phone,
+               (SELECT direction FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_direction,
+               (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_time
+        FROM conversations c
+        JOIN customers cu ON cu.id = c.customer_id
+        WHERE c.is_active = 1
+      `).all();
+
+      const now = Date.now();
+
+      for (const c of convos) {
+        // Skip: already followed up, spam, complaint, human takeover, excluded states
+        if (c.followup_sent) continue;
+        if (c.spam_flag || c.complaint_flag || c.needs_human) continue;
+        if (SILENT_EXCLUDE_STATES_FU.includes(c.state)) continue;
+        if (c.last_msg_direction !== 'outgoing') continue;
+        if (!c.last_msg_time) continue;
+
+        // Calculate silence duration
+        const timeStr = c.last_msg_time.includes('+') ? c.last_msg_time : c.last_msg_time + '+05:00';
+        const lastTime = new Date(timeStr).getTime();
+        if (isNaN(lastTime)) continue;
+
+        const minutesSilent = (now - lastTime) / (1000 * 60);
+        if (minutesSilent < FOLLOWUP_SILENCE_MIN) continue;
+
+        // Send voice note follow-up (one time only)
+        const intlPhone = toInternational(c.phone);
+        const audioUrl = `${serverUrl}/media/${FOLLOWUP_VOICE_FILE}`;
+
+        console.log(`[FOLLOWUP] Sending voice note to ${c.phone} (silent ${Math.round(minutesSilent)}min, conv #${c.id})`);
+        const result = await sendAudio(intlPhone, audioUrl, phoneNumberId, accessToken);
+
+        if (result.success) {
+          // Mark as followed up so it won't send again
+          db.prepare('UPDATE conversations SET followup_sent = 1 WHERE id = ?').run(c.id);
+          // Save message to DB
+          messageModel.create(c.id, 'outgoing', 'bot', '[Voice Follow-up Sent]', { source: 'followup_scheduler' });
+          conversationModel.updateLastMessage(c.id, '[Voice Follow-up]');
+          broadcast({ type: 'new_message', conversationId: c.id });
+          console.log(`[FOLLOWUP] Sent successfully to ${c.phone}`);
+        } else {
+          console.error(`[FOLLOWUP] Failed for ${c.phone}:`, result.error);
+        }
+      }
+    } catch (err) {
+      console.error('[FOLLOWUP] Scheduler error:', err.message);
+    }
+  }, FOLLOWUP_INTERVAL_MS);
+}
+
 // Initialize DB (async) then start server
 (async () => {
   try {
     await initDb();
     seedAll();
+
+    // Add followup_sent column if not exists
+    try {
+      getDb().prepare("ALTER TABLE conversations ADD COLUMN followup_sent INTEGER DEFAULT 0").run();
+      console.log('[DB] Added followup_sent column');
+    } catch (e) { /* column already exists */ }
+
     console.log('[DB] Ready');
+
+    // Start follow-up scheduler
+    startFollowUpScheduler();
 
     const PORT = process.env.PORT || 3010;
     server.listen(PORT, '0.0.0.0', () => {
