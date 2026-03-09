@@ -298,6 +298,7 @@ async function webhookHandler(req, res) {
       const convo = conversationModel.getOrCreateActive(customer.id, 'nureva');
       messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
       conversationModel.updateLastMessage(convo.id, messageText);
+      conversationModel.setAdminUnread(convo.id, true);
       console.log('[WA Webhook] Bot disabled, message saved:', fromPhone);
       _broadcast({
         type: 'new_message',
@@ -358,6 +359,7 @@ async function webhookHandler(req, res) {
       if (convo && convo.spam_flag) {
         messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
         conversationModel.updateLastMessage(convo.id, messageText);
+        conversationModel.setAdminUnread(convo.id, true);
         console.log(`[WA] ${fromPhone}: "${messageText}" — blocked (spam_flag), skipping bot reply`);
         _broadcast({
           type: 'new_message',
@@ -372,6 +374,7 @@ async function webhookHandler(req, res) {
         // Save message but don't reply — human agent will handle
         messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
         conversationModel.updateLastMessage(convo.id, messageText);
+        conversationModel.setAdminUnread(convo.id, true);
         console.log(`[WA] ${fromPhone}: "${messageText}" — needs_human, skipping bot reply`);
         _broadcast({
           type: 'new_message',
