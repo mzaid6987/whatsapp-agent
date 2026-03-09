@@ -629,6 +629,49 @@ app.get('/api/conversations/:id/messages', requireAuth, (req, res) => {
   }
 });
 
+// Get order for a conversation
+app.get('/api/conversations/:id/order', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    const convId = parseInt(req.params.id);
+    const order = db.prepare('SELECT * FROM orders WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 1').get(convId);
+    if (!order) return res.json(null);
+    order.items = order.items_json ? JSON.parse(order.items_json) : [];
+    res.json(order);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Update order details
+app.patch('/api/orders/:id', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    const id = parseInt(req.params.id);
+    const { customer_name, customer_phone, delivery_phone, customer_city, customer_address, items, grand_total, notes, status } = req.body;
+    const updates = [];
+    const params = [];
+    if (customer_name !== undefined) { updates.push('customer_name = ?'); params.push(customer_name); }
+    if (customer_phone !== undefined) { updates.push('customer_phone = ?'); params.push(customer_phone); }
+    if (delivery_phone !== undefined) { updates.push('delivery_phone = ?'); params.push(delivery_phone); }
+    if (customer_city !== undefined) { updates.push('customer_city = ?'); params.push(customer_city); }
+    if (customer_address !== undefined) { updates.push('customer_address = ?'); params.push(customer_address); }
+    if (items !== undefined) { updates.push('items_json = ?'); params.push(JSON.stringify(items)); }
+    if (grand_total !== undefined) { updates.push('grand_total = ?'); params.push(grand_total); }
+    if (notes !== undefined) { updates.push('notes = ?'); params.push(notes); }
+    if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+    if (updates.length === 0) return res.json({ ok: true });
+    updates.push("updated_at = datetime('now','localtime')");
+    params.push(id);
+    db.prepare(`UPDATE orders SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);
+    if (order) order.items = order.items_json ? JSON.parse(order.items_json) : [];
+    res.json(order);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Mark conversation as read by admin
 app.put('/api/conversations/:id/read', requireAuth, (req, res) => {
   try {

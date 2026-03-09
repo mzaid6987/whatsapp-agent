@@ -382,6 +382,86 @@ async function openChat(chatId) {
 
   // Scroll to bottom
   msgsEl.scrollTop = msgsEl.scrollHeight;
+
+  // Load order for this conversation
+  loadOrderPanel(chatId);
+}
+
+let _currentOrder = null;
+
+async function loadOrderPanel(chatId) {
+  const panel = document.getElementById('orderPanel');
+  try {
+    const order = await api(`/api/conversations/${chatId}/order`);
+    if (!order) { panel.style.display = 'none'; _currentOrder = null; return; }
+    _currentOrder = order;
+    panel.style.display = 'block';
+    document.getElementById('orderEditForm').style.display = 'none';
+    document.getElementById('orderView').style.display = 'block';
+    document.getElementById('orderEditBtn').textContent = 'Edit';
+
+    document.getElementById('ovOrderId').textContent = order.order_id || '-';
+    document.getElementById('ovStatus').textContent = (order.status || '').toUpperCase();
+    document.getElementById('ovName').textContent = order.customer_name || '-';
+    document.getElementById('ovPhone').textContent = order.customer_phone || '-';
+    document.getElementById('ovCity').textContent = order.customer_city || '-';
+    document.getElementById('ovAddress').textContent = order.customer_address || '-';
+    const items = order.items || [];
+    document.getElementById('ovItems').textContent = items.map(i => `${i.name || i.short} x${i.qty || 1} (Rs.${i.price})`).join(', ') || '-';
+    document.getElementById('ovTotal').textContent = `Rs.${order.grand_total || 0}`;
+
+    const badge = document.getElementById('orderStatusBadge');
+    const statusColors = { confirmed:'#16A34A', processing:'#D97706', shipped:'#2563EB', delivered:'#059669', returned:'#DC2626', cancelled:'#9CA3AF' };
+    badge.textContent = (order.status || '').toUpperCase();
+    badge.style.background = (statusColors[order.status] || '#888') + '20';
+    badge.style.color = statusColors[order.status] || '#888';
+  } catch (e) {
+    panel.style.display = 'none';
+    _currentOrder = null;
+  }
+}
+
+function toggleOrderEdit() {
+  if (!_currentOrder) return;
+  const view = document.getElementById('orderView');
+  const form = document.getElementById('orderEditForm');
+  const btn = document.getElementById('orderEditBtn');
+  if (form.style.display === 'none') {
+    // Show edit form
+    document.getElementById('oeName').value = _currentOrder.customer_name || '';
+    document.getElementById('oePhone').value = _currentOrder.customer_phone || '';
+    document.getElementById('oeCity').value = _currentOrder.customer_city || '';
+    document.getElementById('oeAddress').value = _currentOrder.customer_address || '';
+    document.getElementById('oeTotal').value = _currentOrder.grand_total || 0;
+    document.getElementById('oeStatus').value = _currentOrder.status || 'confirmed';
+    view.style.display = 'none';
+    form.style.display = 'block';
+    btn.textContent = 'Cancel';
+  } else {
+    view.style.display = 'block';
+    form.style.display = 'none';
+    btn.textContent = 'Edit';
+  }
+}
+
+async function saveOrder() {
+  if (!_currentOrder) return;
+  try {
+    const updated = await api(`/api/orders/${_currentOrder.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        customer_name: document.getElementById('oeName').value,
+        customer_phone: document.getElementById('oePhone').value,
+        customer_city: document.getElementById('oeCity').value,
+        customer_address: document.getElementById('oeAddress').value,
+        grand_total: parseInt(document.getElementById('oeTotal').value) || 0,
+        status: document.getElementById('oeStatus').value,
+      })
+    });
+    if (updated) loadOrderPanel(currentChatId);
+  } catch (e) {
+    alert('Save error: ' + e.message);
+  }
 }
 
 function closeChatView() {
