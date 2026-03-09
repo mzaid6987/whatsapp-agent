@@ -5,7 +5,8 @@
  * Handles: phone numbers, cities, regions, complaints, yes/no, product numbers
  */
 
-const { extractPhone, validatePhone, extractCity, extractAllCities, isRegion, detectProduct, detectAllProducts, detectRuralAddress } = require('./extractors');
+const { extractPhone, validatePhone, extractCity, extractAllCities, isRegion, detectProduct, detectAllProducts, detectRuralAddress, extractArea, extractHouse, extractStreet, extractLandmark } = require('./extractors');
+const { matchArea } = require('./city-areas');
 const { PRODUCTS } = require('./data');
 
 // ============= COMPLAINT DETECTION =============
@@ -595,6 +596,58 @@ function preCheck(message, currentState, collected, state) {
     }
   }
 
+  // 4b-CODE: CODE-FIRST ADDRESS EXTRACTION — extract address parts in code, skip AI
+  // Runs all extractors on customer's message. If ANY part found, return it.
+  // This handles 70-80% of address responses without AI cost.
+  if (currentState === 'COLLECT_ADDRESS' && state && !state.address_confirming) {
+    const ap = collected.address_parts || {};
+    const city = collected.city || null;
+    const parts = {};
+    let foundAny = false;
+
+    // Run all extractors on the raw message
+    const detectedArea = extractArea(msg, city) || (city ? matchArea(l, city) : null);
+    const detectedStreet = extractStreet(msg);
+    const detectedHouse = extractHouse(msg);
+    const detectedLandmark = extractLandmark(msg);
+
+    // "nahi pata" / "number nahi" / "pata nahi" for current step → set nahi_pata
+    const isRefusal = /^(nahi?|nhi|no|ni|nope|na+h?|pata?\s*nahi?|nahi?\s*pata?|nahi?\s*he|number\s*nahi?|nahi?\s*number|ghar\s*(he|hai)\s*bas)\s*[.!]?\s*$/i.test(l);
+
+    // Fill only MISSING parts (don't overwrite existing)
+    if (!ap.area && detectedArea) { parts.area = detectedArea; foundAny = true; }
+    if (!ap.street && detectedStreet) { parts.street = detectedStreet; foundAny = true; }
+    if (!ap.house && detectedHouse) { parts.house = detectedHouse; foundAny = true; }
+    if (!ap.landmark && detectedLandmark) { parts.landmark = detectedLandmark; foundAny = true; }
+
+    // Handle refusal for current missing field
+    if (isRefusal) {
+      if (ap.area && !ap.street) { parts.street = 'nahi_pata'; foundAny = true; }
+      else if (ap.area && ap.street && !ap.house) { parts.house = 'nahi_pata'; foundAny = true; }
+      else if (ap.area && (ap.house || ap.house === 'nahi_pata') && !ap.landmark) { parts.landmark = 'nahi_pata'; foundAny = true; }
+    }
+
+    // Short message (1-3 words) with no extraction and no refusal = likely area name or landmark
+    // If we're waiting for area and message is short text → try as area name directly
+    const wordCount = l.trim().split(/\s+/).length;
+    if (!foundAny && !isRefusal && wordCount <= 4 && /^[a-z\s]+$/i.test(l.trim())) {
+      if (!ap.area) {
+        // Short text during area step → assume it's area name
+        parts.area = msg.trim();
+        foundAny = true;
+      } else if (ap.area && !ap.landmark && (ap.house || ap.house === 'nahi_pata')) {
+        // Have area+house, waiting for landmark → assume short text is landmark
+        parts.landmark = msg.trim();
+        foundAny = true;
+      }
+    }
+
+    if (foundAny) {
+      return { intent: 'address_part_extracted', extracted: { address_parts: parts } };
+    }
+    // If nothing found, fall through to AI
+  }
+
   // 4b. ACKNOWLEDGMENT in collection states — "ok", "acha", "theek", "hmm" → re-ask current field
   // Also: "order krna he", "order karna hai" during collection = just acknowledging, re-ask field
   if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_ADDRESS', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {
@@ -793,7 +846,7 @@ function preCheck(message, currentState, collected, state) {
   {
     const hasNameField = /\b(na+me?|naam)\b/i.test(l);
     const hasPhoneField = /\b(number|phone|mobile|whatsapp|nmbr|nomber)\b/i.test(l);
-    const hasAddressField = /\b(address|city|mohall?ah?|tehsil|tahseel|zilla|zilah|district|gali|street|sector|famous\s*jagah?|mashh?oor)\b/i.test(l);
+    const hasAddressField = /\b(addre(?:ss|es|s|e)|adre(?:ss|es|s|e)?|adrees|city|mohall?ah?|tehsil|tahseel|zilla|zilah|district|gali|street|sector|famous\s*jagah?|mashh?oor)\b/i.test(l);
     // Also check if a known city name is in the message (even without "city:" label)
     const hasCityInMsg = extractCity(msg) !== null;
     const fieldsMentioned = [hasNameField, hasPhoneField, hasAddressField || hasCityInMsg].filter(Boolean).length;
@@ -886,8 +939,8 @@ function preCheck(message, currentState, collected, state) {
       const bulkCity = extractCity(msg);
       if (bulkCity) extracted.city = bulkCity;
 
-      // Address text — "address:", "mohallah:", "gali:", etc. (separator REQUIRED to avoid matching "address pe bhi call")
-      const addrMatch = msg.match(/\baddre(?:ss|es|s)\s*[:\.\-=]\s*(.+)/i);
+      // Address text — "address:", "addrees:", "adres:", "mohallah:", "gali:", etc. (separator REQUIRED to avoid matching "address pe bhi call")
+      const addrMatch = msg.match(/\b(?:addre(?:ss|es|s|e)|adre(?:ss|es|s|e)?|adrees)\s*[:\.\-=]\s*(.+)/i);
       if (addrMatch) {
         let addrText = addrMatch[1].trim().split(/\n/)[0].trim();
         // Strip everything from "City :" / "Phone :" / "Number :" onwards (label + value)

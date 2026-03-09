@@ -237,6 +237,11 @@ YEH RURAL AREA HAI LEKIN CUSTOMER GHAR PE DELIVERY CHAHTA HAI:
 - Landmark/mashoor jagah: koi mashoor jagah ka naam chahiye — masjid, school, bank, petrol pump ya dukaan.
 - KABHI "beshumar" word mat use. HAMESHA "mashoor" likho.
 
+PEHLE SE COLLECTED FIELDS DUBARA MAT POOCH (CRITICAL):
+- Upar "Collected so far" mein jo fields filled hain — DUBARA MAT POOCH.
+- Agar customer ek message mein saari info de → SAARE parts extract kar.
+- "btaya to", "bta dea", "yehi he" = frustrated hai → accept karo, missing = "nahi_pata".
+
 DETECT INTENT: hamesha "address_info" return kar.
 extracted mein address_parts object daal:
 {"address_parts":{"area":"...","street":"...","house":"...","landmark":"..."}}
@@ -267,6 +272,10 @@ YEH RURAL/GAON ADDRESS HAI — IMPORTANT RULES:
 - KABHI internal terms mat use (landmark, delivery point). Customer ko SEEDHA pooch: "Qareeb koi mashoor jagah — masjid, school, dukaan?"
 - KABHI "beshumar" word mat use. HAMESHA "mashoor" likho.
 - Response CHHOTA aur NATURAL rakh — 1 sentence. Internal logic explain mat kar.
+
+PEHLE SE COLLECTED FIELDS DUBARA MAT POOCH (CRITICAL):
+- Upar "Collected so far" mein jo fields filled hain — DUBARA MAT POOCH.
+- "btaya to", "bta dea", "yehi he" = frustrated hai → accept karo, missing = "nahi_pata".
 
 DETECT INTENT: hamesha "address_info" return kar.
 extracted mein address_parts object daal:
@@ -329,6 +338,16 @@ CUSTOMER KO KABHI FORCE MAT KARO (SABSE IMPORTANT RULE):
 - "yeh address hai", "yeah dress he", "yehi hai" → accept karo, missing = "nahi_pata".
 - Agar customer baar baar wahi baat keh raha hai → FORCE mat karo. Jo hai accept karo.
 - Customer ko FRUSTRATE mat karo block/gali/street pucho pucho kar ke. Agar unhone area + koi reference de diya to KAAFI hai.
+
+PEHLE SE COLLECTED FIELDS DUBARA MAT POOCH (CRITICAL):
+- Upar "Collected so far" mein jo fields already filled hain (area, street, house, landmark) — woh DUBARA MAT POOCH.
+- Sirf NEXT MISSING field pooch. Agar area set hai → street pooch. Agar street set hai → house pooch. Agar house set hai → landmark pooch.
+- Agar customer ek message mein SAARE parts de (e.g. "Gulshan block 5 house 3 near masjid") → SAARE extract kar ek saath. Koi skip mat karo.
+- KABHI naam, phone, city yahan mat pooch — woh pehle collect ho chuke hain.
+
+FRUSTRATION DETECTION:
+- "btaya to", "bta dea", "likh dea", "yehi he jo dea", "dea he na" = customer frustrated hai. Jo hai accept karo, missing = "nahi_pata".
+- Agar 2+ messages mein customer wahi info repeat kar raha hai → accept karo, aage badho.
 
 DETECT INTENT: hamesha "address_info" return kar.
 extracted: {"address_parts":{"area":"...","street":"...","house":"...","landmark":"..."}}

@@ -13,7 +13,7 @@ const { composePrompt } = require('../ai/prompt-composer');
 const { chat, AI_MODEL_NAME, AI_PRICING } = require('../ai/claude');
 const { getHonorific, PRODUCTS, deliveryTime, productList } = require('./data');
 const { fillTemplate } = require('./templates');
-const { buildAddressString, validatePhone, extractCity, extractAllCities, extractPhone, extractArea, isLikelyName, hasAddressKeywords, detectProduct } = require('./extractors');
+const { buildAddressString, validatePhone, extractCity, extractAllCities, extractPhone, extractArea, extractHouse, extractStreet, extractLandmark, isLikelyName, hasAddressKeywords, detectProduct } = require('./extractors');
 const { getAreaSuggestions, matchArea } = require('./city-areas');
 const { getDb } = require('../db');
 
@@ -1149,26 +1149,22 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
 
       // Check address completeness
       const hasArea = !!ap.area;
-      const hasStreet = ap.street && ap.street !== 'nahi_pata';
       const hasHouse = ap.house && ap.house !== 'nahi_pata';
       const houseUnknown = ap.house === 'nahi_pata';
       const hasLandmark = !!ap.landmark;
       const isRural = !!state._is_rural || !!state.collected?._is_rural;
       const isRuralHome = !!state._rural_home_delivery || !!state.collected?._rural_home_delivery;
       const hasZilla = !!ap.zilla;
-      // Rural home delivery = full address + zilla (like urban but with zilla)
+      // Rural home delivery = full address + zilla
       // Rural TCS = area + landmark(delivery point) + zilla
-      // Urban detailed (area + street + house) = complete without landmark — don't force customer
-      // Urban basic (area + house but no street) = need landmark for rider reference
+      // Urban = area + house + landmark (landmark always required)
       const addrComplete = isRural
         ? (isRuralHome
           ? (hasArea && (hasHouse || houseUnknown) && hasLandmark && hasZilla)
           : (hasArea && hasLandmark && hasZilla))
-        : (hasArea && (hasHouse || houseUnknown) && (hasLandmark || (hasStreet && hasHouse)));
+        : (hasArea && (hasHouse || houseUnknown) && hasLandmark);
 
       if (addrComplete) {
-        // Address complete → confirm. Fill missing landmark if we're skipping it
-        if (!ap.landmark) ap.landmark = 'nahi_pata';
         state.address_confirming = true;
         const fullAddrParts = buildAddressString(ap, state.collected.city);
         const cityLabel = state.collected.city || '';
@@ -1723,6 +1719,29 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       }
     }
 
+    // RESCUE EXTRACTION — AI may miss parts that code extractors can find in the raw message
+    // Run code extractors on customer message and fill any gaps AI left
+    if (state.current === 'COLLECT_ADDRESS' && !state.address_confirming) {
+      const ap = state.collected.address_parts;
+      const city = state.collected.city;
+      if (!ap.area) {
+        const rescueArea = extractArea(message, city);
+        if (rescueArea) { ap.area = rescueArea; console.log(`[Address Rescue] Found area: ${rescueArea}`); }
+      }
+      if (!ap.street) {
+        const rescueStreet = extractStreet(message);
+        if (rescueStreet) { ap.street = rescueStreet; console.log(`[Address Rescue] Found street: ${rescueStreet}`); }
+      }
+      if (!ap.house) {
+        const rescueHouse = extractHouse(message);
+        if (rescueHouse) { ap.house = rescueHouse; console.log(`[Address Rescue] Found house: ${rescueHouse}`); }
+      }
+      if (!ap.landmark) {
+        const rescueLandmark = extractLandmark(message);
+        if (rescueLandmark) { ap.landmark = rescueLandmark; console.log(`[Address Rescue] Found landmark: ${rescueLandmark}`); }
+      }
+    }
+
     // "Rider call krle" / "bas itna he" = customer wants to stop address collection → accept as-is
     if (state.current === 'COLLECT_ADDRESS' && !state.address_confirming) {
       const addrDoneSignal = /\b(rider\s*(call|aa|a\s*kr|ajaye|aa\s*jaye|ko\s*bol|phone)|bas\s*(itna|yahi|yehi)|call\s*kr\s*(le|lena|do|dena)|aa\s*kr\s*(call|puch|pooch)|vaha\s*aa|wahan\s*aa|address\s*(bas|itna|yahi))\b/i.test(message);
@@ -1751,7 +1770,6 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     if (state.current === 'COLLECT_ADDRESS' && !state.address_confirming) {
       const ap = state.collected.address_parts;
       const hasArea = !!ap.area;
-      const hasStreet = ap.street && ap.street !== 'nahi_pata';
       const hasHouse = ap.house && ap.house !== 'nahi_pata';
       const houseUnknown = ap.house === 'nahi_pata';
       const hasLandmark = !!ap.landmark;
@@ -1760,21 +1778,16 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const hasZilla = !!ap.zilla;
       // Rural home delivery = full address + zilla
       // Rural TCS = area + landmark(delivery point) + zilla
-      // Urban detailed (area + street + house) = complete without landmark — don't force customer
-      // Urban basic (area + house but no street) = need landmark for rider reference
+      // Urban = area + house + landmark (landmark always required)
       const addrComplete = isRural
         ? (isRuralHome
           ? (hasArea && (hasHouse || houseUnknown) && hasLandmark && hasZilla)
           : (hasArea && hasLandmark && hasZilla))
-        : (hasArea && (hasHouse || houseUnknown) && (hasLandmark || (hasStreet && hasHouse)));
+        : (hasArea && (hasHouse || houseUnknown) && hasLandmark);
 
       if (addrComplete) {
-        // Fill missing landmark if complete without it (detailed address with street+house)
-        if (!ap.landmark) ap.landmark = 'nahi_pata';
         // Address complete — check if AI asked a relevant follow-up (landmark, street, etc.)
-        // But ONLY if address is NOT detailed (has street+house) — detailed = don't force landmark
-        const isDetailedAddr = hasStreet && hasHouse;
-        const aiAskedFollowUp = !isDetailedAddr && aiResult && aiResult.reply &&
+        const aiAskedFollowUp = aiResult && aiResult.reply &&
           /\b(landmark|mashoor|mashoor\s*jag[ah]|nearby|qareeb|qareebi|nazdee?k|koi\s*(jag[ah]|dukaan|masjid|school|hospital|chowk)|konsa|konsi|kis\s*ke?\s*paas|reference|pehchan)\b/i.test(aiResult.reply);
 
         if (aiAskedFollowUp) {
@@ -2861,6 +2874,19 @@ function handlePreCheck(pre, message, state, storeName, phone) {
         reply: `Haan ${honorific}, ${askedCity} mein bhi delivery hoti hai — ${dt} lagte hain. Delivery ${currentCity} mein karni hai ya ${askedCity} mein?`,
         state: 'COLLECT_CITY'
       };
+    }
+
+    case 'address_part_extracted': {
+      // Code-first address extraction — parts were extracted by pre-check, merge and ask next
+      const extractedParts = pre.extracted?.address_parts || {};
+      const ap = state.collected.address_parts;
+      if (extractedParts.area) ap.area = extractedParts.area;
+      if (extractedParts.street) ap.street = extractedParts.street;
+      if (extractedParts.house) ap.house = extractedParts.house;
+      if (extractedParts.landmark) ap.landmark = extractedParts.landmark;
+      // Check completeness and move to next field or confirm
+      const addrNext = askNextField(state, storeName);
+      return addrNext || { reply: fillTemplate('FALLBACK', vars), state: state.current };
     }
 
     case 'address_enough': {

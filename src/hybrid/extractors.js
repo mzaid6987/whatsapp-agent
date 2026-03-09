@@ -312,13 +312,26 @@ function hasAddressKeywords(msg) {
 function extractHouse(msg) {
   const l = msg.toLowerCase();
   const patterns = [
-    /(?:house|ghar|flat|apartment|apt|plot|makan)\s*(?:no\.?|number|nmbr|#)?\s*(\d+[a-z]?(?:[-\/]\d+)?)/i,
+    // "Flat # B 306", "Flat # 12", "House # A-5", "Plot # ST-8/1"
+    /(?:house|ghar|flat|apartment|apt|plot|makan)\s*#\s*([A-Za-z]{0,3}[\s\-\/]*\d+(?:[-\/]\w+)*)/i,
+    // "Flat No. B306", "House number 45A", standard keyword + number
+    /(?:house|ghar|flat|apartment|apt|plot|makan)\s*(?:no\.?|number|nmbr)?\s*(\d+[a-z]?(?:[-\/]\d+)?)/i,
+    // "No. 45", "# 12", "Number 8"
     /(?:no\.?|number|nmbr|#)\s*(\d+[a-z]?)\s*(?:house|ghar|flat|makan)?/i,
-    /^(\d{1,4}[a-z]?)\s*(?:,|\s|$)/i,  // starts with number like "45, block 3" or "56 k 10/I"
+    // Letter-number combo like "R68", "E-45", "B/13", "2-C" (common Pakistan house numbers)
+    /\b([A-Za-z][-\/]?\d{1,4}[a-z]?)\b/i,
+    /\b(\d{1,4}[-\/][A-Za-z])\b/i,
+    // starts with number like "45, block 3" or "56 k 10/I"
+    /^(\d{1,4}[a-z]?)\s*(?:,|\s|$)/i,
   ];
   for (const re of patterns) {
     const m = msg.match(re);
-    if (m) return m[1];
+    if (m) {
+      let val = m[1].trim();
+      // Don't match street/block/sector prefixes as house numbers (but allow "ST-8/1" style plot numbers)
+      if (/^(st|blk?|sec|ph)\d/i.test(val) && !/[-\/]/.test(val)) continue;
+      return val;
+    }
   }
   return null;
 }
@@ -681,6 +694,6 @@ function smartFill(msg, collected) {
 module.exports = {
   detectProduct, detectAllProducts, extractPhone, validatePhone, extractCity, extractAllCities, isRegion,
   extractNameFromFullMsg, isLikelyName, hasAddressKeywords, smartFill,
-  extractAddressParts, extractArea, classifyLandmark, isHouseUnknown, buildAddressString,
+  extractAddressParts, extractArea, extractHouse, extractStreet, extractLandmark, classifyLandmark, isHouseUnknown, buildAddressString,
   detectRuralAddress,
 };
