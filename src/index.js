@@ -1026,6 +1026,22 @@ app.post('/api/conversations/:id/undo-complaint', requireAuth, (req, res) => {
   }
 });
 
+// Fix conversations with orders but wrong state
+app.post('/api/fix-order-states', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    const fixed = db.prepare(`
+      UPDATE conversations SET state = 'ORDER_CONFIRMED'
+      WHERE id IN (SELECT DISTINCT conversation_id FROM orders)
+      AND state NOT IN ('ORDER_CONFIRMED','CANCEL_AFTER_CONFIRM')
+      AND complaint_flag = 0
+    `).run();
+    res.json({ success: true, fixed: fixed.changes });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ============= COMPLAINTS MANAGEMENT =============
 
 // List all complaints
