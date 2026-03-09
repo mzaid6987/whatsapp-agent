@@ -939,6 +939,10 @@ app.delete('/api/conversations/:id', requireAuth, (req, res) => {
       db.prepare('UPDATE customers SET total_orders = MAX(0, total_orders - ?), total_revenue = MAX(0, total_revenue - ?) WHERE id = ?')
         .run(orderCount, orderTotal, convo.customer_id);
     }
+    // Clear customer name/city so smartfill doesn't prefill stale data
+    if (convo?.customer_id) {
+      db.prepare('UPDATE customers SET name = NULL, city = NULL, last_address = NULL WHERE id = ?').run(convo.customer_id);
+    }
     // Clear in-memory conversation state so bot doesn't remember old data
     if (customerPhone) {
       const { clearConv } = require('./hybrid/index');
