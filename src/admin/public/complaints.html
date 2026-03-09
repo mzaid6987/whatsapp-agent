@@ -146,7 +146,10 @@
 
   <!-- MAIN -->
   <main class="main-content">
-    <h2 style="margin:0 0 16px; font-size:20px;">Complaints Tracker</h2>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+      <h2 style="margin:0; font-size:20px;">Complaints Tracker</h2>
+      <button onclick="backfillComplaints(this)" style="padding:6px 14px; background:#075E54; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:12px;">Sync Old Complaints</button>
+    </div>
 
     <!-- Stats -->
     <div class="comp-stats" id="compStats">
@@ -329,6 +332,20 @@
       const time = d.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true });
       if (isToday) return time;
       return d.toLocaleDateString('en-PK', { day: '2-digit', month: 'short' }) + ' ' + time;
+    }
+
+    async function backfillComplaints(btn) {
+      btn.disabled = true;
+      btn.textContent = 'Syncing...';
+      try {
+        const data = await api('/api/complaints/backfill', { method: 'POST' });
+        btn.textContent = `Done! +${data.added || 0} added`;
+        if (data.added > 0) loadComplaints();
+        setTimeout(() => { btn.textContent = 'Sync Old Complaints'; btn.disabled = false; }, 3000);
+      } catch (e) {
+        btn.textContent = 'Error!';
+        setTimeout(() => { btn.textContent = 'Sync Old Complaints'; btn.disabled = false; }, 2000);
+      }
     }
 
     // Load on page ready
