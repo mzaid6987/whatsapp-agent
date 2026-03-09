@@ -311,7 +311,11 @@ async function openChat(chatId) {
   btnBlock.textContent = conv.spam_flag ? 'Unblock' : 'Block';
   btnBlock.style.color = conv.spam_flag ? '#38a169' : '#e53e3e';
   btnBlock.style.borderColor = conv.spam_flag ? '#38a169' : '#e53e3e';
-  btnComplaint.classList.toggle('hidden', isComplaint);
+  // Complaint button — toggle
+  btnComplaint.classList.remove('hidden');
+  btnComplaint.textContent = isComplaint ? 'Undo Complaint' : 'Complaint';
+  btnComplaint.style.color = isComplaint ? '#D97706' : '#e53e3e';
+  btnComplaint.style.borderColor = isComplaint ? '#D97706' : '#e53e3e';
   if (conv.needs_human) {
     btnTakeOver.classList.add('hidden');
     btnResumeBot.classList.remove('hidden');
@@ -707,21 +711,35 @@ async function markComplaint() {
   if (!currentChatId) return alert('No chat selected');
   const conv = conversations.find(c => c.id === currentChatId);
   if (!conv) return alert('Conversation not found');
-  if (conv.complaint_flag) return alert('Already marked as complaint');
-  if (!confirm('Mark this chat as Complaint?')) return;
-  try {
-    const res = await api('/api/conversations/' + currentChatId + '/complaint', { method: 'POST' });
-    if (res?.success) {
-      conv.complaint_flag = 1;
-      conv.needs_human = true;
-      conv.state = 'COMPLAINT';
-      openChat(currentChatId);
-      renderChatList(conversations);
-    } else {
-      alert('Failed: ' + JSON.stringify(res));
-    }
-  } catch (e) {
-    alert('Error: ' + e.message);
+  const isComplaint = !!(conv.complaint_flag || conv.state === 'COMPLAINT');
+
+  if (isComplaint) {
+    // Undo complaint
+    if (!confirm('Complaint se hatayein?')) return;
+    try {
+      const res = await api('/api/conversations/' + currentChatId + '/undo-complaint', { method: 'POST' });
+      if (res?.success) {
+        conv.complaint_flag = 0;
+        conv.state = res.state || 'IDLE';
+        openChat(currentChatId);
+        renderChatList(conversations);
+      }
+    } catch (e) { alert('Error: ' + e.message); }
+  } else {
+    // Mark as complaint
+    if (!confirm('Complaint mein dalein?')) return;
+    try {
+      const res = await api('/api/conversations/' + currentChatId + '/complaint', { method: 'POST' });
+      if (res?.success) {
+        conv.complaint_flag = 1;
+        conv.needs_human = true;
+        conv.state = 'COMPLAINT';
+        openChat(currentChatId);
+        renderChatList(conversations);
+      } else {
+        alert('Failed: ' + JSON.stringify(res));
+      }
+    } catch (e) { alert('Error: ' + e.message); }
   }
 }
 

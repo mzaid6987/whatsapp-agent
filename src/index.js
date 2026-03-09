@@ -26,6 +26,7 @@ const productModel = require('./db/models/product');
 const settingsModel = require('./db/models/settings');
 const cacheModel = require('./db/models/cache');
 const mediaModel = require('./db/models/media');
+const complaintModel = require('./db/models/complaint');
 const fs = require('fs');
 
 const app = express();
@@ -976,20 +977,53 @@ app.post('/api/conversations/:id/block', requireAuth, (req, res) => {
   }
 });
 
-// Mark conversation as complaint (manual)
+// Mark conversation as complaint (manual) + create complaint tracker entry
 app.post('/api/conversations/:id/complaint', requireAuth, (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const db = getDb();
     db.prepare('UPDATE conversations SET complaint_flag = 1, needs_human = 1, state = ? WHERE id = ?').run('COMPLAINT', id);
+    // Also create complaint tracker entry
+    const existing = complaintModel.findByConversation(id);
+    if (!existing) {
+      const conv = db.prepare('SELECT c.*, cu.name, cu.phone FROM conversations c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE c.id = ?').get(id);
+      if (conv) {
+        const prod = conv.product_json ? JSON.parse(conv.product_json) : null;
+        complaintModel.create({
+          conversation_id: id,
+          customer_id: conv.customer_id,
+          customer_name: conv.name || null,
+          customer_phone: conv.phone || null,
+          product_name: prod?.name || prod?.short || null,
+          description: conv.last_message || null,
+        });
+      }
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
+// Undo complaint — remove complaint flag + delete from tracker
+app.post('/api/conversations/:id/undo-complaint', requireAuth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const db = getDb();
+    db.prepare('UPDATE conversations SET complaint_flag = 0, state = ? WHERE id = ?').run('IDLE', id);
+    // Remove from complaints tracker
+    const complaint = complaintModel.findByConversation(id);
+    if (complaint) {
+      db.prepare('DELETE FROM complaint_remarks WHERE complaint_id = ?').run(complaint.id);
+      db.prepare('DELETE FROM complaints WHERE id = ?').run(complaint.id);
+    }
+    res.json({ success: true, state: 'IDLE' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ============= COMPLAINTS MANAGEMENT =============
-const complaintModel = require('./db/models/complaint');
 
 // List all complaints
 app.get('/api/complaints', requireAuth, (req, res) => {
