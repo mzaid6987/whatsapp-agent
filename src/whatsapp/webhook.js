@@ -516,8 +516,9 @@ async function webhookHandler(req, res) {
             try {
               const sendResult = await sendMessage(_compPhone, _compReply, _compPhoneId, _compToken);
               console.log(`[WA] Complaint number text sent to ${_compPhone}`);
-              // Text already saved by hybrid engine saveMessages — just update last_message
+              // Save complaint text to DB (after voice note — correct order)
               if (sendResult.success && _compConvId) {
+                messageModel.create(_compConvId, 'outgoing', 'bot', _compReply, { source: 'complaint_text' });
                 conversationModel.updateLastMessage(_compConvId, _compReply);
                 _broadcast({ type: 'new_message', conversationId: _compConvId });
               }

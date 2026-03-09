@@ -760,7 +760,8 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       state.messages.push({ role: 'user', content: message });
       state.messages.push({ role: 'assistant', content: reply });
       if (state.messages.length > 10) state.messages = state.messages.slice(-10);
-      saveMessages(dbConv, message, reply, 'template', 'template', state, {
+      // Save ONLY incoming message — bot reply saved later by delayed complaint flow (voice first, then text)
+      saveMessages(dbConv, message, null, 'template', 'template', state, {
         needs_human: true,
         debug: { path: 'PATH0_COMPLAINT_INTERCEPT', state_before: state.current, state_after: 'COMPLAINT', detected_intent: 'complaint', collected: { ...state.collected } },
       });
@@ -1246,7 +1247,9 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
 
       const reply = preResult.reply ? qualityGate(preResult.reply) : null;
       const stateBefore = state.current;
-      saveMessages(dbConv, message, reply || '(media sent)', pre.intent, 'pre-check', state, {
+      // For complaint audio: save only incoming message, bot reply saved by delayed flow in correct order
+      const preReplyToSave = preResult._complaint_audio ? null : (reply || '(media sent)');
+      saveMessages(dbConv, message, preReplyToSave, pre.intent, 'pre-check', state, {
         needs_human: preResult.needs_human || false,
         debug: { path: 'PATH2_PRE_CHECK', intent: pre.intent, extracted: pre.extracted || null, state_before: stateBefore, state_after: preResult.state, collected: { ...state.collected } },
       });
@@ -1265,6 +1268,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
         _media: preResult._media || null,
         _media_batch: preResult._media_batch || null,
+        _complaint_audio: preResult._complaint_audio || false,
       };
     }
   }
@@ -1953,7 +1957,9 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       if (state.messages.length > 10) state.messages = state.messages.slice(-10);
 
       const reply = qualityGate(templateResult.reply);
-      saveMessages(dbConv, message, reply, aiIntent, source, state, {
+      // For complaint audio: save only incoming message, bot reply saved by delayed flow in correct order
+      const replyToSave = templateResult._complaint_audio ? null : reply;
+      saveMessages(dbConv, message, replyToSave, aiIntent, source, state, {
         tokens_in: aiResult.tokens_in, tokens_out: aiResult.tokens_out,
         needs_human: templateResult.needs_human || false,
         debug: { path: 'PATH3_AI_TO_TEMPLATE', state_before: _stateBefore, state_after: templateResult.state, ai_intent: aiIntent, ai_extracted: extracted, ai_raw_response: aiResult, system_prompt: prompt, context_messages: recentMessages, template_used: templateResult.template || null, collected: { ...state.collected } },
