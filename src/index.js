@@ -32,6 +32,65 @@ const fs = require('fs');
 const app = express();
 const server = http.createServer(app);
 
+// ---- SERVER MONITORING ----
+const SERVER_START_TIME = Date.now();
+const errorLog = []; // Keep last 50 errors in memory
+const MAX_ERROR_LOG = 50;
+const requestStats = { total: 0, slow: 0, errors: 0, lastHour: [] };
+
+function logError(type, error) {
+  const entry = {
+    type,
+    message: error.message || String(error),
+    stack: error.stack?.split('\n').slice(0, 3).join('\n'),
+    time: new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' }),
+    timestamp: Date.now()
+  };
+  errorLog.unshift(entry);
+  if (errorLog.length > MAX_ERROR_LOG) errorLog.pop();
+  console.error(`[${type}] ${entry.message}`);
+}
+
+// Catch uncaught exceptions — log but don't crash
+process.on('uncaughtException', (err) => {
+  logError('UNCAUGHT_EXCEPTION', err);
+  console.error('[FATAL] Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  logError('UNHANDLED_REJECTION', reason instanceof Error ? reason : new Error(String(reason)));
+});
+
+// Health check — public, no auth (for UptimeRobot etc.)
+app.get('/health', (req, res) => {
+  const uptime = Date.now() - SERVER_START_TIME;
+  const mem = process.memoryUsage();
+  let dbOk = false;
+  try {
+    getDb().prepare('SELECT 1').get();
+    dbOk = true;
+  } catch (e) { /* db down */ }
+
+  const status = dbOk ? 'ok' : 'degraded';
+  res.status(dbOk ? 200 : 503).json({
+    status,
+    uptime_seconds: Math.floor(uptime / 1000),
+    uptime_human: formatUptime(uptime),
+    memory_mb: Math.round(mem.rss / 1024 / 1024),
+    heap_mb: Math.round(mem.heapUsed / 1024 / 1024),
+    db: dbOk ? 'connected' : 'error',
+    errors_recent: errorLog.length,
+    timestamp: new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })
+  });
+});
+
+function formatUptime(ms) {
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return `${d}d ${h}h ${m}m`;
+}
+
 // WebSocket setup
 const wss = new WebSocketServer({ server, path: '/ws' });
 
@@ -50,6 +109,33 @@ function broadcast(data) {
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Request performance tracking
+app.use((req, res, next) => {
+  const start = Date.now();
+  requestStats.total++;
+  // Track per-hour for last 24h
+  const hourKey = new Date().toISOString().slice(0, 13);
+  const hourEntry = requestStats.lastHour.find(h => h.hour === hourKey);
+  if (hourEntry) hourEntry.count++;
+  else {
+    requestStats.lastHour.push({ hour: hourKey, count: 1 });
+    if (requestStats.lastHour.length > 24) requestStats.lastHour.shift();
+  }
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    if (duration > 3000 && !req.path.includes('/health')) { // > 3s = slow
+      requestStats.slow++;
+      logError('SLOW_REQUEST', new Error(`${req.method} ${req.path} took ${duration}ms`));
+    }
+    if (res.statusCode >= 500) {
+      requestStats.errors++;
+      logError('HTTP_500', new Error(`${req.method} ${req.path} → ${res.statusCode}`));
+    }
+  });
+  next();
+});
 app.use(cookieParser());
 
 // Admin password (from env or default for dev)
@@ -114,6 +200,68 @@ app.get('/api/auth/check', (req, res) => {
   const tokenValid = !!(req.cookies?.auth_token && verifyToken(req.cookies.auth_token));
   const sessionValid = !!(req.session && req.session.authenticated);
   res.json({ authenticated: tokenValid || sessionValid });
+});
+
+// ---- SERVER MONITORING API ----
+app.get('/api/monitoring', requireAuth, (req, res) => {
+  const uptime = Date.now() - SERVER_START_TIME;
+  const mem = process.memoryUsage();
+  let dbOk = false, dbSize = 0;
+  try {
+    getDb().prepare('SELECT 1').get();
+    dbOk = true;
+    // Get DB file size
+    const dbPath = path.join(__dirname, '..', 'data', 'bot.db');
+    if (fs.existsSync(dbPath)) dbSize = Math.round(fs.statSync(dbPath).size / 1024 / 1024 * 10) / 10;
+  } catch (e) { /* */ }
+
+  // Get today's request count from hourly stats
+  const today = new Date().toISOString().slice(0, 10);
+  const todayRequests = requestStats.lastHour
+    .filter(h => h.hour.startsWith(today))
+    .reduce((sum, h) => sum + h.count, 0);
+
+  // Count today's conversations & messages
+  const db = getDb();
+  const todayChats = db.prepare("SELECT COUNT(*) as c FROM conversations WHERE date(created_at) = date('now','localtime')").get()?.c || 0;
+  const todayMessages = db.prepare("SELECT COUNT(*) as c FROM messages WHERE date(created_at) = date('now','localtime')").get()?.c || 0;
+  const totalConvos = db.prepare("SELECT COUNT(*) as c FROM conversations").get()?.c || 0;
+  const totalMessages = db.prepare("SELECT COUNT(*) as c FROM messages").get()?.c || 0;
+
+  res.json({
+    server: {
+      status: dbOk ? 'ok' : 'degraded',
+      uptime_human: formatUptime(uptime),
+      uptime_seconds: Math.floor(uptime / 1000),
+      started_at: new Date(SERVER_START_TIME).toLocaleString('en-PK', { timeZone: 'Asia/Karachi' }),
+      node_version: process.version,
+      platform: process.platform
+    },
+    memory: {
+      rss_mb: Math.round(mem.rss / 1024 / 1024),
+      heap_used_mb: Math.round(mem.heapUsed / 1024 / 1024),
+      heap_total_mb: Math.round(mem.heapTotal / 1024 / 1024),
+      external_mb: Math.round(mem.external / 1024 / 1024)
+    },
+    database: {
+      connected: dbOk,
+      size_mb: dbSize,
+      total_conversations: totalConvos,
+      total_messages: totalMessages
+    },
+    today: {
+      chats: todayChats,
+      messages: todayMessages,
+      api_requests: todayRequests
+    },
+    performance: {
+      total_requests: requestStats.total,
+      slow_requests: requestStats.slow,
+      server_errors: requestStats.errors,
+      hourly_traffic: requestStats.lastHour
+    },
+    errors: errorLog.slice(0, 20)
+  });
 });
 
 // ---- API ROUTES (Real DB) ----
