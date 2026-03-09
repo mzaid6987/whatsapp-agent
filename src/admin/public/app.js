@@ -437,6 +437,8 @@ async function loadOrderPanel(chatId) {
       document.getElementById('ovAddress').textContent = order.customer_address || '-';
       document.getElementById('ovItems').textContent = items.map(i => `${i.name || i.short} x${i.qty || 1} (Rs.${i.price})`).join(', ') || '-';
       document.getElementById('ovTotal').textContent = `Rs.${order.grand_total || 0}`;
+      const srcMap = { bot: 'Bot', admin: 'Admin', human: 'Human' };
+      document.getElementById('ovSource').textContent = srcMap[order.source] || order.source || '-';
     } else {
       strip.style.background = '#fffbeb';
       document.getElementById('orderPanelTitle').textContent = 'INFO';
@@ -463,6 +465,7 @@ async function loadOrderPanel(chatId) {
       document.getElementById('ovAddress').textContent = col.address || (col.address_parts ? Object.values(col.address_parts).filter(Boolean).join(', ') : '-');
       document.getElementById('ovItems').textContent = prodStr;
       document.getElementById('ovTotal').textContent = '-';
+      document.getElementById('ovSource').textContent = '-';
     }
     document.getElementById('orderEditForm').style.display = 'none';
     document.getElementById('orderView').style.display = 'block';
