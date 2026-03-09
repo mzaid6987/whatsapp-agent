@@ -718,6 +718,10 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
     if (st === 'delivered') return '<span class="msg-ticks delivered" title="Delivered">&#10003;&#10003;</span>';
     return '<span class="msg-ticks sent" title="Sent">&#10003;</span>';
   })() : '';
+  // Follow-up badge — show on voice follow-up messages
+  const isFollowUp = m.source === 'followup_scheduler' || (m.content && m.content.includes('Voice Follow-up'));
+  const followUpBadge = isFollowUp ? '<span class="followup-badge">Follow-up 1</span>' : '';
+
   // Silent timer — show on last outgoing message if customer hasn't replied (live from message time)
   let silentTimerHtml = '';
   if (lastMsgConv && isOut && lastMsgConv.last_msg_direction === 'outgoing' && lastMsgConv.last_msg_time) {
@@ -725,16 +729,26 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
     if (!excluded) {
       const liveH = calcSilentHoursLive(m.created_at);
       const is24h = liveH >= 24;
+      const liveMin = liveH * 60;
+      // Follow-up countdown — show time remaining until 3min follow-up voice note
+      let followUpCountdown = '';
+      if (!lastMsgConv.followup_sent && !isFollowUp && liveMin < 3) {
+        const secsLeft = Math.max(0, Math.ceil((3 - liveMin) * 60));
+        const mm = Math.floor(secsLeft / 60);
+        const ss = secsLeft % 60;
+        followUpCountdown = `<div class="followup-countdown" id="followupCountdown" data-time="${m.created_at}">🎤 Follow-up in ${mm}:${ss.toString().padStart(2, '0')}</div>`;
+      }
       const timerText = is24h
         ? `24h+ silent (${formatSilentTimer(liveH)})`
         : `Silent: ${formatSilentTimer(liveH)}`;
-      silentTimerHtml = `<div class="silent-timer-msg${is24h ? '' : ' pending'}" id="silentTimerMsg" data-time="${m.created_at}">${timerText}</div>`;
+      silentTimerHtml = `<div class="silent-timer-msg${is24h ? '' : ' pending'}" id="silentTimerMsg" data-time="${m.created_at}">${timerText}</div>${followUpCountdown}`;
     }
   }
   return `
     <div class="msg-bubble ${bubbleClass}" data-msg-id="${m.id}" data-wa-id="${m.wa_message_id || ''}">
       ${senderLabel ? `<div class="msg-sender ${senderClass}">${senderLabel}${srcBadge}</div>` : ''}
       ${mediaBadge ? `<div style="margin-bottom:4px">${mediaBadge}</div>` : ''}
+      ${followUpBadge}
       <div>${m.content}</div>
       ${feedbackHtml}
       ${tickHtml}
@@ -760,6 +774,25 @@ setInterval(() => {
     }
   }
 }, 30000);
+
+// Follow-up countdown — update every second for live countdown
+setInterval(() => {
+  const cdEl = document.getElementById('followupCountdown');
+  if (!cdEl) return;
+  const msgTime = cdEl.dataset.time;
+  const liveH = calcSilentHoursLive(msgTime);
+  if (liveH === null) return;
+  const liveMin = liveH * 60;
+  const secsLeft = Math.max(0, Math.ceil((3 - liveMin) * 60));
+  if (secsLeft <= 0) {
+    cdEl.textContent = '🎤 Follow-up sending...';
+    cdEl.style.color = '#25D366';
+  } else {
+    const mm = Math.floor(secsLeft / 60);
+    const ss = secsLeft % 60;
+    cdEl.textContent = `🎤 Follow-up in ${mm}:${ss.toString().padStart(2, '0')}`;
+  }
+}, 1000);
 
 // Polling — always runs every 5s (WS may not work on shared hosting)
 // Skip only if WS delivered a real message in last 15s
