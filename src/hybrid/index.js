@@ -733,6 +733,15 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     // Attach DB IDs to state so confirmOrder can use them
     if (dbConv) state._db_conversation_id = dbConv.id;
     if (dbCustomer) state._db_customer_id = dbCustomer.id;
+    // Sync check: if DB conversation is fresh (IDLE) but in-memory has old state,
+    // it means conversation was deleted by admin — reset in-memory to match DB
+    if (dbConv && dbConv.state === 'IDLE' && state.current !== 'IDLE' && state.current !== 'GREETING') {
+      console.log(`[State] DB is IDLE but memory has ${state.current} — resetting (likely admin-deleted)`);
+      delete conversations[phone];
+      state = getOrCreateConv(phone);
+      state._db_conversation_id = dbConv.id;
+      state._db_customer_id = dbCustomer?.id;
+    }
   });
 
   // ============================================
