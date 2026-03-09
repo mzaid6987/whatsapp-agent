@@ -106,32 +106,9 @@ function broadcast(data) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request performance tracking
-app.use((req, res, next) => {
-  const start = Date.now();
-  requestStats.total++;
-  // Track per-hour for last 24h
-  const hourKey = new Date().toISOString().slice(0, 13);
-  const hourEntry = requestStats.lastHour.find(h => h.hour === hourKey);
-  if (hourEntry) hourEntry.count++;
-  else {
-    requestStats.lastHour.push({ hour: hourKey, count: 1 });
-    if (requestStats.lastHour.length > 24) requestStats.lastHour.shift();
-  }
-
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    if (duration > 3000 && !req.path.includes('/health')) { // > 3s = slow
-      requestStats.slow++;
-      logError('SLOW_REQUEST', new Error(`${req.method} ${req.path} took ${duration}ms`));
-    }
-    if (res.statusCode >= 500) {
-      requestStats.errors++;
-      logError('HTTP_500', new Error(`${req.method} ${req.path} → ${res.statusCode}`));
-    }
-  });
-  next();
-});
+// Lightweight request counter (no per-request overhead)
+let _reqCount = 0;
+app.use((req, res, next) => { _reqCount++; next(); });
 app.use(cookieParser());
 
 // Admin password (from env or default for dev)
@@ -211,18 +188,15 @@ app.get('/api/monitoring', requireAuth, (req, res) => {
     if (fs.existsSync(dbPath)) dbSize = Math.round(fs.statSync(dbPath).size / 1024 / 1024 * 10) / 10;
   } catch (e) { /* */ }
 
-  // Get today's request count from hourly stats
-  const today = new Date().toISOString().slice(0, 10);
-  const todayRequests = requestStats.lastHour
-    .filter(h => h.hour.startsWith(today))
-    .reduce((sum, h) => sum + h.count, 0);
-
   // Count today's conversations & messages
-  const db = getDb();
-  const todayChats = db.prepare("SELECT COUNT(*) as c FROM conversations WHERE date(created_at) = date('now','localtime')").get()?.c || 0;
-  const todayMessages = db.prepare("SELECT COUNT(*) as c FROM messages WHERE date(created_at) = date('now','localtime')").get()?.c || 0;
-  const totalConvos = db.prepare("SELECT COUNT(*) as c FROM conversations").get()?.c || 0;
-  const totalMessages = db.prepare("SELECT COUNT(*) as c FROM messages").get()?.c || 0;
+  let todayChats = 0, todayMessages = 0, totalConvos = 0, totalMessages = 0;
+  try {
+    const db = getDb();
+    todayChats = db.prepare("SELECT COUNT(*) as c FROM conversations WHERE date(created_at) = date('now','localtime')").get()?.c || 0;
+    todayMessages = db.prepare("SELECT COUNT(*) as c FROM messages WHERE date(created_at) = date('now','localtime')").get()?.c || 0;
+    totalConvos = db.prepare("SELECT COUNT(*) as c FROM conversations").get()?.c || 0;
+    totalMessages = db.prepare("SELECT COUNT(*) as c FROM messages").get()?.c || 0;
+  } catch (e) { /* DB not ready */ }
 
   res.json({
     server: {
@@ -248,13 +222,11 @@ app.get('/api/monitoring', requireAuth, (req, res) => {
     today: {
       chats: todayChats,
       messages: todayMessages,
-      api_requests: todayRequests
+      api_requests: _reqCount
     },
     performance: {
-      total_requests: requestStats.total,
-      slow_requests: requestStats.slow,
-      server_errors: requestStats.errors,
-      hourly_traffic: requestStats.lastHour
+      total_requests: _reqCount,
+      error_count: errorLog.length
     },
     errors: errorLog.slice(0, 20)
   });
