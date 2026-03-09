@@ -874,6 +874,21 @@ app.get('/api/customers', requireAuth, (req, res) => {
   }
 });
 
+// Toggle human takeover on conversation — bot stops/resumes responding
+app.post('/api/conversations/:id/human', requireAuth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const db = getDb();
+    const convo = db.prepare('SELECT needs_human FROM conversations WHERE id = ?').get(id);
+    if (!convo) return res.status(404).json({ error: 'Not found' });
+    const newVal = convo.needs_human ? 0 : 1;
+    db.prepare('UPDATE conversations SET needs_human = ? WHERE id = ?').run(newVal, id);
+    res.json({ success: true, needs_human: !!newVal });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Toggle block (spam_flag) on conversation — bot stops responding but number not blocked
 app.post('/api/conversations/:id/block', requireAuth, (req, res) => {
   try {
@@ -935,7 +950,7 @@ app.delete('/api/conversations/:id', requireAuth, (req, res) => {
   }
 });
 
-// Toggle customer bot/human
+// Toggle customer bot/human — sets BOTH customer AND active conversation
 app.post('/api/customers/:id/toggle', requireAuth, (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -943,6 +958,11 @@ app.post('/api/customers/:id/toggle', requireAuth, (req, res) => {
     if (customer) {
       const newVal = customer.needs_human ? 0 : 1;
       customerModel.update(id, { needs_human: newVal });
+      // Also update the active conversation so webhook check works
+      const convo = conversationModel.findActive(customer.id);
+      if (convo) {
+        getDb().prepare('UPDATE conversations SET needs_human = ? WHERE id = ?').run(newVal, convo.id);
+      }
       res.json({ success: true, needs_human: !!newVal });
     } else {
       res.status(404).json({ error: 'Customer not found' });

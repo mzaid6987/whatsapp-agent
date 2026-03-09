@@ -456,20 +456,26 @@ async function toggleBlockChat() {
 async function takeOverChat() {
   if (!currentChatId) return;
   const conv = conversations.find(c => c.id === currentChatId);
-  if (conv) {
-    conv.needs_human = true;
-    openChat(currentChatId);
-    renderChatList(conversations);
+  if (conv && !conv.needs_human) {
+    try {
+      await api(`/api/conversations/${currentChatId}/human`, { method: 'POST' });
+      conv.needs_human = true;
+      openChat(currentChatId);
+      renderChatList(conversations);
+    } catch (e) { console.error('Takeover failed:', e); }
   }
 }
 
 async function resumeBot() {
   if (!currentChatId) return;
   const conv = conversations.find(c => c.id === currentChatId);
-  if (conv) {
-    conv.needs_human = false;
-    openChat(currentChatId);
-    renderChatList(conversations);
+  if (conv && conv.needs_human) {
+    try {
+      await api(`/api/conversations/${currentChatId}/human`, { method: 'POST' });
+      conv.needs_human = false;
+      openChat(currentChatId);
+      renderChatList(conversations);
+    } catch (e) { console.error('Resume failed:', e); }
   }
 }
 
