@@ -462,8 +462,8 @@ async function webhookHandler(req, res) {
       // If hasTextReply + no media files → text was already sent above, nothing more to do
     }
 
-    // Send reply back to WhatsApp
-    if (result.reply && !result._media) {
+    // Send reply back to WhatsApp (skip complaint — handled by delayed sequence)
+    if (result.reply && !result._media && !result._complaint_audio) {
       const sendResult = await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
       if (sendResult.success) {
         console.log(`[WA] → ${fromPhone}: "${result.reply.substring(0, 80)}..."`);
@@ -489,20 +489,35 @@ async function webhookHandler(req, res) {
       }
     }
 
-    // Send complaint voice note after text reply
+    // Complaint: delayed voice note (1 min) + number text (1 min 30s)
+    // Runs in background — don't block the response
     if (result._complaint_audio) {
-      try {
-        const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
-        const audioUrl = `${serverUrl}/media/complaint-voice.mp3`;
-        const audioResult = await sendAudio(fromPhone, audioUrl, phoneNumberId, accessToken);
-        if (audioResult.success) {
-          console.log(`[WA] Complaint voice note sent to ${fromPhone}`);
-        } else {
-          console.error(`[WA] Complaint voice note FAILED for ${fromPhone}:`, audioResult.error);
+      const _compPhone = fromPhone;
+      const _compPhoneId = phoneNumberId;
+      const _compToken = accessToken;
+      const _compReply = result.reply;
+      const _compConvId = result.db_conversation_id;
+      setTimeout(async () => {
+        try {
+          // Step 1: Send voice note (after 1 minute)
+          const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
+          const audioUrl = `${serverUrl}/media/complaint-voice.mp3`;
+          const audioResult = await sendAudio(_compPhone, audioUrl, _compPhoneId, _compToken);
+          console.log(`[WA] Complaint voice note ${audioResult.success ? 'sent' : 'FAILED'} to ${_compPhone}`);
+
+          // Step 2: Send number text (30s after voice note)
+          setTimeout(async () => {
+            try {
+              await sendMessage(_compPhone, _compReply, _compPhoneId, _compToken);
+              console.log(`[WA] Complaint number text sent to ${_compPhone}`);
+            } catch (err) {
+              console.error('[WA] Complaint number text error:', err.message);
+            }
+          }, 30 * 1000);
+        } catch (err) {
+          console.error('[WA] Complaint voice note error:', err.message);
         }
-      } catch (err) {
-        console.error('[WA] Complaint voice note error:', err.message);
-      }
+      }, 60 * 1000);
     }
 
     // Handle batch media — send videos for multiple products AFTER text reply
