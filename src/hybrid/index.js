@@ -6,7 +6,7 @@
  * AI handles: GREETING, PRODUCT_INQUIRY, COLLECT_NAME, COLLECT_ADDRESS, HAGGLING
  * Code handles: phone/city validation, complaints, ORDER_SUMMARY, UPSELL, ORDER_CONFIRMED
  */
-const { preCheck, isYes, isNo } = require('./pre-check');
+const { preCheck, isYes, isNo, isComplaint } = require('./pre-check');
 const { handleTemplateState, askNextField, buildOrderSummary, nextMissingState, buildVars, confirmOrder } = require('./state-machine');
 const { qualityGate } = require('./quality-gate');
 const { composePrompt } = require('../ai/prompt-composer');
@@ -734,6 +734,45 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     if (dbConv) state._db_conversation_id = dbConv.id;
     if (dbCustomer) state._db_customer_id = dbCustomer.id;
   });
+
+  // ============================================
+  // PATH 0: COMPLAINT INTERCEPT — runs BEFORE template states
+  // Customer saying "complain" should ALWAYS be caught, even in ORDER_SUMMARY/UPSELL/ORDER_CONFIRMED
+  // ============================================
+  {
+    const cl = message.toLowerCase().trim();
+    if (isComplaint(cl) && !(/\b(to\s*nahi|toh?\s*nahi|nahi\s*ho|nhi\s*ho|hogi|hoga|jayega|jayegi)\b/i.test(cl))) {
+      // Strong complaint (not a quality question like "kharab to nahi hogi?")
+      const vars = buildVars(state, storeName);
+      state.current = 'COMPLAINT';
+      const reply = qualityGate(fillTemplate('COMPLAINT', vars));
+      state.messages.push({ role: 'user', content: message });
+      state.messages.push({ role: 'assistant', content: reply });
+      if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+      saveMessages(dbConv, message, reply, 'template', 'template', state, {
+        needs_human: true,
+        debug: { path: 'PATH0_COMPLAINT_INTERCEPT', state_before: state.current, state_after: 'COMPLAINT', detected_intent: 'complaint', collected: { ...state.collected } },
+      });
+      // Set complaint flag on conversation
+      if (dbConv) {
+        const db = require('../db').getDb();
+        db.prepare('UPDATE conversations SET complaint_flag = 1, needs_human = 1 WHERE id = ?').run(dbConv.id);
+      }
+      saveState(dbConv, state);
+      saveCustomer(dbCustomer, state);
+      return {
+        reply,
+        state: 'COMPLAINT',
+        collected: { ...state.collected },
+        needs_human: true,
+        source: 'template',
+        intent: 'complaint',
+        tokens_in: 0, tokens_out: 0,
+        response_ms: Date.now() - startTime,
+        db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+      };
+    }
+  }
 
   // ============================================
   // PATH 1: Template-only states (zero AI cost)
