@@ -230,7 +230,7 @@
             <span class="comp-name">${esc(c.customer_name || 'Unknown')}</span>
             <span class="comp-phone">${esc(c.customer_phone || '-')}</span>
             <span class="comp-product">${esc(c.product_name || '-')}</span>
-            ${c.bot_replies_after > 0 ? '<span class="comp-response sent">Msg Sent</span>' : '<span class="comp-response pending">Msg Pending</span>'}
+            ${c.bot_complaint_msg > 0 ? '<span class="comp-response sent">Msg Sent</span>' : '<span class="comp-response pending">Msg Pending</span>'}
             <span class="comp-badge badge-${c.status}">${c.status.toUpperCase()}</span>
             <span class="comp-time">${formatTime(c.created_at)}</span>
           </div>

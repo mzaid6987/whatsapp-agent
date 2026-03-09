@@ -25,9 +25,8 @@ function getAll() {
       (SELECT COUNT(*) FROM complaint_remarks WHERE complaint_id = c.id) as remark_count,
       (SELECT remark FROM complaint_remarks WHERE complaint_id = c.id ORDER BY created_at DESC LIMIT 1) as last_remark,
       (SELECT created_at FROM complaint_remarks WHERE complaint_id = c.id ORDER BY created_at DESC LIMIT 1) as last_remark_at,
-      (SELECT COUNT(*) FROM messages WHERE conversation_id = c.conversation_id AND sender = 'bot' AND created_at >= c.created_at) as bot_replies_after,
-      (SELECT COUNT(*) FROM messages WHERE conversation_id = c.conversation_id AND sender = 'human' AND created_at >= c.created_at) as human_replies_after,
-      (SELECT content FROM messages WHERE conversation_id = c.conversation_id AND sender IN ('bot','human') AND created_at >= c.created_at ORDER BY created_at DESC LIMIT 1) as last_reply
+      (SELECT COUNT(*) FROM messages WHERE conversation_id = c.conversation_id AND source IN ('complaint_voice','complaint_text')) as bot_complaint_msg,
+      (SELECT COUNT(*) FROM messages WHERE conversation_id = c.conversation_id AND sender = 'human') as human_replies
     FROM complaints c
     ORDER BY
       CASE c.status WHEN 'active' THEN 0 ELSE 1 END,
