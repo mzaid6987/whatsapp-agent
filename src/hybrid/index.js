@@ -3095,6 +3095,19 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       };
     }
 
+    case 'media_request_all': {
+      // Customer asked "sab ki video" — send all product videos/pics
+      const allMediaType = pre.extracted?.media_type || 'video';
+      state._pending_media_type = null;
+      const allProducts = require('./data').PRODUCTS;
+      const batch = allProducts.map(p => ({ product_id: p.id, type: allMediaType, product_name: p.short }));
+      return {
+        reply: `Yeh lo sab products ki ${allMediaType === 'video' ? 'videos' : 'pictures'} 😊 Pasand aye to bata dein!`,
+        state: state.current,
+        _media_batch: batch
+      };
+    }
+
     case 'media_request': {
       // Customer asked for picture/video — flag for webhook to send media
       const mediaProduct = pre.extracted?.product || state.product;

@@ -237,6 +237,11 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'trust_question' };
   }
 
+  // 0c. "SAB KI" / "ALL" after pending media request — send all product videos/pics
+  if (state && state._pending_media_type && /^(sab|sb|sari|saari|all|sabki|sb\s*ki|sab\s*ki|sari\s*ki)\s*[.!]?\s*$/i.test(l)) {
+    return { intent: 'media_request_all', extracted: { media_type: state._pending_media_type } };
+  }
+
   // 1a. MEDIA REQUEST — "picture dikhao", "photo bhejo", "video dikhao", "image send karo"
   // Also: "X ki video", "X ki picture" (standalone, no action word needed)
   const isMediaReq = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|bhejdo|send|de|do|dena|chahiye)\b/i.test(l) ||
@@ -247,9 +252,15 @@ function preCheck(message, currentState, collected, state) {
     /\bki\s+(video|vidoe|vedio|vid|picture|photo|pic|image|tasveer)\b/i.test(l) ||
     /\b(video|vidoe|vedio|vid|picture|photo|pic|image|tasveer)\s+ki\b/i.test(l);
   if (isMediaReq) {
+    // Check if asking for ALL products' media — "sab ki video dikhao", "sb products ki video"
+    const isAllReq = /\b(sab|sb|sari|saari|all|har\s*ek)\b/i.test(l);
+    const detectedMediaType = /\b(video|vidoe|vedio|vid|reel)\b/i.test(l) ? 'video' : 'image';
+    if (isAllReq) {
+      return { intent: 'media_request_all', extracted: { media_type: detectedMediaType } };
+    }
     // Check if asking for a specific product's media
     const mediaProduct = detectProduct(msg);
-    return { intent: 'media_request', extracted: { product: mediaProduct || null, media_type: /\b(video|vidoe|vedio|vid|reel)\b/i.test(l) ? 'video' : 'image' } };
+    return { intent: 'media_request', extracted: { product: mediaProduct || null, media_type: detectedMediaType } };
   }
 
   // 1a-x. GREETING FAST-PATH — "kya haal", "kaise ho", "salam" + filler like "theek hai"
