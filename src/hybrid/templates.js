@@ -288,7 +288,7 @@ const T = {
   // COMPLAINT
   // ==========================================
   COMPLAINT: [
-    "{honorific}, aapka masla samajh aata hai 🙏 Aap 03701337838 pe WhatsApp message bhej dein — yeh hamari complaint department hai. Monday to Saturday working hours mein InshaAllah aapka issue resolve ho jayega ✅",
+    "{honorific}, aap is number pe WhatsApp message bhej dein — 03701337838 🙏 InshaAllah aapka masla resolve ho jayega ✅",
   ],
   COMPLAINT_FOLLOWUP: [
     "Aap 03701337838 pe WhatsApp message bhej dein, yeh complaint department hai — Monday to Saturday working hours mein InshaAllah aapka issue resolve ho jayega 👍",

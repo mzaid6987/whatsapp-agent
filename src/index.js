@@ -1198,6 +1198,18 @@ const MEDIA_DIR = path.join(__dirname, '..', 'uploads', 'media');
 // Ensure media directory exists
 if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR, { recursive: true });
 
+// Copy bundled assets (complaint voice note etc.) to media dir if not present
+const ASSETS_DIR = path.join(__dirname, '..', 'assets');
+if (fs.existsSync(ASSETS_DIR)) {
+  for (const file of fs.readdirSync(ASSETS_DIR)) {
+    const dest = path.join(MEDIA_DIR, file);
+    if (!fs.existsSync(dest)) {
+      fs.copyFileSync(path.join(ASSETS_DIR, file), dest);
+      console.log(`[Assets] Copied ${file} to media/`);
+    }
+  }
+}
+
 // Serve media files publicly (WhatsApp needs to access these URLs)
 app.use('/media', express.static(MEDIA_DIR));
 

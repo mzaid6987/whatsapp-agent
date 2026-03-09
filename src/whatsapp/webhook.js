@@ -5,7 +5,7 @@
  * POST /webhook — Incoming messages from WhatsApp users
  */
 
-const { sendMessage, sendImage, sendVideo, markAsRead, toInternational } = require('./sender');
+const { sendMessage, sendImage, sendVideo, sendAudio, markAsRead, toInternational } = require('./sender');
 const { transcribeVoice, analyzeImage } = require('./media-handler');
 const hybrid = require('../hybrid');
 const settingsModel = require('../db/models/settings');
@@ -486,6 +486,22 @@ async function webhookHandler(req, res) {
         }
       } else {
         console.error(`[WA] Send failed to ${fromPhone}:`, sendResult.error);
+      }
+    }
+
+    // Send complaint voice note after text reply
+    if (result._complaint_audio) {
+      try {
+        const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
+        const audioUrl = `${serverUrl}/media/complaint-voice.mp3`;
+        const audioResult = await sendAudio(fromPhone, audioUrl, phoneNumberId, accessToken);
+        if (audioResult.success) {
+          console.log(`[WA] Complaint voice note sent to ${fromPhone}`);
+        } else {
+          console.error(`[WA] Complaint voice note FAILED for ${fromPhone}:`, audioResult.error);
+        }
+      } catch (err) {
+        console.error('[WA] Complaint voice note error:', err.message);
       }
     }
 

@@ -778,6 +778,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         needs_human: true,
         source: 'template',
         intent: 'complaint',
+        _complaint_audio: true,
         tokens_in: 0, tokens_out: 0,
         response_ms: Date.now() - startTime,
         db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
@@ -2000,7 +2001,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     // Handle complaint
     if (aiIntent === 'complaint') {
       state.current = 'COMPLAINT';
-      const complaintResult = { reply: fillTemplate('COMPLAINT', buildVars(state, storeName)), state: 'COMPLAINT', needs_human: true };
+      const complaintResult = { reply: fillTemplate('COMPLAINT', buildVars(state, storeName)), state: 'COMPLAINT', needs_human: true, _complaint_audio: true };
       return returnTemplate(complaintResult);
     }
 
@@ -2592,7 +2593,7 @@ function handlePreCheck(pre, message, state, storeName, phone) {
 
     case 'complaint': {
       state.current = 'COMPLAINT';
-      return { reply: fillTemplate('COMPLAINT', vars), state: 'COMPLAINT', needs_human: true };
+      return { reply: fillTemplate('COMPLAINT', vars), state: 'COMPLAINT', needs_human: true, _complaint_audio: true };
     }
 
     case 'trust_question': {
