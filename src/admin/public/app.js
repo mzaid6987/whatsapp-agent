@@ -388,33 +388,74 @@ async function openChat(chatId) {
 }
 
 let _currentOrder = null;
+let _currentConvForOrder = null;
 
 async function loadOrderPanel(chatId) {
   const panel = document.getElementById('orderPanel');
+  const conv = conversations.find(c => c.id === chatId);
+  _currentConvForOrder = conv;
+  panel.style.display = 'block';
+
   try {
     const order = await api(`/api/conversations/${chatId}/order`);
-    if (!order) { panel.style.display = 'none'; _currentOrder = null; return; }
     _currentOrder = order;
-    panel.style.display = 'block';
-    document.getElementById('orderEditForm').style.display = 'none';
-    document.getElementById('orderView').style.display = 'block';
-    document.getElementById('orderEditBtn').textContent = 'Edit';
 
-    document.getElementById('ovOrderId').textContent = order.order_id || '-';
-    document.getElementById('ovStatus').textContent = (order.status || '').toUpperCase();
-    document.getElementById('ovName').textContent = order.customer_name || '-';
-    document.getElementById('ovPhone').textContent = order.customer_phone || '-';
-    document.getElementById('ovCity').textContent = order.customer_city || '-';
-    document.getElementById('ovAddress').textContent = order.customer_address || '-';
-    const items = order.items || [];
-    document.getElementById('ovItems').textContent = items.map(i => `${i.name || i.short} x${i.qty || 1} (Rs.${i.price})`).join(', ') || '-';
-    document.getElementById('ovTotal').textContent = `Rs.${order.grand_total || 0}`;
+    if (order) {
+      // Has order — show order view
+      panel.style.background = '#f0fdf4';
+      document.getElementById('orderPanelTitle').textContent = 'ORDER SUMMARY';
+      document.getElementById('orderPanelTitle').style.color = '#16A34A';
+      document.getElementById('orderEditForm').style.display = 'none';
+      document.getElementById('orderView').style.display = 'block';
+      document.getElementById('orderEditBtn').textContent = 'Edit';
+      document.getElementById('orderEditBtn').style.display = '';
+      document.getElementById('orderCreateBtn').style.display = 'none';
 
-    const badge = document.getElementById('orderStatusBadge');
-    const statusColors = { confirmed:'#16A34A', processing:'#D97706', shipped:'#2563EB', delivered:'#059669', returned:'#DC2626', cancelled:'#9CA3AF' };
-    badge.textContent = (order.status || '').toUpperCase();
-    badge.style.background = (statusColors[order.status] || '#888') + '20';
-    badge.style.color = statusColors[order.status] || '#888';
+      document.getElementById('ovOrderId').textContent = order.order_id || '-';
+      document.getElementById('ovName').textContent = order.customer_name || '-';
+      document.getElementById('ovPhone').textContent = order.customer_phone || '-';
+      document.getElementById('ovCity').textContent = order.customer_city || '-';
+      document.getElementById('ovAddress').textContent = order.customer_address || '-';
+      const items = order.items || [];
+      document.getElementById('ovItems').textContent = items.map(i => `${i.name || i.short} x${i.qty || 1} (Rs.${i.price})`).join(', ') || '-';
+      document.getElementById('ovTotal').textContent = `Rs.${order.grand_total || 0}`;
+
+      const badge = document.getElementById('orderStatusBadge');
+      const statusColors = { confirmed:'#16A34A', processing:'#D97706', shipped:'#2563EB', delivered:'#059669', returned:'#DC2626', cancelled:'#9CA3AF' };
+      badge.textContent = (order.status || '').toUpperCase();
+      badge.style.background = (statusColors[order.status] || '#888') + '20';
+      badge.style.color = statusColors[order.status] || '#888';
+      badge.style.display = '';
+    } else {
+      // No order — show collected info
+      panel.style.background = '#fffbeb';
+      document.getElementById('orderPanelTitle').textContent = 'COLLECTED INFO';
+      document.getElementById('orderPanelTitle').style.color = '#D97706';
+      document.getElementById('orderStatusBadge').style.display = 'none';
+      document.getElementById('orderEditBtn').textContent = 'Edit';
+      document.getElementById('orderEditBtn').style.display = '';
+      document.getElementById('orderCreateBtn').style.display = '';
+      document.getElementById('orderEditForm').style.display = 'none';
+      document.getElementById('orderView').style.display = 'block';
+
+      const col = conv ? JSON.parse(conv.collected_json || '{}') : {};
+      const prod = conv?.product_json ? JSON.parse(conv.product_json) : null;
+      const prods = conv?.products_json ? JSON.parse(conv.products_json) : [];
+
+      document.getElementById('ovOrderId').textContent = '-';
+      document.getElementById('ovName').textContent = col.name || conv?.customer_name || '-';
+      document.getElementById('ovPhone').textContent = col.phone || conv?.phone || '-';
+      document.getElementById('ovCity').textContent = col.city || '-';
+      document.getElementById('ovAddress').textContent = col.address || (col.address_parts ? Object.values(col.address_parts).filter(Boolean).join(', ') : '-');
+      if (prods.length) {
+        document.getElementById('ovItems').textContent = prods.map(p => `${p.short || p.name} (Rs.${p.price})`).join(', ');
+      } else if (prod) {
+        document.getElementById('ovItems').textContent = `${prod.short || prod.name} (Rs.${prod.price})`;
+      } else {
+        document.getElementById('ovItems').textContent = col.product || '-';
+      }
+      document.getElementById('ovTotal').textContent = '-';
+    }
   } catch (e) {
     panel.style.display = 'none';
     _currentOrder = null;
@@ -422,18 +463,35 @@ async function loadOrderPanel(chatId) {
 }
 
 function toggleOrderEdit() {
-  if (!_currentOrder) return;
   const view = document.getElementById('orderView');
   const form = document.getElementById('orderEditForm');
   const btn = document.getElementById('orderEditBtn');
   if (form.style.display === 'none') {
-    // Show edit form
-    document.getElementById('oeName').value = _currentOrder.customer_name || '';
-    document.getElementById('oePhone').value = _currentOrder.customer_phone || '';
-    document.getElementById('oeCity').value = _currentOrder.customer_city || '';
-    document.getElementById('oeAddress').value = _currentOrder.customer_address || '';
-    document.getElementById('oeTotal').value = _currentOrder.grand_total || 0;
-    document.getElementById('oeStatus').value = _currentOrder.status || 'confirmed';
+    // Pre-fill from order or collected info
+    const conv = _currentConvForOrder;
+    const col = conv ? JSON.parse(conv.collected_json || '{}') : {};
+    const prod = conv?.product_json ? JSON.parse(conv.product_json) : null;
+    const prods = conv?.products_json ? JSON.parse(conv.products_json) : [];
+
+    if (_currentOrder) {
+      document.getElementById('oeName').value = _currentOrder.customer_name || '';
+      document.getElementById('oePhone').value = _currentOrder.customer_phone || '';
+      document.getElementById('oeCity').value = _currentOrder.customer_city || '';
+      document.getElementById('oeAddress').value = _currentOrder.customer_address || '';
+      document.getElementById('oeTotal').value = _currentOrder.grand_total || 0;
+      document.getElementById('oeStatus').value = _currentOrder.status || 'confirmed';
+      document.getElementById('oeItems').value = (_currentOrder.items || []).map(i => `${i.name || i.short} x${i.qty || 1} @ Rs.${i.price}`).join(', ');
+    } else {
+      document.getElementById('oeName').value = col.name || conv?.customer_name || '';
+      document.getElementById('oePhone').value = col.phone || conv?.phone || '';
+      document.getElementById('oeCity').value = col.city || '';
+      document.getElementById('oeAddress').value = col.address || (col.address_parts ? Object.values(col.address_parts).filter(Boolean).join(', ') : '');
+      const itemsList = prods.length ? prods : (prod ? [prod] : []);
+      document.getElementById('oeItems').value = itemsList.map(p => `${p.short || p.name} x1 @ Rs.${p.price}`).join(', ');
+      const total = itemsList.reduce((s, p) => s + (p.price || 0), 0);
+      document.getElementById('oeTotal').value = total || '';
+      document.getElementById('oeStatus').value = 'confirmed';
+    }
     view.style.display = 'none';
     form.style.display = 'block';
     btn.textContent = 'Cancel';
@@ -445,20 +503,37 @@ function toggleOrderEdit() {
 }
 
 async function saveOrder() {
-  if (!_currentOrder) return;
   try {
-    const updated = await api(`/api/orders/${_currentOrder.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        customer_name: document.getElementById('oeName').value,
-        customer_phone: document.getElementById('oePhone').value,
-        customer_city: document.getElementById('oeCity').value,
-        customer_address: document.getElementById('oeAddress').value,
-        grand_total: parseInt(document.getElementById('oeTotal').value) || 0,
-        status: document.getElementById('oeStatus').value,
-      })
-    });
-    if (updated) loadOrderPanel(currentChatId);
+    if (_currentOrder) {
+      // Update existing order
+      const updated = await api(`/api/orders/${_currentOrder.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          customer_name: document.getElementById('oeName').value,
+          customer_phone: document.getElementById('oePhone').value,
+          customer_city: document.getElementById('oeCity').value,
+          customer_address: document.getElementById('oeAddress').value,
+          grand_total: parseInt(document.getElementById('oeTotal').value) || 0,
+          status: document.getElementById('oeStatus').value,
+        })
+      });
+      if (updated) loadOrderPanel(currentChatId);
+    } else {
+      // Create new order
+      const result = await api('/api/orders/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          conversation_id: currentChatId,
+          customer_name: document.getElementById('oeName').value,
+          customer_phone: document.getElementById('oePhone').value,
+          customer_city: document.getElementById('oeCity').value,
+          customer_address: document.getElementById('oeAddress').value,
+          grand_total: parseInt(document.getElementById('oeTotal').value) || 0,
+          items_text: document.getElementById('oeItems').value,
+        })
+      });
+      if (result) loadOrderPanel(currentChatId);
+    }
   } catch (e) {
     alert('Save error: ' + e.message);
   }
