@@ -63,9 +63,15 @@ const PRODUCTS = [
     f1:'8 feet tak extend hota hai — fan, ceiling, corners sab reach hote hain',
     f2:'Bendable head hai angled cleaning ke liye, washable microfiber — baar baar use karo',
     desc:'Ceiling fan, AC vents, almari ke upar — sab jagah pohonch jaata hai. Microfiber dust pakad ke rakhta hai, udaata nahi. Dho ke phir se use karo.' },
+
+  { id:11, name:'Mini Pain Relief EMS Butterfly Massager', short:'EMS Massager', price:1099,
+    kw:['massager','massage','ems','butterfly','pain relief','dard','muscle','body massager','kamar dard','back pain','shoulder','gardan','body pain','electric massager','mini massager','titli','pain','relief','relaxation','masajr','masajer'],
+    f1:'EMS technology se muscles ko direct stimulation milti hai — dard mein fori rahat',
+    f2:'Compact butterfly design, multiple intensity levels, portable — kahin bhi use karo',
+    desc:'Kamar, gardan, kandhe, tange — jahan bhi dard ho chipka do. Electric pulses se muscles relax hoti hain. Chota hai pocket mein aa jata hai.' },
 ];
 
-const UPSELL_MAP = { 1:[2,5], 2:[7,1], 3:[6,4], 4:[3,6], 5:[1,7], 6:[3,4], 7:[2], 10:[3,6] };
+const UPSELL_MAP = { 1:[2,5], 2:[7,1], 3:[6,4], 4:[3,6], 5:[1,7], 6:[3,4], 7:[2], 10:[3,6], 11:[9,8] };
 
 // ============= CITIES =============
 const CITIES_FAST = ['karachi','lahore','islamabad','rawalpindi'];

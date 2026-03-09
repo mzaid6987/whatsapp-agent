@@ -18,6 +18,7 @@ function seedProducts(db) {
     { id:8, name:'Compact Portable Nebulizer', short:'Nebulizer', price:1699, kw:'nebulizer,inhaler,breathing,saans', f1:'Silent operation hai, bachy bhi use kar sakte hain', f2:'portable hai USB se charge hota hai', upsell:'[]' },
     { id:9, name:'Knee Support Sleeve', short:'Knee Sleeve', price:1499, kw:'knee,sleeve,support,joint,ghutna', f1:'Breathable lycra material hai', f2:'Buy 1 Get 1 Free — dono knees cover', upsell:'[]' },
     { id:10, name:'Grey Duster Cleaning Kit', short:'Duster Kit', price:1250, kw:'duster,cleaning kit,dust,safai', f1:'8 feet tak extend hota hai', f2:'washable microfiber head hai', upsell:'[3,6]' },
+    { id:11, name:'Mini Pain Relief EMS Butterfly Massager', short:'EMS Massager', price:1099, kw:'massager,massage,ems,butterfly,pain relief,dard,muscle,body massager,kamar dard,back pain', f1:'EMS technology se muscles ko direct stimulation milti hai', f2:'Compact butterfly design, multiple intensity levels, portable', upsell:'[9,8]' },
   ];
 
   const insert = db.prepare(`
@@ -75,6 +76,7 @@ function syncProductPrices(db) {
     8: { price: 1699, name: 'Compact Portable Nebulizer' },
     9: { price: 1499, name: 'Knee Support Sleeve' },
     10: { price: 1250, name: 'Grey Duster Cleaning Kit' },
+    11: { price: 1099, name: 'Mini Pain Relief EMS Butterfly Massager' },
   };
   const update = db.prepare('UPDATE products SET price = ?, name = ? WHERE id = ?');
   let changed = 0;
@@ -86,6 +88,19 @@ function syncProductPrices(db) {
     }
   }
   if (changed > 0) console.log(`[DB] Synced ${changed} products (price+name)`);
+
+  // Insert missing products (e.g. product #11 added after initial seed)
+  const insert = db.prepare('INSERT OR IGNORE INTO products (id, name, short_name, price, keywords, feature_1, feature_2, upsell_with, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const missing = [
+    { id:11, name:'Mini Pain Relief EMS Butterfly Massager', short:'EMS Massager', price:1099, kw:'massager,massage,ems,butterfly,pain relief,dard,muscle,body massager', f1:'EMS technology se muscles ko direct stimulation milti hai', f2:'Compact butterfly design, multiple intensity levels, portable', upsell:'[9,8]' },
+  ];
+  for (const p of missing) {
+    const exists = db.prepare('SELECT id FROM products WHERE id = ?').get(p.id);
+    if (!exists) {
+      insert.run(p.id, p.name, p.short, p.price, p.kw, p.f1, p.f2, p.upsell, p.id);
+      console.log(`[DB] Added missing product: ${p.name}`);
+    }
+  }
 }
 
 function seedAll() {
