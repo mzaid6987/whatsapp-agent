@@ -916,6 +916,59 @@ app.post('/api/conversations/:id/complaint', requireAuth, (req, res) => {
   }
 });
 
+// ============= COMPLAINTS MANAGEMENT =============
+const complaintModel = require('./db/models/complaint');
+
+// List all complaints
+app.get('/api/complaints', requireAuth, (req, res) => {
+  try {
+    const complaints = complaintModel.getAll();
+    const stats = complaintModel.getStats();
+    res.json({ complaints, stats });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Update complaint status
+app.patch('/api/complaints/:id/status', requireAuth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { status } = req.body;
+    if (!['active', 'closed', 'unsolveable', 'refund', 'exchange'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    complaintModel.updateStatus(id, status);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Add remark to complaint
+app.post('/api/complaints/:id/remarks', requireAuth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { remark } = req.body;
+    if (!remark || !remark.trim()) return res.status(400).json({ error: 'Remark required' });
+    const result = complaintModel.addRemark(id, remark.trim());
+    res.json({ success: true, remark: result });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get remarks for a complaint
+app.get('/api/complaints/:id/remarks', requireAuth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const remarks = complaintModel.getRemarks(id);
+    res.json({ remarks });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Delete conversation (keeps orders + auto_templates/learnings)
 app.delete('/api/conversations/:id', requireAuth, (req, res) => {
   try {

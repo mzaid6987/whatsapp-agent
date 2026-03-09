@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complaints — WhatsApp Agent</title>
+  <link rel="stylesheet" href="/admin/style.css">
+  <style>
+    .comp-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 20px; }
+    .comp-stat { background: #fff; border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.08); min-width: 0; }
+    .comp-stat .num { font-size: 22px; font-weight: 700; }
+    .comp-stat .label { font-size: 11px; color: #999; text-transform: uppercase; }
+    .comp-stat.active .num { color: #DC2626; }
+    .comp-stat.closed .num { color: #16A34A; }
+    .comp-stat.unsolveable .num { color: #9333EA; }
+    .comp-stat.refund .num { color: #D97706; }
+    .comp-stat.exchange .num { color: #2563EB; }
+
+    .comp-filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .comp-filter { padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-size: 13px; color: #555; }
+    .comp-filter.active { background: #075E54; color: #fff; border-color: #075E54; }
+
+    .comp-card { background: #fff; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden; border-left: 4px solid #DC2626; }
+    .comp-card.status-closed { border-left-color: #16A34A; }
+    .comp-card.status-unsolveable { border-left-color: #9333EA; }
+    .comp-card.status-refund { border-left-color: #D97706; }
+    .comp-card.status-exchange { border-left-color: #2563EB; }
+
+    .comp-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; gap: 8px; flex-wrap: wrap; }
+    .comp-header:hover { background: #f7f7f7; }
+    .comp-name { font-weight: 700; font-size: 14px; color: #1a1a1a; min-width: 100px; }
+    .comp-phone { font-size: 13px; color: #555; }
+    .comp-product { font-size: 13px; color: #333; flex: 1; min-width: 80px; }
+    .comp-time { font-size: 11px; color: #999; white-space: nowrap; }
+    .comp-badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-active { background: #FEE2E2; color: #DC2626; }
+    .badge-closed { background: #DCFCE7; color: #16A34A; }
+    .badge-unsolveable { background: #F3E8FF; color: #9333EA; }
+    .badge-refund { background: #FEF3C7; color: #D97706; }
+    .badge-exchange { background: #DBEAFE; color: #2563EB; }
+
+    .comp-body { display: none; padding: 0 16px 16px; border-top: 1px solid #f0f0f0; }
+    .comp-body.open { display: block; }
+
+    .comp-desc { background: #f8f9fa; border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 13px; color: #333; line-height: 1.5; }
+    .comp-desc h4 { font-size: 11px; color: #999; text-transform: uppercase; margin: 0 0 4px; }
+
+    .comp-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+    .status-select { padding: 6px 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; }
+
+    .remarks-section { margin-top: 14px; }
+    .remarks-section h4 { font-size: 12px; color: #666; margin: 0 0 8px; }
+    .remark-item { display: flex; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+    .remark-time { color: #999; font-size: 11px; white-space: nowrap; min-width: 110px; }
+    .remark-text { color: #333; }
+    .remark-input { display: flex; gap: 8px; margin-top: 8px; }
+    .remark-input input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; }
+    .remark-input button { padding: 8px 16px; background: #075E54; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+    .remark-input button:hover { background: #054d44; }
+
+    .no-complaints { text-align: center; padding: 60px 20px; color: #999; }
+
+    @media (max-width: 768px) {
+      .comp-stats { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .comp-stats { grid-template-columns: repeat(2, 1fr); }
+      .comp-header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="bot-status on" id="botStatus" onclick="toggleBot()">
+        <span class="bot-status-dot"></span>
+        <span id="botStatusText">BOT ON</span>
+      </div>
+      <span class="header-title">WhatsApp Agent</span>
+    </div>
+    <div class="header-right">
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- NAV BAR -->
+  <nav class="nav-bar">
+    <a href="/admin/" class="nav-item" data-page="chats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/customers.html" class="nav-item" data-page="customers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      Customers
+    </a>
+    <a href="/admin/orders.html" class="nav-item" data-page="orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      Orders
+    </a>
+    <a href="/admin/complaints.html" class="nav-item active" data-page="complaints">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Complaints
+    </a>
+    <a href="/admin/stats.html" class="nav-item" data-page="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </a>
+    <a href="/admin/diagnostics.html" class="nav-item" data-page="diagnostics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Diagnostics
+    </a>
+    <a href="/admin/templates.html" class="nav-item" data-page="templates">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Templates
+    </a>
+    <a href="/admin/settings.html" class="nav-item" data-page="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- MOBILE NAV -->
+  <nav class="mobile-nav">
+    <a href="/admin/" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/orders.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      Orders
+    </a>
+    <a href="/admin/complaints.html" class="mobile-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Complaints
+    </a>
+    <a href="/admin/stats.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </a>
+    <a href="/admin/settings.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <h2 style="margin:0 0 16px; font-size:20px;">Complaints Tracker</h2>
+
+    <!-- Stats -->
+    <div class="comp-stats" id="compStats">
+      <div class="comp-stat"><div class="num" id="statTotal">-</div><div class="label">Total</div></div>
+      <div class="comp-stat active"><div class="num" id="statActive">-</div><div class="label">Active</div></div>
+      <div class="comp-stat closed"><div class="num" id="statClosed">-</div><div class="label">Closed</div></div>
+      <div class="comp-stat unsolveable"><div class="num" id="statUnsolveable">-</div><div class="label">Unsolveable</div></div>
+      <div class="comp-stat refund"><div class="num" id="statRefund">-</div><div class="label">Refund</div></div>
+      <div class="comp-stat exchange"><div class="num" id="statExchange">-</div><div class="label">Exchange</div></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="comp-filters">
+      <button class="comp-filter active" onclick="filterComplaints('all', this)">All</button>
+      <button class="comp-filter" onclick="filterComplaints('active', this)">Active</button>
+      <button class="comp-filter" onclick="filterComplaints('closed', this)">Closed</button>
+      <button class="comp-filter" onclick="filterComplaints('unsolveable', this)">Unsolveable</button>
+      <button class="comp-filter" onclick="filterComplaints('refund', this)">Refund</button>
+      <button class="comp-filter" onclick="filterComplaints('exchange', this)">Exchange</button>
+    </div>
+
+    <!-- List -->
+    <div id="complaintsList"></div>
+    <div id="noComplaints" class="no-complaints" style="display:none;">Koi complaint nahi hai abhi!</div>
+  </main>
+
+  <script src="/admin/app.js"></script>
+  <script>
+    let allComplaints = [];
+    let currentFilter = 'all';
+
+    async function loadComplaints() {
+      try {
+        const data = await api('/api/complaints');
+        allComplaints = data.complaints || [];
+
+        // Stats
+        const s = data.stats || {};
+        document.getElementById('statTotal').textContent = s.total || 0;
+        document.getElementById('statActive').textContent = s.active || 0;
+        document.getElementById('statClosed').textContent = s.closed || 0;
+        document.getElementById('statUnsolveable').textContent = s.unsolveable || 0;
+        document.getElementById('statRefund').textContent = s.refund || 0;
+        document.getElementById('statExchange').textContent = s.exchange || 0;
+
+        renderComplaints();
+      } catch (e) {
+        console.error('Load complaints error:', e);
+      }
+    }
+
+    function filterComplaints(status, btn) {
+      currentFilter = status;
+      document.querySelectorAll('.comp-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderComplaints();
+    }
+
+    function renderComplaints() {
+      const list = document.getElementById('complaintsList');
+      const noEl = document.getElementById('noComplaints');
+      const filtered = currentFilter === 'all' ? allComplaints : allComplaints.filter(c => c.status === currentFilter);
+
+      if (filtered.length === 0) {
+        list.innerHTML = '';
+        noEl.style.display = 'block';
+        return;
+      }
+      noEl.style.display = 'none';
+
+      list.innerHTML = filtered.map(c => `
+        <div class="comp-card status-${c.status}" id="comp-${c.id}">
+          <div class="comp-header" onclick="toggleComp(${c.id})">
+            <span class="comp-name">${esc(c.customer_name || 'Unknown')}</span>
+            <span class="comp-phone">${esc(c.customer_phone || '-')}</span>
+            <span class="comp-product">${esc(c.product_name || '-')}</span>
+            <span class="comp-badge badge-${c.status}">${c.status.toUpperCase()}</span>
+            <span class="comp-time">${formatTime(c.created_at)}</span>
+          </div>
+          <div class="comp-body" id="comp-body-${c.id}">
+            ${c.description ? `<div class="comp-desc"><h4>Customer Message</h4>${esc(c.description)}</div>` : ''}
+
+            <div class="comp-actions">
+              <select class="status-select" id="status-${c.id}" onchange="updateStatus(${c.id}, this.value)">
+                <option value="active" ${c.status === 'active' ? 'selected' : ''}>Active</option>
+                <option value="closed" ${c.status === 'closed' ? 'selected' : ''}>Closed</option>
+                <option value="unsolveable" ${c.status === 'unsolveable' ? 'selected' : ''}>Unsolveable</option>
+                <option value="refund" ${c.status === 'refund' ? 'selected' : ''}>Refund</option>
+                <option value="exchange" ${c.status === 'exchange' ? 'selected' : ''}>Exchange</option>
+              </select>
+              ${c.last_remark ? `<span style="font-size:11px; color:#999;">Last remark: ${formatTime(c.last_remark_at)}</span>` : ''}
+            </div>
+
+            <div class="remarks-section">
+              <h4>Remarks (${c.remark_count || 0})</h4>
+              <div id="remarks-${c.id}"><span style="font-size:12px; color:#999;">Click to load remarks...</span></div>
+              <div class="remark-input">
+                <input type="text" id="remark-input-${c.id}" placeholder="Add remark..." onkeydown="if(event.key==='Enter')addRemark(${c.id})">
+                <button onclick="addRemark(${c.id})">Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function toggleComp(id) {
+      const body = document.getElementById('comp-body-' + id);
+      const isOpen = body.classList.contains('open');
+      // Close all
+      document.querySelectorAll('.comp-body.open').forEach(el => el.classList.remove('open'));
+      if (!isOpen) {
+        body.classList.add('open');
+        loadRemarks(id);
+      }
+    }
+
+    async function loadRemarks(id) {
+      try {
+        const data = await api('/api/complaints/' + id + '/remarks');
+        const container = document.getElementById('remarks-' + id);
+        const remarks = data.remarks || [];
+        if (remarks.length === 0) {
+          container.innerHTML = '<span style="font-size:12px; color:#999;">No remarks yet</span>';
+          return;
+        }
+        container.innerHTML = remarks.map(r => `
+          <div class="remark-item">
+            <span class="remark-time">${formatTime(r.created_at)}</span>
+            <span class="remark-text">${esc(r.remark)}</span>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Load remarks error:', e);
+      }
+    }
+
+    async function updateStatus(id, status) {
+      try {
+        await api('/api/complaints/' + id + '/status', {
+          method: 'PATCH',
+          body: JSON.stringify({ status })
+        });
+        // Update local data
+        const comp = allComplaints.find(c => c.id === id);
+        if (comp) comp.status = status;
+        renderComplaints();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function addRemark(id) {
+      const input = document.getElementById('remark-input-' + id);
+      const text = input.value.trim();
+      if (!text) return;
+      try {
+        await api('/api/complaints/' + id + '/remarks', {
+          method: 'POST',
+          body: JSON.stringify({ remark: text })
+        });
+        input.value = '';
+        // Update count
+        const comp = allComplaints.find(c => c.id === id);
+        if (comp) comp.remark_count = (comp.remark_count || 0) + 1;
+        loadRemarks(id);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function formatTime(ts) {
+      if (!ts) return '-';
+      const d = new Date(ts);
+      if (isNaN(d)) return ts;
+      const now = new Date();
+      const isToday = d.toDateString() === now.toDateString();
+      const time = d.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true });
+      if (isToday) return time;
+      return d.toLocaleDateString('en-PK', { day: '2-digit', month: 'short' }) + ' ' + time;
+    }
+
+    // Load on page ready
+    loadComplaints();
+  </script>
+</body>
+</html>

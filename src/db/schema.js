@@ -181,6 +181,31 @@ CREATE TABLE IF NOT EXISTS product_media (
   created_at      TEXT DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_media_product ON product_media(product_id, type);
+
+-- Complaints tracker
+CREATE TABLE IF NOT EXISTS complaints (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversation_id INTEGER REFERENCES conversations(id),
+  customer_id     INTEGER REFERENCES customers(id),
+  customer_name   TEXT,
+  customer_phone  TEXT,
+  product_name    TEXT,
+  description     TEXT,
+  status          TEXT DEFAULT 'active' CHECK(status IN ('active','closed','unsolveable','refund','exchange')),
+  created_at      TEXT DEFAULT (datetime('now','localtime')),
+  updated_at      TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);
+CREATE INDEX IF NOT EXISTS idx_complaints_customer ON complaints(customer_id);
+
+-- Complaint remarks (history log)
+CREATE TABLE IF NOT EXISTS complaint_remarks (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  complaint_id    INTEGER NOT NULL REFERENCES complaints(id),
+  remark          TEXT NOT NULL,
+  created_at      TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_remarks_complaint ON complaint_remarks(complaint_id);
 `;
 
 module.exports = { SCHEMA };

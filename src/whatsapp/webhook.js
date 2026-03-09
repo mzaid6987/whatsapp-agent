@@ -492,6 +492,24 @@ async function webhookHandler(req, res) {
     // Complaint: delayed voice note (1 min) + number text (1 min 30s)
     // Runs in background — don't block the response
     if (result._complaint_audio) {
+      // Auto-create complaint tracker entry
+      try {
+        const complaintModel = require('../db/models/complaint');
+        const existingComplaint = result.db_conversation_id ? complaintModel.findByConversation(result.db_conversation_id) : null;
+        if (!existingComplaint) {
+          complaintModel.create({
+            conversation_id: result.db_conversation_id,
+            customer_id: result.db_customer_id,
+            customer_name: result.collected?.name || null,
+            customer_phone: fromPhone,
+            product_name: result.collected?.product || null,
+            description: messageText || null,
+          });
+          console.log(`[COMPLAINT] Auto-created complaint for ${fromPhone}`);
+        }
+      } catch (e) {
+        console.error('[COMPLAINT] Auto-create error:', e.message);
+      }
       const _compPhone = fromPhone;
       const _compPhoneId = phoneNumberId;
       const _compToken = accessToken;
