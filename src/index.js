@@ -1647,6 +1647,22 @@ function startFollowUpScheduler() {
       console.log('[DB] Added wa_profile_name column');
     } catch (e) { /* column already exists */ }
 
+    // Migration: move WhatsApp profile names from customer.name to wa_profile_name
+    // If customer has name but their conversation's collected_json shows name=null, it came from WhatsApp profile
+    try {
+      const db = getDb();
+      const migrated = db.prepare(`
+        UPDATE customers SET wa_profile_name = name, name = NULL
+        WHERE name IS NOT NULL AND wa_profile_name IS NULL
+        AND id IN (
+          SELECT c.customer_id FROM conversations c
+          WHERE c.collected_json LIKE '%"name":null%'
+          OR c.collected_json LIKE '%"name": null%'
+        )
+      `).run();
+      if (migrated.changes > 0) console.log(`[DB] Migrated ${migrated.changes} WhatsApp profile names from customer.name to wa_profile_name`);
+    } catch (e) { console.error('[DB] wa_profile_name migration error:', e.message); }
+
     console.log('[DB] Ready');
 
     // Start follow-up scheduler
