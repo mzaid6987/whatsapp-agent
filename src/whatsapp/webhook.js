@@ -504,12 +504,24 @@ async function webhookHandler(req, res) {
           const audioUrl = `${serverUrl}/media/complaint-voice.mp3`;
           const audioResult = await sendAudio(_compPhone, audioUrl, _compPhoneId, _compToken);
           console.log(`[WA] Complaint voice note ${audioResult.success ? 'sent' : 'FAILED'} to ${_compPhone}`);
+          // Log voice note in DB + dashboard
+          if (audioResult.success && _compConvId) {
+            messageModel.create(_compConvId, 'outgoing', 'bot', '[🎤 Complaint Voice Note]', { source: 'complaint_voice' });
+            conversationModel.updateLastMessage(_compConvId, '[🎤 Voice Note]');
+            _broadcast({ type: 'new_message', conversationId: _compConvId });
+          }
 
           // Step 2: Send number text (30s after voice note)
           setTimeout(async () => {
             try {
-              await sendMessage(_compPhone, _compReply, _compPhoneId, _compToken);
+              const sendResult = await sendMessage(_compPhone, _compReply, _compPhoneId, _compToken);
               console.log(`[WA] Complaint number text sent to ${_compPhone}`);
+              // Log text in DB + dashboard
+              if (sendResult.success && _compConvId) {
+                messageModel.create(_compConvId, 'outgoing', 'bot', _compReply, { source: 'complaint_text' });
+                conversationModel.updateLastMessage(_compConvId, _compReply);
+                _broadcast({ type: 'new_message', conversationId: _compConvId });
+              }
             } catch (err) {
               console.error('[WA] Complaint number text error:', err.message);
             }
