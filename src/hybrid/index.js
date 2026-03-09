@@ -1961,13 +1961,17 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       saveState(dbConv, state);
       saveCustomer(dbCustomer, state);
 
-      return {
+      const retVal = {
         reply, state: state.current, collected: { ...state.collected },
         needs_human: templateResult.needs_human || false, source, intent: aiIntent,
         tokens_in: aiResult.tokens_in || 0, tokens_out: aiResult.tokens_out || 0,
         response_ms: Date.now() - startTime,
         db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
       };
+      // Forward special flags from template result
+      if (templateResult._complaint_audio) retVal._complaint_audio = true;
+      if (templateResult._media) retVal._media = templateResult._media;
+      return retVal;
     }
 
     // Handle media_request from AI — customer asked for picture/video

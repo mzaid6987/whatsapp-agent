@@ -34,7 +34,7 @@ const COMPLAINT_WORDS = [
   'kharab','kharaab','toot','broken','defective','return karna','return','refund',
   'galat','wrong','scam','fake','fraud','dhoka','bakwas','pagal','nonsense','wtf',
   'bas karo','bekar','cheat','loot','nakli','naqli','wahiyat','ghatiya','complain',
-  'complaint','toot gaya','kam nahi karta','kaam nahi','band ho gaya','chal nahi raha',
+  'complaint','compliant','complane','toot gaya','kam nahi karta','kaam nahi','band ho gaya','chal nahi raha',
   'damage','damaged'
 ];
 
