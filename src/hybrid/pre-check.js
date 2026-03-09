@@ -527,10 +527,10 @@ function preCheck(message, currentState, collected, state) {
     }
   }
 
-  // 4a0. DISCOUNT/HAGGLE in COLLECT_NAME — "discount to do", "offer do", "sasta kro"
+  // 4a0. DISCOUNT/HAGGLE in collection states — "discount to do", "offer do", "sasta kro"
   // Must catch BEFORE name detection so "discount to do" is not saved as name
-  if (currentState === 'COLLECT_NAME') {
-    const isDiscountInName = /\b(disc?o?u?n?t|discoutn|disocunt|discont|discoynt|off|offer|sast[aie]|kam\s*kr|km\s*kr|mehn?g[aie]|price\s*kam|price\s*km|rate\s*kam|rate\s*km)\b/i.test(l);
+  if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {
+    const isDiscountInName = /\b(disc?o?u?n?t|discoutn|disocunt|discont|discoynt|off|offer|sast[aie]|kam\s*kr[oa]?|km\s*kr[oa]?|kam\s*kard?o?|km\s*kard?o?|kam\s*do|km\s*do|kuch\s*(to\s*)?km|mehn?g[aie]|price\s*kam|price\s*km|rate\s*kam|rate\s*km)\b/i.test(l);
     if (isDiscountInName) return { intent: 'haggle_in_collection' };
   }
 
@@ -558,6 +558,21 @@ function preCheck(message, currentState, collected, state) {
       // Capitalize properly
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_given', extracted: { name } };
+    }
+  }
+
+  // 4b0-CITY. CITY CORRECTION — "Lahore nahi Fatehpur hai" / "city galat hai X hai"
+  // Customer correcting wrongly detected city — update city and re-ask address
+  if (currentState === 'COLLECT_ADDRESS' || currentState === 'COLLECT_CITY') {
+    const cityCorrection = /\b(nhi|nahi|na|ni|nai|galat|ghalat|wrong)\b/i.test(l);
+    if (cityCorrection) {
+      const allCities = extractAllCities(msg);
+      const currentCity = (collected.city || '').toLowerCase();
+      // Find the NEW city (not the current one)
+      const newCity = allCities.find(c => c.toLowerCase() !== currentCity);
+      if (newCity) {
+        return { intent: 'city_correction', extracted: { city: newCity } };
+      }
     }
   }
 

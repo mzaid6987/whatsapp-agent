@@ -2620,6 +2620,8 @@ const CITY_ALIASES = {
   'jaampur': 'jampur', 'jam pur': 'jampur',
   'shorkot cantt': 'shorkot', 'shorkot city': 'shorkot',
   'fateh jung': 'fateh jang', 'fatehjang': 'fateh jang', 'fatehjan': 'fateh jang',
+  'fath pur': 'fatehpur', 'fateh pur': 'fatehpur', 'fathpur': 'fatehpur', 'fateh pure': 'fatehpur', 'fathehpur': 'fatehpur', 'fatehpure': 'fatehpur',
+  'mian chanu': 'mian channu', 'mian chunu': 'mian channu', 'mian channo': 'mian channu', 'mianchanu': 'mian channu', 'mianchannu': 'mian channu',
   'naushera virkan': 'naushera virkan', 'naushehra virkan': 'naushera virkan',
   'bhalwal': 'bhalwal', 'bhelwal': 'bhalwal',
   'chak jhumra': 'chak jhumra', 'chakjhumra': 'chak jhumra', 'chak jumra': 'chak jhumra',
@@ -2763,7 +2765,7 @@ function matchArea(input, city) {
   // Keyword match: key word of multi-word area found as standalone word in input
   // E.g., "johar" in input → matches "johar town", "gulberg" → "gulberg"
   // Skip generic words (town, colony, etc.) and city name to avoid false matches
-  const GENERIC_AREA_WORDS = new Set(['town','city','nagar','abad','pura','ganj','gunj','road','scheme','phase','sector','block','colony','society','housing','extension','ext','north','south','east','west','new','old','chak','village','gaon','goth','killi','dhoke','mauza']);
+  const GENERIC_AREA_WORDS = new Set(['town','city','nagar','abad','pura','ganj','gunj','road','scheme','phase','sector','block','colony','society','housing','extension','ext','north','south','east','west','new','old','chak','village','gaon','goth','killi','dhoke','mauza','main','gate','market','bazar','bazaar','chowk','mohalla','mohallah','naya','purana']);
   const cityWord = city.toLowerCase().replace(/[-\s]/g, '');
   const inputWords = l.split(/\s+/);
   for (const area of data.areas) {

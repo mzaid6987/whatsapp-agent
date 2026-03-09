@@ -65,8 +65,11 @@ function extractDetailsFromMsg(msg, productShort) {
         if (addrKeywords.test(w) || /^\d/.test(w)) break;
         nameWords.push(w);
       }
-      if (nameWords.length > 0 && nameWords.length <= 3) {
-        details.name = nameWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      // Stop words guard — "ke name se" = "by the name of", not a person's name
+      const NAME_STOP_WORDS = new Set(['se','ke','ka','ki','ko','me','mein','mai','hai','he','h','ho','hain','pe','par','ye','yeh','ya','to','toh','bhi','aur','or','wala','vala','wali','vali','na','nahi','nhi','ji','g','ok','do','de','kr','kar','dein','den','haan','han','nai']);
+      const filteredNameWords = nameWords.filter(w => !NAME_STOP_WORDS.has(w.toLowerCase()));
+      if (filteredNameWords.length > 0 && filteredNameWords.length <= 3) {
+        details.name = filteredNameWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       }
     }
     // Extract address from remaining text (everything except name and phone parts)
@@ -1483,7 +1486,9 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       _smartFillDebug.raw_result = smartDetails;
       // Update name if: not set, OR message explicitly says "name X" / "naam X" (customer correcting/giving name)
       const explicitNameGiven = /\b(name|naam|my\s*name|mera\s*naam)\s+/i.test(message);
-      if (smartDetails.name && (!state.collected.name || explicitNameGiven)) state.collected.name = smartDetails.name;
+      // Don't overwrite a longer existing name with a shorter extracted one (likely false positive)
+      const existingName = state.collected.name;
+      if (smartDetails.name && (!existingName || (explicitNameGiven && smartDetails.name.length >= 3))) state.collected.name = smartDetails.name;
       if (smartDetails.phone && !state.collected.phone) state.collected.phone = smartDetails.phone;
       if (smartDetails.city && !state.collected.city) state.collected.city = smartDetails.city;
       // Labeled format: directly populate address_parts (area, street, house, landmark)
@@ -2887,6 +2892,24 @@ function handlePreCheck(pre, message, state, storeName, phone) {
         reply: `Haan ${honorific}, ${askedCity} mein bhi delivery hoti hai — ${dt} lagte hain. Delivery ${currentCity} mein karni hai ya ${askedCity} mein?`,
         state: 'COLLECT_CITY'
       };
+    }
+
+    case 'city_correction': {
+      // Customer correcting wrong city — "Lahore nahi Fatehpur"
+      const newCity = pre.extracted.city;
+      const oldCity = state.collected.city;
+      const honorific = getHonorific(state.collected.name, state.gender);
+      state.collected.city = newCity.charAt(0).toUpperCase() + newCity.slice(1).toLowerCase();
+      // Reset address parts since city changed
+      state.collected.address = null;
+      state.collected.address_parts = { area: null, street: null, house: null, landmark: null };
+      state.address_step = null;
+      state.address_confirming = false;
+      const areaSugg = getAreaSuggestions(state.collected.city);
+      const replyText = areaSugg
+        ? `${honorific}, city ${state.collected.city} update ho gaya ✅ ${state.collected.city} mein konsa area hai? 📍 ${areaSugg}`
+        : `${honorific}, city ${state.collected.city} update ho gaya ✅ Address bata dein — area, gali, house number? 📍`;
+      return { reply: replyText, state: 'COLLECT_ADDRESS' };
     }
 
     case 'address_part_extracted': {

@@ -97,7 +97,8 @@ const ALL_CITIES = [
   'chitral','dir','malakand','buner','shangla','kohistan',
   'zhob','loralai','pishin','chaman','sibi','kalat','mastung','nushki',
   'skardu','hunza','ghizer','astore','diamer',
-  'murree','nathia gali','bhurban','haripur','hassan abdal'
+  'murree','nathia gali','bhurban','haripur','hassan abdal',
+  'fatehpur','mian channu','kamalia','jaranwala','samundri','tandlianwala','fateh jang','pattoki','arifwala','chishtian','duniya pur','alipur','jatoi','kot addu','kabirwala'
 ];
 
 const REGIONS = ['kashmir','ajk','punjab','sindh','kpk','balochistan','fata','gilgit baltistan','khyber pakhtunkhwa'];
