@@ -36,7 +36,14 @@ const COMPLAINT_WORDS = [
   'not fit','does not fit','doesn\'t fit','stopped working','stop working',
   'not charging','not charge','charger issue','charger problem',
   'sending damage','damage product','faulty','malfunction',
-  'not turning on','not turn on','not switching on','issue with'
+  'not turning on','not turn on','not switching on','issue with',
+  // "nahien/nahin" spelling variants (common in Pakistani English-Urdu)
+  'chal nahien','chal nahin','chalti nahien','chalti nahin','chalta nahien','chalta nahin',
+  'kam nahien','kam nahin','kaam nahien','kaam nahin','work nahien','work nahin',
+  // English complaint expressions
+  'disappointed','very disappointed','not happy','not satisfied','unsatisfied',
+  'waste of money','waste money','money waste','paisa barbaad','paise barbaad','paisay barbaad',
+  'haraam','haram','paisay haraam','paise haraam','paisa haraam'
 ];
 
 const TRUST_WORDS = /\b(asli|original|cod|cash\s*on|return\s*policy|exchange\s*policy|warranty|guarantee|quality|bharosa|trust|kaisi?\s*quality)\b/i;

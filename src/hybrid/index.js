@@ -741,7 +741,9 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   // ============================================
   {
     const cl = message.toLowerCase().trim();
-    if (isComplaint(cl) && !(/\b(to\s*nahi|toh?\s*nahi|nahi\s*ho|nhi\s*ho|hogi|hoga|jayega|jayegi)\b/i.test(cl))) {
+    // Angry emojis (😡🤬😤💢) = complaint/frustration signal → escalate to human
+    const hasAngryEmoji = /[\u{1F621}\u{1F624}\u{1F92C}\u{1F4A2}]/u.test(message);
+    if ((isComplaint(cl) || hasAngryEmoji) && !(/\b(to\s*nahi|toh?\s*nahi|nahi\s*ho|nhi\s*ho|hogi|hoga|jayega|jayegi)\b/i.test(cl))) {
       // Strong complaint (not a quality question like "kharab to nahi hogi?")
       const vars = buildVars(state, storeName);
       state.current = 'COMPLAINT';
