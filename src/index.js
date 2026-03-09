@@ -1534,10 +1534,10 @@ app.all('/deploy', (req, res) => {
 });
 
 // ---- SILENT FOLLOW-UP SCHEDULER ----
-// Sends a one-time voice note follow-up after 3 minutes of customer silence
+// Sends a one-time voice note follow-up after 6 hours of customer silence
 // IMPORTANT: Only sends to conversations created AFTER the feature was activated (followup_activated_at)
-const FOLLOWUP_INTERVAL_MS = 30 * 1000;   // Check every 30 seconds
-const FOLLOWUP_SILENCE_MIN = 3;            // Trigger after 3 minutes silent
+const FOLLOWUP_INTERVAL_MS = 60 * 1000;   // Check every 60 seconds
+const FOLLOWUP_SILENCE_MIN = 360;          // Trigger after 360 minutes (6 hours) silent
 const FOLLOWUP_VOICE_FILE = 'followup-voice.mp3';
 const SILENT_EXCLUDE_STATES_FU = ['ORDER_CONFIRMED', 'CANCEL_AFTER_CONFIRM', 'COMPLAINT', 'IDLE', 'UPSELL_HOOK', 'UPSELL_SHOW'];
 
@@ -1599,7 +1599,8 @@ function startFollowUpScheduler() {
         if (minutesSilent < FOLLOWUP_SILENCE_MIN) continue;
 
         // Don't send if customer was silent for too long (>60 min) — likely abandoned
-        if (minutesSilent > 60) {
+        // Don't send if customer was silent for too long (>24 hours) — likely abandoned
+        if (minutesSilent > 1440) {
           db.prepare('UPDATE conversations SET followup_sent = 1 WHERE id = ?').run(c.id);
           continue;
         }

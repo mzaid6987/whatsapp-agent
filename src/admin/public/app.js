@@ -730,13 +730,14 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
       const liveH = calcSilentHoursLive(m.created_at);
       const is24h = liveH >= 24;
       const liveMin = liveH * 60;
-      // Follow-up countdown — show time remaining until 3min follow-up voice note
+      // Follow-up countdown — show time remaining until 6h follow-up voice note
       let followUpCountdown = '';
-      if (!lastMsgConv.followup_sent && !isFollowUp && liveMin < 3) {
-        const secsLeft = Math.max(0, Math.ceil((3 - liveMin) * 60));
-        const mm = Math.floor(secsLeft / 60);
-        const ss = secsLeft % 60;
-        followUpCountdown = `<div class="followup-countdown" id="followupCountdown" data-time="${m.created_at}">🎤 Follow-up in ${mm}:${ss.toString().padStart(2, '0')}</div>`;
+      const fuTotalMin = 360; // 6 hours
+      if (!lastMsgConv.followup_sent && !isFollowUp && liveMin < fuTotalMin) {
+        const minsLeft = Math.max(0, Math.ceil(fuTotalMin - liveMin));
+        const hh = Math.floor(minsLeft / 60);
+        const mm = minsLeft % 60;
+        followUpCountdown = `<div class="followup-countdown" id="followupCountdown" data-time="${m.created_at}" data-fu-min="${fuTotalMin}">🎤 Follow-up in ${hh}h ${mm}m</div>`;
       }
       const timerText = is24h
         ? `24h+ silent (${formatSilentTimer(liveH)})`
@@ -775,24 +776,25 @@ setInterval(() => {
   }
 }, 30000);
 
-// Follow-up countdown — update every second for live countdown
+// Follow-up countdown — update every 30s for 6h timer
 setInterval(() => {
   const cdEl = document.getElementById('followupCountdown');
   if (!cdEl) return;
   const msgTime = cdEl.dataset.time;
+  const fuTotalMin = parseInt(cdEl.dataset.fuMin) || 360;
   const liveH = calcSilentHoursLive(msgTime);
   if (liveH === null) return;
   const liveMin = liveH * 60;
-  const secsLeft = Math.max(0, Math.ceil((3 - liveMin) * 60));
-  if (secsLeft <= 0) {
+  const minsLeft = Math.max(0, Math.ceil(fuTotalMin - liveMin));
+  if (minsLeft <= 0) {
     cdEl.textContent = '🎤 Follow-up sending...';
     cdEl.style.color = '#25D366';
   } else {
-    const mm = Math.floor(secsLeft / 60);
-    const ss = secsLeft % 60;
-    cdEl.textContent = `🎤 Follow-up in ${mm}:${ss.toString().padStart(2, '0')}`;
+    const hh = Math.floor(minsLeft / 60);
+    const mm = minsLeft % 60;
+    cdEl.textContent = `🎤 Follow-up in ${hh}h ${mm}m`;
   }
-}, 1000);
+}, 30000);
 
 // Polling — always runs every 5s (WS may not work on shared hosting)
 // Skip only if WS delivered a real message in last 15s
