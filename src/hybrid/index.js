@@ -1269,6 +1269,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         _media: preResult._media || null,
         _media_batch: preResult._media_batch || null,
         _complaint_audio: preResult._complaint_audio || false,
+        _trust_audio: preResult._trust_audio || false,
       };
     }
   }
@@ -1976,6 +1977,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       };
       // Forward special flags from template result
       if (templateResult._complaint_audio) retVal._complaint_audio = true;
+      if (templateResult._trust_audio) retVal._trust_audio = true;
       if (templateResult._media) retVal._media = templateResult._media;
       return retVal;
     }
@@ -2613,7 +2615,7 @@ function handlePreCheck(pre, message, state, storeName, phone) {
         const reask = askNextField(state, storeName);
         if (reask) reply += ' ' + reask.reply;
       }
-      return { reply, state: state.current };
+      return { reply, state: state.current, _trust_audio: true };
     }
 
     case 'quality_question': {
@@ -2623,7 +2625,7 @@ function handlePreCheck(pre, message, state, storeName, phone) {
         const reask = askNextField(state, storeName);
         if (reask) reply += ' ' + reask.reply;
       }
-      return { reply, state: state.current };
+      return { reply, state: state.current, _trust_audio: true };
     }
 
     case 'haggle': {

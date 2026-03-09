@@ -532,6 +532,29 @@ async function webhookHandler(req, res) {
       }, 60 * 1000);
     }
 
+    // Trust/quality: send voice note 10s after text reply
+    if (result._trust_audio) {
+      const _tPhone = fromPhone;
+      const _tPhoneId = phoneNumberId;
+      const _tToken = accessToken;
+      const _tConvId = result.db_conversation_id;
+      setTimeout(async () => {
+        try {
+          const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
+          const audioUrl = `${serverUrl}/media/trust-voice.mp3`;
+          const audioResult = await sendAudio(_tPhone, audioUrl, _tPhoneId, _tToken);
+          console.log(`[WA] Trust voice note ${audioResult.success ? 'sent' : 'FAILED'} to ${_tPhone}`);
+          if (audioResult.success && _tConvId) {
+            messageModel.create(_tConvId, 'outgoing', 'bot', '[🎤 Trust Voice Note]', { source: 'trust_voice' });
+            conversationModel.updateLastMessage(_tConvId, '[🎤 Voice Note]');
+            _broadcast({ type: 'new_message', conversationId: _tConvId });
+          }
+        } catch (err) {
+          console.error('[WA] Trust voice note error:', err.message);
+        }
+      }, 10 * 1000);
+    }
+
     // Handle batch media — send videos for multiple products AFTER text reply
     // (product list text goes first, then all videos follow)
     if (result._media_batch && result._media_batch.length > 0) {
