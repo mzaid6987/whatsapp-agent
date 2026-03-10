@@ -1089,7 +1089,7 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
   }
   // Unsend button — only on outgoing bot messages with wa_message_id, not already unsent
   const unsendBtn = (isOut && m.wa_message_id && m.source !== 'unsent')
-    ? `<button class="msg-unsend-btn" onclick="unsendMessage(${m.id})" title="Unsend (Delete for Everyone)">🗑️</button>`
+    ? `<button class="msg-unsend-btn" onclick="unsendMessage(${m.id})" title="Unsend (Delete for Everyone)">🗑️ Unsend</button>`
     : '';
   return `
     <div class="msg-bubble ${bubbleClass}" data-msg-id="${m.id}" data-wa-id="${m.wa_message_id || ''}">

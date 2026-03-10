@@ -759,19 +759,18 @@ body:has(.chats-container) {
 .msg-feedback-btn.has-feedback { opacity: 1; color: var(--orange-warning); }
 
 .msg-unsend-btn {
-  background: none;
-  border: none;
+  background: rgba(229,62,62,0.08);
+  border: 1px solid rgba(229,62,62,0.3);
   cursor: pointer;
   font-size: 11px;
-  opacity: 0;
-  padding: 1px 4px;
-  border-radius: 3px;
+  color: #e53e3e;
+  padding: 2px 8px;
+  border-radius: 4px;
   transition: all 0.15s;
-  vertical-align: middle;
-  margin-left: 4px;
+  margin-top: 4px;
+  display: inline-block;
 }
-.msg-bubble:hover .msg-unsend-btn { opacity: 0.5; }
-.msg-unsend-btn:hover { opacity: 1; background: rgba(229,62,62,0.1); }
+.msg-unsend-btn:hover { background: rgba(229,62,62,0.18); border-color: #e53e3e; }
 
 .msg-feedback-text {
   background: #FFF3E0;
