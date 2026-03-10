@@ -1126,15 +1126,18 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
     const intlPhone = toInternational(conv.phone);
     const complaintText = 'Sir, aap is number pe WhatsApp message bhej dein — 03701337838 🙏 InshaAllah aapka masla resolve ho jayega ✅';
 
-    // Check 24-hour window — warn if customer's last message is >23h ago
+    // Check 24-hour window — use customer's LAST INCOMING message (not bot messages)
     let windowWarning = null;
-    if (conv.last_msg_time) {
-      const timeStr = conv.last_msg_time.includes('+') ? conv.last_msg_time : conv.last_msg_time + '+05:00';
+    const lastCustomerMsg = db.prepare(
+      "SELECT created_at FROM messages WHERE conversation_id = ? AND direction = 'incoming' ORDER BY created_at DESC LIMIT 1"
+    ).get(id);
+    if (lastCustomerMsg && lastCustomerMsg.created_at) {
+      const timeStr = lastCustomerMsg.created_at.includes('+') ? lastCustomerMsg.created_at : lastCustomerMsg.created_at + '+05:00';
       const lastTime = new Date(timeStr).getTime();
       const hoursSince = (Date.now() - lastTime) / (1000 * 60 * 60);
       if (hoursSince > 23) {
-        windowWarning = `Warning: Customer ka last message ${Math.round(hoursSince)}h pehle tha — 24h window khatam. Message deliver nahi ho sakta.`;
-        console.log(`[MANUAL-COMPLAINT] 24h window expired (${Math.round(hoursSince)}h) for ${conv.phone}`);
+        windowWarning = 'Customer ka last message ' + Math.round(hoursSince) + 'h pehle tha — 24h window khatam. Message deliver nahi ho sakta.';
+        console.log('[MANUAL-COMPLAINT] 24h window expired (' + Math.round(hoursSince) + 'h) for ' + conv.phone);
       }
     }
 
