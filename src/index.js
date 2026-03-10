@@ -1093,6 +1093,22 @@ app.post('/api/conversations/:id/block', requireAuth, (req, res) => {
   }
 });
 
+// Toggle follow-up on conversation — manually stop or re-enable follow-up voice note
+app.post('/api/conversations/:id/followup', requireAuth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const db = getDb();
+    const convo = db.prepare('SELECT followup_sent FROM conversations WHERE id = ?').get(id);
+    if (!convo) return res.status(404).json({ error: 'Not found' });
+    const newVal = convo.followup_sent ? 0 : 1;
+    db.prepare('UPDATE conversations SET followup_sent = ? WHERE id = ?').run(newVal, id);
+    console.log(`[FOLLOWUP] Manual toggle: conv #${id} → followup_sent=${newVal}`);
+    res.json({ success: true, followup_sent: newVal });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Mark conversation as complaint (manual) + create complaint tracker entry
 app.post('/api/conversations/:id/complaint', requireAuth, (req, res) => {
   try {

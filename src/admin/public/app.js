@@ -316,6 +316,13 @@ async function openChat(chatId) {
   btnComplaint.textContent = isComplaint ? 'Undo Complaint' : 'Complaint';
   btnComplaint.style.color = isComplaint ? '#D97706' : '#e53e3e';
   btnComplaint.style.borderColor = isComplaint ? '#D97706' : '#e53e3e';
+  // Follow-up button — toggle text
+  const btnFollowup = document.getElementById('btnStopFollowup');
+  if (btnFollowup) {
+    btnFollowup.textContent = conv.followup_sent ? 'Enable Follow-up' : 'Stop Follow-up';
+    btnFollowup.style.color = conv.followup_sent ? '#38a169' : '#D97706';
+    btnFollowup.style.borderColor = conv.followup_sent ? '#38a169' : '#D97706';
+  }
   if (conv.needs_human) {
     btnTakeOver.classList.add('hidden');
     btnResumeBot.classList.remove('hidden');
@@ -675,6 +682,23 @@ async function toggleBlockChat() {
       conv.spam_flag = res.spam_flag;
       openChat(currentChatId);
       renderChatList(conversations);
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+async function toggleFollowup() {
+  if (!currentChatId) return;
+  const conv = conversations.find(c => c.id === currentChatId);
+  if (!conv) return;
+  const action = conv.followup_sent ? 'Enable follow-up' : 'Stop follow-up';
+  if (!confirm(`${action} for this chat?`)) return;
+  try {
+    const res = await api('/api/conversations/' + currentChatId + '/followup', { method: 'POST' });
+    if (res?.success) {
+      conv.followup_sent = res.followup_sent;
+      openChat(currentChatId);
     }
   } catch (e) {
     alert('Error: ' + e.message);
