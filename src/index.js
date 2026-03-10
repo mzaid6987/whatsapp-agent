@@ -1136,8 +1136,8 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
       const lastTime = new Date(timeStr).getTime();
       const hoursSince = (Date.now() - lastTime) / (1000 * 60 * 60);
       if (hoursSince > 23) {
-        windowWarning = 'Customer ka last message ' + Math.round(hoursSince) + 'h pehle tha — 24h window khatam. Message deliver nahi ho sakta.';
-        console.log('[MANUAL-COMPLAINT] 24h window expired (' + Math.round(hoursSince) + 'h) for ' + conv.phone);
+        console.log('[MANUAL-COMPLAINT] 24h window expired (' + Math.round(hoursSince) + 'h) for ' + conv.phone + ' — BLOCKED');
+        return res.json({ success: false, error: 'Customer ka last message ' + Math.round(hoursSince) + 'h pehle tha — 24h window khatam. Message deliver nahi ho sakta.' });
       }
     }
 
