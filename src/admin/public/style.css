@@ -758,19 +758,33 @@ body:has(.chats-container) {
 .msg-feedback-btn:hover { color: var(--orange-warning); background: rgba(255,149,0,0.1); }
 .msg-feedback-btn.has-feedback { opacity: 1; color: var(--orange-warning); }
 
-.msg-unsend-btn {
-  background: rgba(229,62,62,0.08);
-  border: 1px solid rgba(229,62,62,0.3);
-  cursor: pointer;
-  font-size: 11px;
-  color: #e53e3e;
-  padding: 2px 8px;
-  border-radius: 4px;
-  transition: all 0.15s;
-  margin-top: 4px;
-  display: inline-block;
+/* Media previews in chat bubbles */
+.msg-media-preview {
+  margin-bottom: 4px;
 }
-.msg-unsend-btn:hover { background: rgba(229,62,62,0.18); border-color: #e53e3e; }
+
+.msg-media-img {
+  max-width: 100%;
+  max-height: 280px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: block;
+  object-fit: cover;
+}
+
+.msg-media-audio {
+  width: 100%;
+  max-width: 260px;
+  height: 36px;
+  display: block;
+}
+
+.msg-media-video {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 6px;
+  display: block;
+}
 
 .msg-feedback-text {
   background: #FFF3E0;

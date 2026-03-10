@@ -232,4 +232,27 @@ async function analyzeImage(mediaId, accessToken, openaiApiKey) {
   };
 }
 
-module.exports = { transcribeVoice, analyzeImage, downloadMedia };
+// ============= SAVE MEDIA TO DISK =============
+const CHAT_MEDIA_DIR = path.join(__dirname, '../../uploads/chat-media');
+if (!fs.existsSync(CHAT_MEDIA_DIR)) fs.mkdirSync(CHAT_MEDIA_DIR, { recursive: true });
+
+/**
+ * Save incoming media (image/voice) to disk for dashboard preview.
+ * Returns the filename (relative to chat-media dir).
+ */
+function saveIncomingMedia(buffer, type, phone, mimeType) {
+  const ts = Date.now();
+  const cleanPhone = (phone || 'unknown').replace(/\D/g, '').slice(-10);
+  const extMap = {
+    'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+    'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/amr': 'amr', 'audio/aac': 'aac',
+    'video/mp4': 'mp4', 'video/3gpp': '3gp',
+  };
+  const baseMime = (mimeType || '').split(';')[0].trim();
+  const ext = extMap[baseMime] || (type === 'image' ? 'jpg' : type === 'audio' ? 'ogg' : 'bin');
+  const filename = `${type}_${cleanPhone}_${ts}.${ext}`;
+  fs.writeFileSync(path.join(CHAT_MEDIA_DIR, filename), buffer);
+  return filename;
+}
+
+module.exports = { transcribeVoice, analyzeImage, downloadMedia, saveIncomingMedia };

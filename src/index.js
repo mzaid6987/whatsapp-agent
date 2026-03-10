@@ -13,7 +13,7 @@ const { WebSocketServer } = require('ws');
 const http = require('http');
 const hybrid = require('./hybrid');
 const { webhookVerify, webhookHandler, setBroadcast } = require('./whatsapp/webhook');
-const { sendMessage, sendAudio, deleteMessage, toInternational } = require('./whatsapp/sender');
+const { sendMessage, sendAudio, toInternational } = require('./whatsapp/sender');
 
 // DB modules
 const { initDb, getDb } = require('./db');
@@ -1093,33 +1093,6 @@ app.post('/api/conversations/:id/block', requireAuth, (req, res) => {
   }
 });
 
-// Unsend (delete for everyone) a message via WhatsApp API
-app.post('/api/messages/:id/unsend', requireAuth, async (req, res) => {
-  try {
-    const msgId = parseInt(req.params.id);
-    const db = getDb();
-    const msg = db.prepare('SELECT * FROM messages WHERE id = ?').get(msgId);
-    if (!msg) return res.status(404).json({ error: 'Message not found' });
-    if (msg.direction !== 'outgoing') return res.json({ success: false, error: 'Sirf bot ke bheje hue messages unsend ho sakte hain.' });
-    if (!msg.wa_message_id) return res.json({ success: false, error: 'WhatsApp message ID nahi mila — ye message unsend nahi ho sakta.' });
-
-    const accessToken = settingsModel.get('meta_whatsapp_token', '');
-    const phoneNumberId = settingsModel.get('meta_phone_number_id', '');
-    if (!accessToken || !phoneNumberId) return res.status(500).json({ error: 'WhatsApp credentials not configured' });
-
-    const result = await deleteMessage(msg.wa_message_id, phoneNumberId, accessToken);
-    if (result.success) {
-      db.prepare("UPDATE messages SET content = '🚫 Message unsent', source = 'unsent' WHERE id = ?").run(msgId);
-      console.log(`[UNSEND] Message #${msgId} (wa: ${msg.wa_message_id}) unsent successfully`);
-      broadcast({ type: 'new_message', conversationId: msg.conversation_id });
-      return res.json({ success: true });
-    }
-    return res.json({ success: false, error: result.error || 'WhatsApp API error' });
-  } catch (e) {
-    console.error('[UNSEND] Error:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
 
 // Toggle follow-up on conversation — manually stop or re-enable follow-up voice note
 app.post('/api/conversations/:id/followup', requireAuth, (req, res) => {
@@ -1186,7 +1159,7 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
       return res.json({ success: false, error: 'Voice note send failed: ' + (audioResult.error || 'unknown'), warning: windowWarning });
     }
 
-    messageModel.create(id, 'outgoing', 'bot', '[🎤 Complaint Voice Note]', { source: 'manual_complaint_voice' });
+    messageModel.create(id, 'outgoing', 'bot', '[🎤 Complaint Voice Note]', { source: 'manual_complaint_voice', media_type: 'audio', media_url: '/media/complaint-voice.mp3' });
     conversationModel.updateLastMessage(id, '[🎤 Voice Note]');
     broadcast({ type: 'new_message', conversationId: id });
 
@@ -1674,6 +1647,11 @@ if (fs.existsSync(ASSETS_DIR)) {
 // Serve media files publicly (WhatsApp needs to access these URLs)
 app.use('/media', express.static(MEDIA_DIR));
 
+// Serve chat media (incoming customer images/voice for dashboard preview)
+const CHAT_MEDIA_DIR = path.join(__dirname, '..', 'uploads', 'chat-media');
+if (!fs.existsSync(CHAT_MEDIA_DIR)) fs.mkdirSync(CHAT_MEDIA_DIR, { recursive: true });
+app.use('/chat-media', express.static(CHAT_MEDIA_DIR));
+
 // List all media (grouped by product)
 app.get('/api/media', requireAuth, (req, res) => {
   try {
@@ -2088,7 +2066,7 @@ function startFollowUpScheduler() {
           // Mark as followed up so it won't send again
           db.prepare('UPDATE conversations SET followup_sent = 1 WHERE id = ?').run(c.id);
           // Save message to DB
-          messageModel.create(c.id, 'outgoing', 'bot', '[🎤 Voice Follow-up Sent]', { source: 'followup_scheduler' });
+          messageModel.create(c.id, 'outgoing', 'bot', '[🎤 Voice Follow-up Sent]', { source: 'followup_scheduler', media_type: 'audio', media_url: `/media/${FOLLOWUP_VOICE_FILE}` });
           conversationModel.updateLastMessage(c.id, '[Voice Follow-up]');
           broadcast({ type: 'new_message', conversationId: c.id });
           console.log(`[FOLLOWUP] Sent successfully to ${c.phone}`);

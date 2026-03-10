@@ -5,14 +5,15 @@ const { getDb } = require('../index');
 
 function create(conversationId, direction, sender, content, extra = {}) {
   const result = getDb().prepare(`
-    INSERT INTO messages (conversation_id, direction, sender, content, intent, source, tokens_in, tokens_out, response_ms, debug_json, wa_message_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO messages (conversation_id, direction, sender, content, intent, source, tokens_in, tokens_out, response_ms, debug_json, wa_message_id, media_type, media_url)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     conversationId, direction, sender, content,
     extra.intent || null, extra.source || null,
     extra.tokens_in || 0, extra.tokens_out || 0, extra.response_ms || 0,
     extra.debug_json ? (typeof extra.debug_json === 'string' ? extra.debug_json : JSON.stringify(extra.debug_json)) : null,
-    extra.wa_message_id || null
+    extra.wa_message_id || null,
+    extra.media_type || null, extra.media_url || null
   );
   return result.lastInsertRowid;
 }

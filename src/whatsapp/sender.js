@@ -188,36 +188,4 @@ async function sendAudio(to, audioUrl, phoneNumberId, accessToken) {
   }
 }
 
-/**
- * Delete a message (unsend / "Delete for Everyone")
- * @param {string} waMessageId — WhatsApp message ID (wamid.xxx)
- * @param {string} phoneNumberId — WhatsApp Business phone number ID
- * @param {string} accessToken — Meta access token
- */
-async function deleteMessage(waMessageId, phoneNumberId, accessToken) {
-  const url = `${GRAPH_API}/${phoneNumberId}/messages`;
-  try {
-    const res = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        message_id: waMessageId,
-      }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      return { success: true };
-    }
-    console.error('[WA Delete] Error:', data.error?.message || JSON.stringify(data));
-    return { success: false, error: data.error?.message || 'Unknown error' };
-  } catch (err) {
-    console.error('[WA Delete] Network error:', err.message);
-    return { success: false, error: err.message };
-  }
-}
-
-module.exports = { sendMessage, sendImage, sendVideo, sendAudio, markAsRead, deleteMessage, toInternational };
+module.exports = { sendMessage, sendImage, sendVideo, sendAudio, markAsRead, toInternational };

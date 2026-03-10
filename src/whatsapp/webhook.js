@@ -6,7 +6,7 @@
  */
 
 const { sendMessage, sendImage, sendVideo, sendAudio, markAsRead, toInternational } = require('./sender');
-const { transcribeVoice, analyzeImage } = require('./media-handler');
+const { transcribeVoice, analyzeImage, downloadMedia, saveIncomingMedia } = require('./media-handler');
 const hybrid = require('../hybrid');
 const settingsModel = require('../db/models/settings');
 const { getDb } = require('../db');
@@ -199,6 +199,8 @@ async function webhookHandler(req, res) {
     let messageText = '';
     let mediaNote = ''; // For logging what type of media was processed
     let mediaCost = null; // Track media processing cost
+    let incomingMediaType = null; // 'image', 'audio', 'video' — for dashboard preview
+    let incomingMediaFile = null; // saved filename in chat-media/
 
     if (msg.type === 'text') {
       // Wait for any ongoing media processing for this phone (image/voice takes 3-5s)
@@ -226,6 +228,13 @@ async function webhookHandler(req, res) {
           messageText = '[voice message - no mediaId found]';
           console.error(`[WA] Voice: no mediaId! voiceData=${JSON.stringify(voiceData)}`);
         } else {
+          // Download & save voice file for dashboard playback
+          try {
+            const { buffer: rawBuf, mimeType: rawMime } = await downloadMedia(mediaId, accessToken);
+            incomingMediaFile = saveIncomingMedia(rawBuf, 'audio', fromPhone, rawMime);
+            incomingMediaType = 'audio';
+          } catch (e) { console.warn('[WA] Voice save failed:', e.message); }
+
           const result = await transcribeVoice(mediaId, accessToken, apiKey);
           messageText = result.text;
           mediaNote = ' [voice→text]';
@@ -250,6 +259,13 @@ async function webhookHandler(req, res) {
         const caption = msg.image?.caption || '';
         if (!mediaId) { messageText = caption || '[image]'; }
         else {
+          // Download & save image for dashboard preview
+          try {
+            const { buffer: rawBuf, mimeType: rawMime } = await downloadMedia(mediaId, accessToken);
+            incomingMediaFile = saveIncomingMedia(rawBuf, 'image', fromPhone, rawMime);
+            incomingMediaType = 'image';
+          } catch (e) { console.warn('[WA] Image save failed:', e.message); }
+
           const result = await analyzeImage(mediaId, accessToken, apiKey);
           messageText = caption ? `${caption} [Image: ${result.text}]` : `[Image: ${result.text}]`;
           mediaNote = ' [image→text]';
@@ -261,8 +277,22 @@ async function webhookHandler(req, res) {
       } finally {
         endMediaLock(fromPhone);
       }
+    } else if (msg.type === 'video') {
+      // Video — download and save for dashboard preview (no AI analysis)
+      const videoData = msg.video || {};
+      const caption = videoData.caption || '';
+      const mediaId = videoData.id;
+      if (mediaId) {
+        try {
+          const { buffer: rawBuf, mimeType: rawMime } = await downloadMedia(mediaId, accessToken);
+          incomingMediaFile = saveIncomingMedia(rawBuf, 'video', fromPhone, rawMime);
+          incomingMediaType = 'video';
+          console.log(`[WA] Video saved: ${incomingMediaFile} (${rawBuf.length} bytes)`);
+        } catch (e) { console.warn('[WA] Video save failed:', e.message); }
+      }
+      messageText = caption || '[video]';
     } else {
-      // Other types (sticker, video, document, etc.) — not supported yet
+      // Other types (sticker, document, etc.) — not supported yet
       messageText = `[${msg.type}]`;
     }
 
@@ -297,7 +327,7 @@ async function webhookHandler(req, res) {
       // Save WhatsApp profile name separately — don't overwrite customer.name (that's for COLLECT_NAME)
       if (contactName) customerModel.update(customer.id, { wa_profile_name: contactName });
       const convo = conversationModel.getOrCreateActive(customer.id, 'nureva');
-      messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
+      messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId, media_type: incomingMediaType, media_url: incomingMediaFile });
       conversationModel.updateLastMessage(convo.id, messageText);
       conversationModel.setAdminUnread(convo.id, true);
       console.log('[WA Webhook] Bot disabled, message saved:', fromPhone);
@@ -316,7 +346,7 @@ async function webhookHandler(req, res) {
     if (blockedCheck && blockedCheck.is_blocked) {
       // Blocked customer — save message but don't reply
       const convo = conversationModel.getOrCreateActive(blockedCheck.id, 'nureva');
-      messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
+      messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId, media_type: incomingMediaType, media_url: incomingMediaFile });
       conversationModel.updateLastMessage(convo.id, messageText);
       console.log('[WA Webhook] Blocked customer, skipping:', fromPhone);
       _broadcast({ type: 'new_message', phone: fromPhone, source: 'whatsapp', contactName, result: { reply: null, incoming: messageText } });
@@ -337,11 +367,9 @@ async function webhookHandler(req, res) {
       }
     }
 
-    // Unsupported media types (sticker, video, document, location, contacts)
-    if (['sticker', 'video', 'document', 'location', 'contacts'].includes(msg.type)) {
-      const replyText = msg.type === 'video'
-        ? 'Video load nahi ho rahi. Ap please message likh ke bhej dein.'
-        : 'Abhi sirf text aur voice messages support hain. Ap please message likh ke bhej dein.';
+    // Unsupported media types (sticker, document, location, contacts)
+    if (['sticker', 'document', 'location', 'contacts'].includes(msg.type)) {
+      const replyText = 'Abhi sirf text, voice aur video messages support hain. Ap please message likh ke bhej dein.';
       await sendMessage(fromPhone, replyText, phoneNumberId, accessToken);
       console.log(`[WA] Unsupported (${msg.type}) from ${fromPhone}`);
       return;
@@ -358,7 +386,7 @@ async function webhookHandler(req, res) {
       const convo = conversationModel.getOrCreateActive(customer.id, storeName.toLowerCase());
       // Blocked conversation — save message silently, no bot response
       if (convo && convo.spam_flag) {
-        messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
+        messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId, media_type: incomingMediaType, media_url: incomingMediaFile });
         conversationModel.updateLastMessage(convo.id, messageText);
         conversationModel.setAdminUnread(convo.id, true);
         console.log(`[WA] ${fromPhone}: "${messageText}" — blocked (spam_flag), skipping bot reply`);
@@ -373,7 +401,7 @@ async function webhookHandler(req, res) {
       }
       if (convo && convo.needs_human) {
         // Save message but don't reply — human agent will handle
-        messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId });
+        messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId, media_type: incomingMediaType, media_url: incomingMediaFile });
         conversationModel.updateLastMessage(convo.id, messageText);
         conversationModel.setAdminUnread(convo.id, true);
         console.log(`[WA] ${fromPhone}: "${messageText}" — needs_human, skipping bot reply`);
@@ -389,7 +417,7 @@ async function webhookHandler(req, res) {
     }
 
     // Process message through the hybrid engine
-    const result = await hybrid.handleMessage(messageText, fromPhone, storeName, apiKey || undefined, { mediaCost, wa_message_id: messageId });
+    const result = await hybrid.handleMessage(messageText, fromPhone, storeName, apiKey || undefined, { mediaCost, wa_message_id: messageId, incoming_media_type: incomingMediaType, incoming_media_url: incomingMediaFile });
 
     // Add media processing cost to result (so dashboard shows it)
     if (mediaCost) {
@@ -443,14 +471,17 @@ async function webhookHandler(req, res) {
           result.reply = mediaLabel + result.reply;
         }
         markAsRead(messageId, phoneNumberId, accessToken);
-        // Update DB message with media label
+        // Update DB message with media label + media preview info
         if (result.db_conversation_id) {
           try {
             const { getDb } = require('../db');
+            const firstMedia = mediaFiles[0];
+            const mType = firstMedia.type === 'image' ? 'image' : 'video';
+            const mUrl = `/media/${firstMedia.filename}`;
             getDb().prepare(`
-              UPDATE messages SET content = ?
+              UPDATE messages SET content = ?, media_type = ?, media_url = ?
               WHERE id = (SELECT id FROM messages WHERE conversation_id = ? AND direction = 'outgoing' ORDER BY created_at DESC LIMIT 1)
-            `).run(result.reply, result.db_conversation_id);
+            `).run(result.reply, mType, mUrl, result.db_conversation_id);
           } catch (e) { /* non-critical */ }
         }
       } else if (!hasTextReply) {
@@ -524,7 +555,7 @@ async function webhookHandler(req, res) {
           console.log(`[WA] Complaint voice note ${audioResult.success ? 'sent' : 'FAILED'} to ${_compPhone}`);
           // Log voice note in DB + dashboard
           if (audioResult.success && _compConvId) {
-            messageModel.create(_compConvId, 'outgoing', 'bot', '[🎤 Complaint Voice Note]', { source: 'complaint_voice' });
+            messageModel.create(_compConvId, 'outgoing', 'bot', '[🎤 Complaint Voice Note]', { source: 'complaint_voice', media_type: 'audio', media_url: '/media/complaint-voice.mp3' });
             conversationModel.updateLastMessage(_compConvId, '[🎤 Voice Note]');
             _broadcast({ type: 'new_message', conversationId: _compConvId });
           }
@@ -582,7 +613,7 @@ async function webhookHandler(req, res) {
       if (audioResult.success) {
         markAsRead(messageId, phoneNumberId, accessToken);
         if (result.db_conversation_id) {
-          messageModel.create(result.db_conversation_id, 'outgoing', 'bot', '[🎤 Salam Voice Note]', { source: 'greeting_voice' });
+          messageModel.create(result.db_conversation_id, 'outgoing', 'bot', '[🎤 Salam Voice Note]', { source: 'greeting_voice', media_type: 'audio', media_url: `/media/${result._greeting_audio}` });
           conversationModel.updateLastMessage(result.db_conversation_id, '[🎤 Salam Voice Note]');
           _broadcast({ type: 'new_message', conversationId: result.db_conversation_id });
         }
@@ -618,14 +649,24 @@ async function webhookHandler(req, res) {
         // Prepend media info to reply for admin log
         const batchLabel = `[📎 ${batchSent} video${batchSent > 1 ? 's' : ''} sent: ${sentNames.join(', ')}]\n`;
         result.reply = batchLabel + (result.reply || '');
-        // Update DB message with media label so admin sees it in chat view
+        // Update DB message with media label + first video as preview
         if (result.db_conversation_id) {
           try {
             const { getDb } = require('../db');
-            getDb().prepare(`
-              UPDATE messages SET content = ?
-              WHERE id = (SELECT id FROM messages WHERE conversation_id = ? AND direction = 'outgoing' ORDER BY created_at DESC LIMIT 1)
-            `).run(result.reply, result.db_conversation_id);
+            // Find first successfully sent media file for preview
+            const firstBatchMedia = result._media_batch.find(item => mediaModel.getByProduct(item.product_id, item.type).length > 0);
+            const firstFile = firstBatchMedia ? mediaModel.getByProduct(firstBatchMedia.product_id, firstBatchMedia.type)[0] : null;
+            if (firstFile) {
+              getDb().prepare(`
+                UPDATE messages SET content = ?, media_type = ?, media_url = ?
+                WHERE id = (SELECT id FROM messages WHERE conversation_id = ? AND direction = 'outgoing' ORDER BY created_at DESC LIMIT 1)
+              `).run(result.reply, firstFile.type, `/media/${firstFile.filename}`, result.db_conversation_id);
+            } else {
+              getDb().prepare(`
+                UPDATE messages SET content = ?
+                WHERE id = (SELECT id FROM messages WHERE conversation_id = ? AND direction = 'outgoing' ORDER BY created_at DESC LIMIT 1)
+              `).run(result.reply, result.db_conversation_id);
+            }
           } catch (e) { console.error('[WA Media Batch] DB update failed:', e.message); }
         }
       }

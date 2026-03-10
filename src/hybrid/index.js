@@ -555,6 +555,8 @@ function dbSave(fn) {
 // Module-level media cost — set per handleMessage call, consumed on first saveMessages
 let _pendingMediaCost = null;
 let _pendingWaMessageId = null;
+let _pendingMediaType = null;  // 'image', 'audio' — for dashboard preview
+let _pendingMediaUrl = null;   // saved filename in chat-media/
 
 function saveMessages(dbConv, message, reply, intent, source, state, extra = {}) {
   if (!dbConv) return;
@@ -564,6 +566,12 @@ function saveMessages(dbConv, message, reply, intent, source, state, extra = {})
     if (_pendingWaMessageId) {
       incomingExtra.wa_message_id = _pendingWaMessageId;
       _pendingWaMessageId = null; // Consume
+    }
+    if (_pendingMediaType) {
+      incomingExtra.media_type = _pendingMediaType;
+      incomingExtra.media_url = _pendingMediaUrl;
+      _pendingMediaType = null;
+      _pendingMediaUrl = null;
     }
     if (_pendingMediaCost) {
       incomingExtra.debug_json = JSON.stringify({
@@ -704,9 +712,11 @@ function intentToNextState(intent, currentState, extracted, state) {
 async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   const startTime = Date.now();
 
-  // Set pending media cost + WA message ID for saveMessages to pick up
+  // Set pending media cost + WA message ID + media file for saveMessages to pick up
   _pendingMediaCost = options.mediaCost || null;
   _pendingWaMessageId = options.wa_message_id || null;
+  _pendingMediaType = options.incoming_media_type || null;
+  _pendingMediaUrl = options.incoming_media_url || null;
 
   // Guard: non-text messages (image, voice, sticker, location, contact) → polite reply
   if (!message || typeof message !== 'string' || !message.trim()) {

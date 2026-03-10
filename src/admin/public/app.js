@@ -753,20 +753,6 @@ async function sendComplaintMsg() {
   }
 }
 
-async function unsendMessage(msgId) {
-  if (!confirm('Ye message unsend (Delete for Everyone) karein?')) return;
-  try {
-    const res = await api('/api/messages/' + msgId + '/unsend', { method: 'POST' });
-    if (res?.success) {
-      if (currentChatId) openChat(currentChatId);
-    } else {
-      alert('Unsend failed: ' + (res?.error || 'Unknown error'));
-    }
-  } catch (e) {
-    alert('Error: ' + e.message);
-  }
-}
-
 async function toggleFollowup() {
   if (!currentChatId) return;
   const conv = conversations.find(c => c.id === currentChatId);
@@ -1087,18 +1073,27 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
       silentTimerHtml = `<div class="silent-timer-msg${is24h ? '' : ' pending'}" id="silentTimerMsg" data-time="${m.created_at}">${timerText}</div>${followUpCountdown}`;
     }
   }
-  // Unsend button — only on outgoing bot messages with wa_message_id, not already unsent
-  const unsendBtn = (isOut && m.wa_message_id && m.source !== 'unsent')
-    ? `<button class="msg-unsend-btn" onclick="unsendMessage(${m.id})" title="Unsend (Delete for Everyone)">🗑️ Unsend</button>`
-    : '';
+  // Media preview — show image thumbnail, audio player, or video player
+  let mediaPreviewHtml = '';
+  if (m.media_type && m.media_url) {
+    const mediaUrl = m.media_url.startsWith('/') ? m.media_url : `/chat-media/${m.media_url}`;
+    if (m.media_type === 'image') {
+      mediaPreviewHtml = `<div class="msg-media-preview"><img src="${mediaUrl}" alt="Image" class="msg-media-img" onclick="window.open('${mediaUrl}','_blank')"></div>`;
+    } else if (m.media_type === 'audio') {
+      mediaPreviewHtml = `<div class="msg-media-preview"><audio controls preload="none" class="msg-media-audio"><source src="${mediaUrl}"></audio></div>`;
+    } else if (m.media_type === 'video') {
+      mediaPreviewHtml = `<div class="msg-media-preview"><video controls preload="none" class="msg-media-video"><source src="${mediaUrl}"></video></div>`;
+    }
+  }
   return `
     <div class="msg-bubble ${bubbleClass}" data-msg-id="${m.id}" data-wa-id="${m.wa_message_id || ''}">
       ${senderLabel ? `<div class="msg-sender ${senderClass}">${senderLabel}${srcBadge}</div>` : ''}
       ${mediaBadge ? `<div style="margin-bottom:4px">${mediaBadge}</div>` : ''}
       ${followUpBadge}
+      ${mediaPreviewHtml}
       <div>${m.content}</div>
       ${feedbackHtml}
-      ${tickHtml}${unsendBtn}
+      ${tickHtml}
       ${silentTimerHtml}
     </div>
   `;
