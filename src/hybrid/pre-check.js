@@ -151,6 +151,14 @@ function preCheck(message, currentState, collected, state) {
     const textWithoutImage = msg.replace(/\[Image:[^\]]*\]/g, '').trim();
     const isImageOnly = textWithoutImage.length < 5 || /^(yh|ye|yeh|is|check|dekho?|dekhein)\s*$/i.test(textWithoutImage);
     if (isNoMatch && isImageOnly) {
+      // AUTO-SPAM: Track non-product image count — 2+ = broadcast spammer
+      if (state) {
+        state._nonProductImages = (state._nonProductImages || 0) + 1;
+        if (state._nonProductImages >= 2) {
+          console.log(`[AUTO-SPAM] ${state._nonProductImages} non-product images detected — marking as spam`);
+          return { intent: 'spam' };
+        }
+      }
       return { intent: 'image_not_recognized' };
     }
     // Even if not image-only, strip product names from image description to prevent false product detection

@@ -1372,6 +1372,23 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     // Reset consecutive error counter on successful AI call
     state._error_count = 0;
 
+    // AUTO-SPAM: If AI returns "unknown" for an image message, track it
+    const isImageMsg = /^\[Image:/.test(message);
+    if (aiIntent === 'unknown' && isImageMsg && ['IDLE', 'GREETING'].includes(state.current)) {
+      state._nonProductImages = (state._nonProductImages || 0) + 1;
+      if (state._nonProductImages >= 2) {
+        console.log(`[AUTO-SPAM] AI unknown + image × ${state._nonProductImages} — marking spam`);
+        saveMessages(dbConv, message, null, 'spam', 'auto-spam', state, {});
+        saveState(dbConv, state);
+        if (dbConv?.id) conversationModel.setSpam(dbConv.id, true);
+        return { reply: null, state: state.current, source: 'auto-spam', intent: 'spam' };
+      }
+    }
+    // Reset non-product image counter when customer sends actual text (not image)
+    if (!isImageMsg && state._nonProductImages) {
+      state._nonProductImages = 0;
+    }
+
     // --- Process AI extracted data ---
 
     // Product detection from AI
