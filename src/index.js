@@ -1118,6 +1118,14 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
     if (!conv) return res.status(404).json({ error: 'Not found' });
     if (!conv.phone) return res.status(400).json({ error: 'No phone number' });
 
+    // Guard: prevent duplicate sends — check if complaint msg was sent in last 5 minutes
+    const recentComplaint = db.prepare(
+      "SELECT id FROM messages WHERE conversation_id = ? AND source IN ('manual_complaint_voice','manual_complaint_text') AND created_at > datetime('now','localtime','-5 minutes') LIMIT 1"
+    ).get(id);
+    if (recentComplaint) {
+      return res.json({ success: false, error: 'Complaint message already sent in last 5 minutes. Dubara bhejne ki zaroorat nahi.' });
+    }
+
     const accessToken = settingsModel.get('meta_whatsapp_token', '');
     const phoneNumberId = settingsModel.get('meta_phone_number_id', '');
     if (!accessToken || !phoneNumberId) return res.status(500).json({ error: 'WhatsApp credentials not configured' });
