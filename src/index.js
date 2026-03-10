@@ -13,7 +13,7 @@ const { WebSocketServer } = require('ws');
 const http = require('http');
 const hybrid = require('./hybrid');
 const { webhookVerify, webhookHandler, setBroadcast } = require('./whatsapp/webhook');
-const { sendMessage, sendAudio, toInternational } = require('./whatsapp/sender');
+const { sendMessage, sendAudio, deleteMessage, toInternational } = require('./whatsapp/sender');
 
 // DB modules
 const { initDb, getDb } = require('./db');
@@ -1089,6 +1089,34 @@ app.post('/api/conversations/:id/block', requireAuth, (req, res) => {
     db.prepare('UPDATE conversations SET spam_flag = ? WHERE id = ?').run(newVal, id);
     res.json({ success: true, spam_flag: newVal });
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Unsend (delete for everyone) a message via WhatsApp API
+app.post('/api/messages/:id/unsend', requireAuth, async (req, res) => {
+  try {
+    const msgId = parseInt(req.params.id);
+    const db = getDb();
+    const msg = db.prepare('SELECT * FROM messages WHERE id = ?').get(msgId);
+    if (!msg) return res.status(404).json({ error: 'Message not found' });
+    if (msg.direction !== 'outgoing') return res.json({ success: false, error: 'Sirf bot ke bheje hue messages unsend ho sakte hain.' });
+    if (!msg.wa_message_id) return res.json({ success: false, error: 'WhatsApp message ID nahi mila — ye message unsend nahi ho sakta.' });
+
+    const accessToken = settingsModel.get('meta_whatsapp_token', '');
+    const phoneNumberId = settingsModel.get('meta_phone_number_id', '');
+    if (!accessToken || !phoneNumberId) return res.status(500).json({ error: 'WhatsApp credentials not configured' });
+
+    const result = await deleteMessage(msg.wa_message_id, phoneNumberId, accessToken);
+    if (result.success) {
+      db.prepare("UPDATE messages SET content = '🚫 Message unsent', source = 'unsent' WHERE id = ?").run(msgId);
+      console.log(`[UNSEND] Message #${msgId} (wa: ${msg.wa_message_id}) unsent successfully`);
+      broadcast({ type: 'new_message', conversationId: msg.conversation_id });
+      return res.json({ success: true });
+    }
+    return res.json({ success: false, error: result.error || 'WhatsApp API error' });
+  } catch (e) {
+    console.error('[UNSEND] Error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });

@@ -753,6 +753,20 @@ async function sendComplaintMsg() {
   }
 }
 
+async function unsendMessage(msgId) {
+  if (!confirm('Ye message unsend (Delete for Everyone) karein?')) return;
+  try {
+    const res = await api('/api/messages/' + msgId + '/unsend', { method: 'POST' });
+    if (res?.success) {
+      if (currentChatId) openChat(currentChatId);
+    } else {
+      alert('Unsend failed: ' + (res?.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
 async function toggleFollowup() {
   if (!currentChatId) return;
   const conv = conversations.find(c => c.id === currentChatId);
@@ -1073,6 +1087,10 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
       silentTimerHtml = `<div class="silent-timer-msg${is24h ? '' : ' pending'}" id="silentTimerMsg" data-time="${m.created_at}">${timerText}</div>${followUpCountdown}`;
     }
   }
+  // Unsend button — only on outgoing bot messages with wa_message_id, not already unsent
+  const unsendBtn = (isOut && m.wa_message_id && m.source !== 'unsent')
+    ? `<button class="msg-unsend-btn" onclick="unsendMessage(${m.id})" title="Unsend (Delete for Everyone)">🗑️</button>`
+    : '';
   return `
     <div class="msg-bubble ${bubbleClass}" data-msg-id="${m.id}" data-wa-id="${m.wa_message_id || ''}">
       ${senderLabel ? `<div class="msg-sender ${senderClass}">${senderLabel}${srcBadge}</div>` : ''}
@@ -1080,7 +1098,7 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
       ${followUpBadge}
       <div>${m.content}</div>
       ${feedbackHtml}
-      ${tickHtml}
+      ${tickHtml}${unsendBtn}
       ${silentTimerHtml}
     </div>
   `;
