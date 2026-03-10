@@ -351,15 +351,18 @@ async function openChat(chatId) {
   const inputArea = document.getElementById('chatInputArea');
   const chatInput = document.getElementById('chatInput');
   const sendBtn = document.getElementById('chatSendBtn');
+  const attachBtn = document.getElementById('chatAttachBtn');
   if (conv.needs_human) {
     chatInput.disabled = false;
     chatInput.placeholder = 'Type reply as human agent...';
     sendBtn.disabled = false;
+    attachBtn.disabled = false;
     inputArea.classList.remove('disabled');
   } else {
     chatInput.disabled = true;
     chatInput.placeholder = 'Bot handling this chat...';
     sendBtn.disabled = true;
+    attachBtn.disabled = true;
     inputArea.classList.add('disabled');
   }
 
@@ -881,6 +884,51 @@ async function sendManualReply() {
     input.disabled = false;
     sendBtn.disabled = false;
     input.focus();
+  }
+}
+
+// ---- SEND MEDIA (image/video/voice) from admin ----
+async function handleMediaSelect(input) {
+  const file = input.files[0];
+  if (!file || !currentChatId) return;
+  input.value = ''; // Reset so same file can be selected again
+
+  const maxSize = 16 * 1024 * 1024; // 16MB
+  if (file.size > maxSize) { alert('File bohut bara hai (max 16MB)'); return; }
+
+  const type = file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : file.type.startsWith('audio') ? 'audio' : null;
+  if (!type) { alert('Sirf image, video ya audio files support hain'); return; }
+
+  const caption = type === 'image' ? prompt('Image caption (optional):', '') : null;
+
+  const attachBtn = document.getElementById('chatAttachBtn');
+  attachBtn.disabled = true;
+  attachBtn.innerHTML = '⏳';
+
+  try {
+    // Read file as base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]); // strip data:... prefix
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const result = await api(`/api/conversations/${currentChatId}/send-media`, {
+      method: 'POST',
+      body: JSON.stringify({ type, caption: caption || '', base64, filename: file.name, mimetype: file.type })
+    });
+    if (result?.success) {
+      loadChats();
+      openChat(currentChatId);
+    } else {
+      alert('Media send failed: ' + (result?.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    attachBtn.disabled = false;
+    attachBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>';
   }
 }
 

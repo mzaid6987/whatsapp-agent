@@ -14,7 +14,6 @@ const http = require('http');
 const hybrid = require('./hybrid');
 const { webhookVerify, webhookHandler, setBroadcast } = require('./whatsapp/webhook');
 const { sendMessage, sendImage, sendVideo, sendAudio, toInternational } = require('./whatsapp/sender');
-const multer = require('multer');
 
 // DB modules
 const { initDb, getDb } = require('./db');
@@ -104,7 +103,7 @@ function broadcast(data) {
 }
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Lightweight request counter (no per-request overhead)
@@ -1193,23 +1192,18 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
 const CHAT_MEDIA_DIR = path.join(__dirname, '..', 'uploads', 'chat-media');
 if (!fs.existsSync(CHAT_MEDIA_DIR)) fs.mkdirSync(CHAT_MEDIA_DIR, { recursive: true });
 
-const mediaUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, CHAT_MEDIA_DIR),
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname) || '.bin';
-      cb(null, `admin_${Date.now()}${ext}`);
-    }
-  }),
-  limits: { fileSize: 16 * 1024 * 1024 } // 16MB
-});
-
-app.post('/api/conversations/:id/send-media', requireAuth, mediaUpload.single('media'), async (req, res) => {
+app.post('/api/conversations/:id/send-media', requireAuth, async (req, res) => {
   try {
     const convId = parseInt(req.params.id);
-    const { type, caption } = req.body; // type: 'image' | 'video' | 'audio'
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const { type, caption, base64, filename, mimetype } = req.body;
+    if (!base64) return res.status(400).json({ error: 'No file data' });
     if (!['image', 'video', 'audio'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+
+    // Save base64 to file
+    const ext = path.extname(filename || '') || (type === 'image' ? '.jpg' : type === 'video' ? '.mp4' : '.mp3');
+    const mediaFilename = `admin_${Date.now()}${ext}`;
+    const filePath = path.join(CHAT_MEDIA_DIR, mediaFilename);
+    fs.writeFileSync(filePath, Buffer.from(base64, 'base64'));
 
     const conv = conversationModel.findById(convId);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
@@ -1222,7 +1216,6 @@ app.post('/api/conversations/:id/send-media', requireAuth, mediaUpload.single('m
 
     const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
     const intlPhone = toInternational(customer.phone);
-    const mediaFilename = req.file.filename;
     const publicUrl = `${serverUrl}/chat-media/${mediaFilename}`;
 
     // Send via WhatsApp API
@@ -1240,8 +1233,7 @@ app.post('/api/conversations/:id/send-media', requireAuth, mediaUpload.single('m
     }
 
     if (!sendResult.success) {
-      // Clean up file on failure
-      try { fs.unlinkSync(req.file.path); } catch (e) {}
+      try { fs.unlinkSync(filePath); } catch (e) {}
       return res.status(500).json({ error: 'WhatsApp send failed: ' + sendResult.error });
     }
 
