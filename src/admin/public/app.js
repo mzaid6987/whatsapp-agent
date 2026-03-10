@@ -14,6 +14,22 @@ let conversations = [];
 let currentChatId = null;
 let botEnabled = true;
 
+// ---- 24H WINDOW COUNTDOWN ----
+function _update24hWindow() {
+  const el = document.getElementById('chat24hWindow');
+  if (!el || !window._24hExpiresAt) return;
+  const remaining = window._24hExpiresAt - Date.now();
+  if (remaining <= 0) {
+    const expiredHrs = Math.round(Math.abs(remaining) / (1000 * 60 * 60));
+    el.innerHTML = '<span style="color:#e53e3e;font-weight:600">⛔ 24h Window EXPIRED (' + expiredHrs + 'h ago)</span>';
+  } else {
+    const hrs = Math.floor(remaining / (1000 * 60 * 60));
+    const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    const color = hrs < 2 ? '#D97706' : '#38a169';
+    el.innerHTML = '<span style="color:' + color + ';font-weight:600">⏱️ 24h Window: ' + hrs + 'h ' + mins + 'm remaining</span>';
+  }
+}
+
 // ---- UTILS ----
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -384,6 +400,23 @@ async function openChat(chatId) {
     try {
       const modelEl = document.getElementById('chatAiModel');
       if (modelEl && _m) modelEl.textContent = `Model: ${_m.name} (${_m.model})`;
+    } catch(e) {}
+
+    // 24h Window Countdown — find last incoming message
+    try {
+      const lastIncoming = [...msgs].reverse().find(m => m.direction === 'incoming');
+      const windowEl = document.getElementById('chat24hWindow');
+      if (windowEl && lastIncoming && lastIncoming.created_at) {
+        const ts = lastIncoming.created_at.includes('+') ? lastIncoming.created_at : lastIncoming.created_at + '+05:00';
+        const lastTime = new Date(ts).getTime();
+        const expiresAt = lastTime + (24 * 60 * 60 * 1000);
+        window._24hExpiresAt = expiresAt;
+        _update24hWindow();
+        clearInterval(window._24hInterval);
+        window._24hInterval = setInterval(_update24hWindow, 30000);
+      } else if (windowEl) {
+        windowEl.textContent = '';
+      }
     } catch(e) {}
   } catch (err) {
     if (seq !== _openChatSeq) return;
