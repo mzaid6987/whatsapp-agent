@@ -573,6 +573,22 @@ async function webhookHandler(req, res) {
       }, 10 * 1000);
     }
 
+    // Greeting voice note — send audio instead of text for salam greeting
+    if (result._greeting_audio) {
+      const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
+      const audioUrl = `${serverUrl}/media/${result._greeting_audio}`;
+      const audioResult = await sendAudio(fromPhone, audioUrl, phoneNumberId, accessToken);
+      console.log(`[WA] Greeting voice note ${audioResult.success ? 'sent' : 'FAILED'} to ${fromPhone}`);
+      if (audioResult.success) {
+        markAsRead(messageId, phoneNumberId, accessToken);
+        if (result.db_conversation_id) {
+          messageModel.create(result.db_conversation_id, 'outgoing', 'bot', '[🎤 Salam Voice Note]', { source: 'greeting_voice' });
+          conversationModel.updateLastMessage(result.db_conversation_id, '[🎤 Salam Voice Note]');
+          _broadcast({ type: 'new_message', conversationId: result.db_conversation_id });
+        }
+      }
+    }
+
     // Handle batch media — send videos for multiple products AFTER text reply
     // (product list text goes first, then all videos follow)
     if (result._media_batch && result._media_batch.length > 0) {

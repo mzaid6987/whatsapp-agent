@@ -1250,8 +1250,8 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
 
       const reply = preResult.reply ? qualityGate(preResult.reply) : null;
       const stateBefore = state.current;
-      // For complaint audio: save only incoming message, bot reply saved by delayed flow in correct order
-      const preReplyToSave = preResult._complaint_audio ? null : (reply || '(media sent)');
+      // For complaint/greeting audio: save only incoming message, bot reply saved by webhook
+      const preReplyToSave = (preResult._complaint_audio || preResult._greeting_audio) ? null : (reply || '(media sent)');
       saveMessages(dbConv, message, preReplyToSave, pre.intent, 'pre-check', state, {
         needs_human: preResult.needs_human || false,
         debug: { path: 'PATH2_PRE_CHECK', intent: pre.intent, extracted: pre.extracted || null, state_before: stateBefore, state_after: preResult.state, collected: { ...state.collected } },
@@ -1273,6 +1273,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         _media_batch: preResult._media_batch || null,
         _complaint_audio: preResult._complaint_audio || false,
         _trust_audio: preResult._trust_audio || false,
+        _greeting_audio: preResult._greeting_audio || null,
       };
     }
   }
@@ -2428,7 +2429,7 @@ function handlePreCheck(pre, message, state, storeName, phone) {
     }
 
     case 'greeting_salam': {
-      // In HAGGLING/PRODUCT_INQUIRY — greet + remind about product
+      // In HAGGLING/PRODUCT_INQUIRY — greet + remind about product (text, no voice)
       if (['HAGGLING', 'PRODUCT_INQUIRY'].includes(state.current) && state.product) {
         const greet = fillTemplate('GREETING_SALAM', vars);
         return { reply: `${greet} ${state.product.short} Rs.${state.product.price.toLocaleString()} — order karna hai?`, state: state.current };
@@ -2437,7 +2438,8 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       if (state.isReturning && state.collected.name) {
         return { reply: fillTemplate('GREETING_RETURNING_SALAM', vars), state: 'GREETING' };
       }
-      return { reply: fillTemplate('GREETING_SALAM', vars), state: 'GREETING' };
+      // Send voice note instead of text for fresh salam greeting
+      return { reply: null, state: 'GREETING', _greeting_audio: 'greeting-salam.mp3' };
     }
 
     case 'greeting_casual': {
