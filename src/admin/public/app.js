@@ -906,32 +906,16 @@ async function handleMediaSelect(input) {
   attachBtn.innerHTML = '⏳';
 
   try {
-    let result;
-    if (type === 'video' || type === 'audio' || file.size > 2 * 1024 * 1024) {
-      // Large files: use FormData (streaming, no base64 bloat)
-      const formData = new FormData();
-      formData.append('media', file);
-      formData.append('type', type);
-      if (caption) formData.append('caption', caption);
-      const res = await fetch(`/api/conversations/${currentChatId}/send-media`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-      result = await res.json();
-    } else {
-      // Small files (images): base64 JSON
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      result = await api(`/api/conversations/${currentChatId}/send-media`, {
-        method: 'POST',
-        body: JSON.stringify({ type, caption: caption || '', base64, filename: file.name, mimetype: file.type })
-      });
-    }
+    const formData = new FormData();
+    formData.append('media', file);
+    formData.append('type', type);
+    if (caption) formData.append('caption', caption);
+    const res = await fetch(`/api/conversations/${currentChatId}/send-media`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    });
+    const result = await res.json();
     if (result?.success) {
       loadChats();
       openChat(currentChatId);

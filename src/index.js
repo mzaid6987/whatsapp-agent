@@ -14,6 +14,7 @@ const http = require('http');
 const hybrid = require('./hybrid');
 const { webhookVerify, webhookHandler, setBroadcast } = require('./whatsapp/webhook');
 const { sendMessage, sendImage, sendVideo, sendAudio, toInternational } = require('./whatsapp/sender');
+const multer = require('multer');
 
 // DB modules
 const { initDb, getDb } = require('./db');
@@ -1192,76 +1193,28 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
 const CHAT_MEDIA_DIR = path.join(__dirname, '..', 'uploads', 'chat-media');
 if (!fs.existsSync(CHAT_MEDIA_DIR)) fs.mkdirSync(CHAT_MEDIA_DIR, { recursive: true });
 
-// Inline multipart parser (no multer needed)
-function parseMultipart(req) {
-  return new Promise((resolve, reject) => {
-    const contentType = req.headers['content-type'] || '';
-    const boundaryMatch = contentType.match(/boundary=(.+?)(?:;|$)/);
-    if (!boundaryMatch) return reject(new Error('No boundary'));
-    const boundary = boundaryMatch[1];
-    const chunks = [];
-    req.on('data', c => chunks.push(c));
-    req.on('end', () => {
-      const buf = Buffer.concat(chunks);
-      const parts = {};
-      const sep = Buffer.from('--' + boundary);
-      let pos = 0;
-      while (pos < buf.length) {
-        const start = buf.indexOf(sep, pos);
-        if (start === -1) break;
-        const nextStart = buf.indexOf(sep, start + sep.length + 2);
-        if (nextStart === -1) break;
-        const part = buf.slice(start + sep.length + 2, nextStart - 2); // skip \r\n
-        const headerEnd = part.indexOf('\r\n\r\n');
-        if (headerEnd === -1) { pos = nextStart; continue; }
-        const headers = part.slice(0, headerEnd).toString();
-        const body = part.slice(headerEnd + 4);
-        const nameMatch = headers.match(/name="([^"]+)"/);
-        const filenameMatch = headers.match(/filename="([^"]+)"/);
-        if (nameMatch) {
-          if (filenameMatch) {
-            parts[nameMatch[1]] = { buffer: body, filename: filenameMatch[1] };
-          } else {
-            parts[nameMatch[1]] = body.toString();
-          }
-        }
-        pos = nextStart;
-      }
-      resolve(parts);
-    });
-    req.on('error', reject);
-  });
-}
+const mediaUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, CHAT_MEDIA_DIR),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname) || '.bin';
+      cb(null, `admin_${Date.now()}${ext}`);
+    }
+  }),
+  limits: { fileSize: 16 * 1024 * 1024 }
+});
 
-app.post('/api/conversations/:id/send-media', requireAuth, async (req, res) => {
+app.post('/api/conversations/:id/send-media', requireAuth, mediaUpload.single('media'), async (req, res) => {
   try {
     const convId = parseInt(req.params.id);
-    let type, caption, filePath, mediaFilename;
+    const type = req.body.type;
+    const caption = req.body.caption || '';
 
-    const contentType = req.headers['content-type'] || '';
-    if (contentType.includes('multipart/form-data')) {
-      // FormData upload (for videos/large files)
-      const parts = await parseMultipart(req);
-      type = parts.type;
-      caption = parts.caption || '';
-      if (!parts.media?.buffer) return res.status(400).json({ error: 'No file uploaded' });
-      const ext = path.extname(parts.media.filename || '') || '.bin';
-      mediaFilename = `admin_${Date.now()}${ext}`;
-      filePath = path.join(CHAT_MEDIA_DIR, mediaFilename);
-      fs.writeFileSync(filePath, parts.media.buffer);
-    } else {
-      // JSON base64 upload (for images/small files)
-      const { base64, filename } = req.body;
-      type = req.body.type;
-      caption = req.body.caption || '';
-      if (!base64) return res.status(400).json({ error: 'No file data' });
-      const ext = path.extname(filename || '') || (type === 'image' ? '.jpg' : type === 'video' ? '.mp4' : '.mp3');
-      mediaFilename = `admin_${Date.now()}${ext}`;
-      filePath = path.join(CHAT_MEDIA_DIR, mediaFilename);
-      fs.writeFileSync(filePath, Buffer.from(base64, 'base64'));
-    }
-
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     if (!['image', 'video', 'audio'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+
+    const mediaFilename = req.file.filename;
+    const filePath = req.file.path;
 
     const conv = conversationModel.findById(convId);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
