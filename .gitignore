@@ -5,4 +5,5 @@ temp/
 uploads/
 !uploads/media/followup-voice.mp3
 !uploads/media/greeting-salam.mp3
+!uploads/media/greeting-casual.mp3
 *.log

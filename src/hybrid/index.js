@@ -2451,7 +2451,8 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       if (state.isReturning && state.collected.name) {
         return { reply: fillTemplate('GREETING_RETURNING_CASUAL', vars), state: 'GREETING' };
       }
-      return { reply: fillTemplate('GREETING_CASUAL', vars), state: 'GREETING' };
+      // Send voice note instead of text for fresh casual greeting
+      return { reply: null, state: 'GREETING', _greeting_audio: 'greeting-casual.mp3' };
     }
 
     case 'greeting_howru': {
