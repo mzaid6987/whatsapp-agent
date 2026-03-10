@@ -44,7 +44,17 @@ const COMPLAINT_WORDS = [
   // English complaint expressions
   'disappointed','very disappointed','not happy','not satisfied','unsatisfied',
   'waste of money','waste money','money waste','paisa barbaad','paise barbaad','paisay barbaad',
-  'haraam','haram','paisay haraam','paise haraam','paisa haraam'
+  'haraam','haram','paisay haraam','paise haraam','paisa haraam',
+  // "on nhi ho rha" / device not turning on (Roman Urdu — common electronics complaint)
+  'on nhi','on nahi','on ni','on nhi ho','on nahi ho',
+  'start nhi','start nahi','start ni','start nhi ho','start nahi ho',
+  'charge nhi','charge nahi','charge ni','charge nhi ho','charge nahi ho',
+  'light nhi','light nahi','light ni',
+  'jal nhi','jal nahi','jal ni',
+  'power nhi','power nahi','power ni',
+  'chalu nhi','chalu nahi','chalu ni',
+  'band hai','band he','band h',
+  'on hi nhi','on hi nahi','on he nhi','on he nahi'
 ];
 
 const TRUST_WORDS = /\b(asli|original|cod|cash\s*on|return\s*policy|exchange\s*policy|warranty|guarantee|quality|bharosa|trust|kaisi?\s*quality)\b/i;
