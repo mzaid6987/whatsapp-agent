@@ -1109,6 +1109,59 @@ app.post('/api/conversations/:id/followup', requireAuth, (req, res) => {
   }
 });
 
+// Send complaint voice note + number text manually (same sequence as auto-complaint)
+app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const db = getDb();
+    const conv = db.prepare('SELECT c.*, cu.phone FROM conversations c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE c.id = ?').get(id);
+    if (!conv) return res.status(404).json({ error: 'Not found' });
+    if (!conv.phone) return res.status(400).json({ error: 'No phone number' });
+
+    const accessToken = settingsModel.get('meta_whatsapp_token', '');
+    const phoneNumberId = settingsModel.get('meta_phone_number_id', '');
+    if (!accessToken || !phoneNumberId) return res.status(500).json({ error: 'WhatsApp credentials not configured' });
+
+    const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
+    const intlPhone = toInternational(conv.phone);
+    const complaintText = 'Sir, aap is number pe WhatsApp message bhej dein — 03701337838 🙏 InshaAllah aapka masla resolve ho jayega ✅';
+
+    // Step 1: Send voice note immediately
+    const audioUrl = `${serverUrl}/media/complaint-voice.mp3`;
+    const audioResult = await sendAudio(intlPhone, audioUrl, phoneNumberId, accessToken);
+    console.log(`[MANUAL-COMPLAINT] Voice note ${audioResult.success ? 'sent' : 'FAILED'} to ${conv.phone}`);
+
+    if (audioResult.success) {
+      messageModel.create(id, 'outgoing', 'bot', '[🎤 Complaint Voice Note]', { source: 'manual_complaint_voice' });
+      conversationModel.updateLastMessage(id, '[🎤 Voice Note]');
+      broadcast({ type: 'new_message', conversationId: id });
+    }
+
+    // Step 2: Send number text after 30s delay
+    setTimeout(async () => {
+      try {
+        const sendResult = await sendMessage(intlPhone, complaintText, phoneNumberId, accessToken);
+        console.log(`[MANUAL-COMPLAINT] Number text ${sendResult.success ? 'sent' : 'FAILED'} to ${conv.phone}`);
+        if (sendResult.success) {
+          messageModel.create(id, 'outgoing', 'bot', complaintText, { source: 'manual_complaint_text' });
+          conversationModel.updateLastMessage(id, complaintText);
+          broadcast({ type: 'new_message', conversationId: id });
+        }
+      } catch (err) {
+        console.error('[MANUAL-COMPLAINT] Text error:', err.message);
+      }
+    }, 30 * 1000);
+
+    // Also mark as complaint + human assigned
+    db.prepare('UPDATE conversations SET complaint_flag = 1, needs_human = 1, state = ? WHERE id = ?').run('COMPLAINT', id);
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[MANUAL-COMPLAINT] Error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Mark conversation as complaint (manual) + create complaint tracker entry
 app.post('/api/conversations/:id/complaint', requireAuth, (req, res) => {
   try {

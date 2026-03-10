@@ -688,6 +688,31 @@ async function toggleBlockChat() {
   }
 }
 
+async function sendComplaintMsg() {
+  if (!currentChatId) return;
+  if (!confirm('Complaint voice note + number text bhejein?')) return;
+  const btn = document.getElementById('btnSendComplaint');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  try {
+    const res = await api('/api/conversations/' + currentChatId + '/send-complaint', { method: 'POST' });
+    if (res?.success) {
+      btn.textContent = 'Sent!';
+      btn.style.color = '#38a169';
+      btn.style.borderColor = '#38a169';
+      setTimeout(() => { openChat(currentChatId); }, 2000);
+    } else {
+      alert('Failed: ' + (res?.error || 'Unknown error'));
+      btn.textContent = '📞 Complaint Msg';
+      btn.disabled = false;
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+    btn.textContent = '📞 Complaint Msg';
+    btn.disabled = false;
+  }
+}
+
 async function toggleFollowup() {
   if (!currentChatId) return;
   const conv = conversations.find(c => c.id === currentChatId);
