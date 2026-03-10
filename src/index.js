@@ -14,7 +14,6 @@ const http = require('http');
 const hybrid = require('./hybrid');
 const { webhookVerify, webhookHandler, setBroadcast } = require('./whatsapp/webhook');
 const { sendMessage, sendImage, sendVideo, sendAudio, toInternational } = require('./whatsapp/sender');
-const multer = require('multer');
 
 // DB modules
 const { initDb, getDb } = require('./db');
@@ -1193,28 +1192,42 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
 const CHAT_MEDIA_DIR = path.join(__dirname, '..', 'uploads', 'chat-media');
 if (!fs.existsSync(CHAT_MEDIA_DIR)) fs.mkdirSync(CHAT_MEDIA_DIR, { recursive: true });
 
-const mediaUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, CHAT_MEDIA_DIR),
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname) || '.bin';
-      cb(null, `admin_${Date.now()}${ext}`);
-    }
-  }),
-  limits: { fileSize: 16 * 1024 * 1024 }
-});
-
-app.post('/api/conversations/:id/send-media', requireAuth, mediaUpload.single('media'), async (req, res) => {
+app.post('/api/conversations/:id/send-media', requireAuth, express.raw({ type: 'multipart/form-data', limit: '16mb' }), async (req, res) => {
   try {
     const convId = parseInt(req.params.id);
-    const type = req.body.type;
-    const caption = req.body.caption || '';
 
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    // Parse multipart form data from raw body
+    const ct = req.headers['content-type'] || '';
+    const bMatch = ct.match(/boundary=([^\s;]+)/);
+    if (!bMatch) return res.status(400).json({ error: 'Invalid content type' });
+    const boundary = '--' + bMatch[1];
+    const raw = req.body; // Buffer from express.raw()
+    const parts = {};
+    const bBuf = Buffer.from(boundary);
+    let idx = raw.indexOf(bBuf);
+    while (idx !== -1) {
+      const nextIdx = raw.indexOf(bBuf, idx + bBuf.length + 2);
+      if (nextIdx === -1) break;
+      const chunk = raw.slice(idx + bBuf.length + 2, nextIdx - 2);
+      const hdrEnd = chunk.indexOf('\r\n\r\n');
+      if (hdrEnd === -1) { idx = nextIdx; continue; }
+      const hdr = chunk.slice(0, hdrEnd).toString();
+      const data = chunk.slice(hdrEnd + 4);
+      const nm = hdr.match(/name="([^"]+)"/);
+      const fn = hdr.match(/filename="([^"]+)"/);
+      if (nm) parts[nm[1]] = fn ? { buffer: data, filename: fn[1] } : data.toString();
+      idx = nextIdx;
+    }
+
+    const type = parts.type;
+    const caption = parts.caption || '';
+    if (!parts.media?.buffer) return res.status(400).json({ error: 'No file uploaded' });
     if (!['image', 'video', 'audio'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
-    const mediaFilename = req.file.filename;
-    const filePath = req.file.path;
+    const ext = path.extname(parts.media.filename || '') || '.bin';
+    const mediaFilename = `admin_${Date.now()}${ext}`;
+    const filePath = path.join(CHAT_MEDIA_DIR, mediaFilename);
+    fs.writeFileSync(filePath, parts.media.buffer);
 
     const conv = conversationModel.findById(convId);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
