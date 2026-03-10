@@ -1118,12 +1118,12 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
     if (!conv) return res.status(404).json({ error: 'Not found' });
     if (!conv.phone) return res.status(400).json({ error: 'No phone number' });
 
-    // Guard: prevent duplicate sends — check if complaint msg was sent in last 5 minutes
-    const recentComplaint = db.prepare(
-      "SELECT id FROM messages WHERE conversation_id = ? AND source IN ('manual_complaint_voice','manual_complaint_text') AND created_at > datetime('now','localtime','-5 minutes') LIMIT 1"
+    // Guard: only allow ONE manual complaint message per conversation (ever)
+    const alreadySent = db.prepare(
+      "SELECT id FROM messages WHERE conversation_id = ? AND source IN ('manual_complaint_voice','manual_complaint_text') LIMIT 1"
     ).get(id);
-    if (recentComplaint) {
-      return res.json({ success: false, error: 'Complaint message already sent in last 5 minutes. Dubara bhejne ki zaroorat nahi.' });
+    if (alreadySent) {
+      return res.json({ success: false, error: 'Complaint message pehle se bheja ja chuka hai. Sirf 1 baar bhej sakte hain.' });
     }
 
     const accessToken = settingsModel.get('meta_whatsapp_token', '');
