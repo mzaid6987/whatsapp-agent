@@ -13,7 +13,8 @@ const { WebSocketServer } = require('ws');
 const http = require('http');
 const hybrid = require('./hybrid');
 const { webhookVerify, webhookHandler, setBroadcast } = require('./whatsapp/webhook');
-const { sendMessage, sendAudio, toInternational } = require('./whatsapp/sender');
+const { sendMessage, sendImage, sendVideo, sendAudio, toInternational } = require('./whatsapp/sender');
+const multer = require('multer');
 
 // DB modules
 const { initDb, getDb } = require('./db');
@@ -1188,6 +1189,92 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
   }
 });
 
+// ---- Admin send media (image/video/voice) from dashboard ----
+const CHAT_MEDIA_DIR = path.join(__dirname, '..', 'uploads', 'chat-media');
+if (!fs.existsSync(CHAT_MEDIA_DIR)) fs.mkdirSync(CHAT_MEDIA_DIR, { recursive: true });
+
+const mediaUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, CHAT_MEDIA_DIR),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname) || '.bin';
+      cb(null, `admin_${Date.now()}${ext}`);
+    }
+  }),
+  limits: { fileSize: 16 * 1024 * 1024 } // 16MB
+});
+
+app.post('/api/conversations/:id/send-media', requireAuth, mediaUpload.single('media'), async (req, res) => {
+  try {
+    const convId = parseInt(req.params.id);
+    const { type, caption } = req.body; // type: 'image' | 'video' | 'audio'
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!['image', 'video', 'audio'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+
+    const conv = conversationModel.findById(convId);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    const customer = customerModel.findById(conv.customer_id);
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+
+    const accessToken = settingsModel.get('meta_whatsapp_token', '');
+    const phoneNumberId = settingsModel.get('meta_phone_number_id', '');
+    if (!accessToken || !phoneNumberId) return res.status(500).json({ error: 'WhatsApp credentials not configured' });
+
+    const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
+    const intlPhone = toInternational(customer.phone);
+    const mediaFilename = req.file.filename;
+    const publicUrl = `${serverUrl}/chat-media/${mediaFilename}`;
+
+    // Send via WhatsApp API
+    let sendResult;
+    let contentText;
+    if (type === 'image') {
+      sendResult = await sendImage(intlPhone, publicUrl, caption || '', phoneNumberId, accessToken);
+      contentText = caption ? `[📷 Image: ${caption}]` : '[📷 Image]';
+    } else if (type === 'video') {
+      sendResult = await sendVideo(intlPhone, publicUrl, caption || '', phoneNumberId, accessToken);
+      contentText = caption ? `[🎥 Video: ${caption}]` : '[🎥 Video]';
+    } else {
+      sendResult = await sendAudio(intlPhone, publicUrl, phoneNumberId, accessToken);
+      contentText = '[🎤 Voice Note]';
+    }
+
+    if (!sendResult.success) {
+      // Clean up file on failure
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+      return res.status(500).json({ error: 'WhatsApp send failed: ' + sendResult.error });
+    }
+
+    // Save to DB
+    const msgId = messageModel.create(convId, 'outgoing', 'human', contentText, {
+      source: 'admin_media',
+      media_type: type,
+      media_url: mediaFilename,
+      wa_message_id: sendResult.messageId || null
+    });
+    conversationModel.updateLastMessage(convId, contentText);
+    conversationModel.setHumanOnly(convId, true);
+
+    // Mark as read
+    try {
+      const lastIncoming = getDb().prepare(
+        "SELECT wa_message_id FROM messages WHERE conversation_id = ? AND direction = 'incoming' ORDER BY created_at DESC LIMIT 1"
+      ).get(convId);
+      if (lastIncoming?.wa_message_id) {
+        const { markAsRead } = require('./whatsapp/sender');
+        markAsRead(lastIncoming.wa_message_id, phoneNumberId, accessToken);
+      }
+    } catch (e) { /* non-critical */ }
+
+    broadcast({ type: 'new_message', conversationId: convId });
+    console.log(`[ADMIN-MEDIA] Sent ${type} to ${customer.phone} (conv #${convId})`);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[ADMIN-MEDIA] Error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Mark conversation as complaint (manual) + create complaint tracker entry
 app.post('/api/conversations/:id/complaint', requireAuth, (req, res) => {
   try {
@@ -1648,8 +1735,6 @@ if (fs.existsSync(ASSETS_DIR)) {
 app.use('/media', express.static(MEDIA_DIR));
 
 // Serve chat media (incoming customer images/voice for dashboard preview)
-const CHAT_MEDIA_DIR = path.join(__dirname, '..', 'uploads', 'chat-media');
-if (!fs.existsSync(CHAT_MEDIA_DIR)) fs.mkdirSync(CHAT_MEDIA_DIR, { recursive: true });
 app.use('/chat-media', express.static(CHAT_MEDIA_DIR));
 
 // List all media (grouped by product)
