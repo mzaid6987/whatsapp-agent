@@ -1126,16 +1126,30 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
     const intlPhone = toInternational(conv.phone);
     const complaintText = 'Sir, aap is number pe WhatsApp message bhej dein — 03701337838 🙏 InshaAllah aapka masla resolve ho jayega ✅';
 
+    // Check 24-hour window — warn if customer's last message is >23h ago
+    let windowWarning = null;
+    if (conv.last_msg_time) {
+      const timeStr = conv.last_msg_time.includes('+') ? conv.last_msg_time : conv.last_msg_time + '+05:00';
+      const lastTime = new Date(timeStr).getTime();
+      const hoursSince = (Date.now() - lastTime) / (1000 * 60 * 60);
+      if (hoursSince > 23) {
+        windowWarning = `Warning: Customer ka last message ${Math.round(hoursSince)}h pehle tha — 24h window khatam. Message deliver nahi ho sakta.`;
+        console.log(`[MANUAL-COMPLAINT] 24h window expired (${Math.round(hoursSince)}h) for ${conv.phone}`);
+      }
+    }
+
     // Step 1: Send voice note immediately
     const audioUrl = `${serverUrl}/media/complaint-voice.mp3`;
     const audioResult = await sendAudio(intlPhone, audioUrl, phoneNumberId, accessToken);
     console.log(`[MANUAL-COMPLAINT] Voice note ${audioResult.success ? 'sent' : 'FAILED'} to ${conv.phone}`);
 
-    if (audioResult.success) {
-      messageModel.create(id, 'outgoing', 'bot', '[🎤 Complaint Voice Note]', { source: 'manual_complaint_voice' });
-      conversationModel.updateLastMessage(id, '[🎤 Voice Note]');
-      broadcast({ type: 'new_message', conversationId: id });
+    if (!audioResult.success) {
+      return res.json({ success: false, error: 'Voice note send failed: ' + (audioResult.error || 'unknown'), warning: windowWarning });
     }
+
+    messageModel.create(id, 'outgoing', 'bot', '[🎤 Complaint Voice Note]', { source: 'manual_complaint_voice' });
+    conversationModel.updateLastMessage(id, '[🎤 Voice Note]');
+    broadcast({ type: 'new_message', conversationId: id });
 
     // Step 2: Send number text after 30s delay
     setTimeout(async () => {
@@ -1155,7 +1169,7 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
     // Also mark as complaint + human assigned
     db.prepare('UPDATE conversations SET complaint_flag = 1, needs_human = 1, state = ? WHERE id = ?').run('COMPLAINT', id);
 
-    res.json({ success: true });
+    res.json({ success: true, warning: windowWarning });
   } catch (e) {
     console.error('[MANUAL-COMPLAINT] Error:', e.message);
     res.status(500).json({ error: e.message });

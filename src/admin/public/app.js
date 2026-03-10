@@ -697,12 +697,19 @@ async function sendComplaintMsg() {
   try {
     const res = await api('/api/conversations/' + currentChatId + '/send-complaint', { method: 'POST' });
     if (res?.success) {
-      btn.textContent = 'Sent!';
-      btn.style.color = '#38a169';
-      btn.style.borderColor = '#38a169';
+      if (res.warning) {
+        btn.textContent = '⚠️ Window Expired';
+        btn.style.color = '#D97706';
+        btn.style.borderColor = '#D97706';
+        alert(res.warning);
+      } else {
+        btn.textContent = 'Sent ✓';
+        btn.style.color = '#38a169';
+        btn.style.borderColor = '#38a169';
+      }
       setTimeout(() => { openChat(currentChatId); }, 2000);
     } else {
-      alert('Failed: ' + (res?.error || 'Unknown error'));
+      alert('Failed: ' + (res?.error || 'Unknown error') + (res?.warning ? '\n\n' + res.warning : ''));
       btn.textContent = '📞 Complaint Msg';
       btn.disabled = false;
     }
