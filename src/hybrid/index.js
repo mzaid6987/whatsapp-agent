@@ -2611,6 +2611,14 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       return { reply: fillTemplate('ORDER_WITHOUT_PRODUCT', owpVars), state: 'PRODUCT_SELECTION' };
     }
 
+    case 'website_referral': {
+      // Customer clicked WhatsApp button on website — product name in text but not matched in DB
+      // Show product list so they can pick
+      state.current = 'PRODUCT_SELECTION';
+      const wrVars = buildVars(state, storeName);
+      return { reply: fillTemplate('PRODUCT_LIST', wrVars), state: 'PRODUCT_SELECTION' };
+    }
+
     case 'reorder': {
       // Customer wants to reorder — check if we have their past data
       state.current = 'PRODUCT_SELECTION';

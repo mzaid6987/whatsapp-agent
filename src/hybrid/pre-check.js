@@ -109,9 +109,27 @@ function preCheck(message, currentState, collected, state) {
 
   // 0b. SPAM DETECTION — messages with URLs from unknown senders = spam/scam
   // Ramzan packages, free data, phishing links etc. — don't waste AI tokens
+  // BUT: whitelist our own store domains (website WhatsApp button sends product URL)
+  const OWN_DOMAINS = /\b(nuvenza\.shop|thezenora\.shop|thenureva\.shop|thenuvenza\.shop|theelvorastore\.shop|thealvorashop\.shop|thenovenzashop\.shop)\b/i;
   const hasUrl = /https?:\/\/|www\.|\.com\b|\.online\b|\.site\b|\.pk\b|\.buzz\b|\.top\b|\.live\b|\.html\b|\.org\b|\.net\b|clkbitz|lnkbits/i.test(l);
-  if (hasUrl && ['IDLE', 'GREETING'].includes(currentState)) {
+  const isOwnDomain = OWN_DOMAINS.test(l);
+  if (hasUrl && !isOwnDomain && ['IDLE', 'GREETING'].includes(currentState)) {
     return { intent: 'spam' };
+  }
+
+  // 0b-ref. WEBSITE REFERRAL — "I want to order "Product Name" https://ourstore.shop/..."
+  // Customer clicked WhatsApp button on our website — extract product name from quoted text
+  if (isOwnDomain && /i\s*want\s*to\s*order/i.test(l)) {
+    const quotedProduct = msg.match(/["""]([^"""]+)["""]/);
+    if (quotedProduct) {
+      const productName = quotedProduct[1].trim();
+      const product = detectProduct(productName);
+      if (product) {
+        return { intent: 'product_selected', extracted: { product, source: 'website_referral' } };
+      }
+      // Product name found but not in our DB — still treat as inquiry, not spam
+      return { intent: 'website_referral', extracted: { product_text: productName } };
+    }
   }
 
   // 0b0. GIFT CARD DETECTION — customer mentions gift card or sends gift card image
