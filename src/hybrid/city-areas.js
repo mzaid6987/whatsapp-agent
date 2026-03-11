@@ -166,6 +166,10 @@ const CITY_AREAS = {
       'wagah','gulshan e ravi','allama iqbal town','ghulam muhammad abad',
       'expo centre','emporium mall','packages mall',
       'peoples colony','green town','nawab town',
+      // === Al Rehman Garden / Housing Schemes ===
+      'al rehman garden','alrehman garden','al-rehman garden','al rehman garden phase 1','al rehman garden phase 2',
+      'alrehman garden phase 1','alrehman garden phase 2','eden garden','eden city','paragon city',
+      'citi housing','central park housing','al kabir town','al jalil garden',
       // === Saddar area ===
       'saddar','jail road','civil lines',
     ],

@@ -109,13 +109,19 @@ function extractDetailsFromMsg(msg, productShort) {
       // If no city and no area found, try fuzzy matching against top cities
       if (!detectedArea && !details.city) {
         const topCities = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Peshawar', 'Multan', 'Hyderabad', 'Quetta', 'Gujranwala'];
+        // Try all cities and pick the LONGEST/most specific area match
+        let bestArea = null, bestCity = null, bestLen = 0;
         for (const tryCity of topCities) {
           const tryArea = matchArea(addrText, tryCity);
-          if (tryArea) {
-            detectedArea = tryArea;
-            details.inferredCity = tryCity; // hint only — still ask customer
-            break;
+          if (tryArea && tryArea.length > bestLen) {
+            bestArea = tryArea;
+            bestCity = tryCity;
+            bestLen = tryArea.length;
           }
+        }
+        if (bestArea) {
+          detectedArea = bestArea;
+          details.inferredCity = bestCity; // hint only — still ask customer
         }
       }
       if (detectedArea) addrParts.area = detectedArea;
