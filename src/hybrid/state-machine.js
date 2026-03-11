@@ -352,6 +352,11 @@ function handleTemplateState(message, state, storeName, preIntent) {
         const delReply = fillTemplate('DELIVERY_POST_ORDER', vars);
         return { reply: delReply + '\n\nWaise discount products dekhna chahein ge?', state: 'UPSELL_HOOK' };
       }
+      // Pause/wait request — "rokye to", "ruko", "wait", "theher jao"
+      const isPauseHook = /\b(rok[iy]?[ea]|ruk[oia]|ruk\s*ja|wait|theher|thr|thehr|abort|bas\s*bas|stop|rok\s*do)\b/i.test(l);
+      if (isPauseHook) {
+        return { reply: 'Ji bilkul, aaram se dekhein! Jab tayar hon to bata dein 😊', state: 'UPSELL_HOOK' };
+      }
       if (yes || l.includes('dikhao') || l.includes('dikao') || l.includes('dikha') || l.includes('dekhao') || /\b(discount|offer|sast[ai])\b/i.test(l)) {
         state.current = 'UPSELL_SHOW';
         let uList = state.upsell_candidates.map((p, i) => {
@@ -401,6 +406,11 @@ function handleTemplateState(message, state, storeName, preIntent) {
           ? `Bilkul ${vars.honorific}, fikar na karein! ${reassureProduct.f2 || reassureProduct.f1 || 'Product tested hai'}. Delivery pe pehle check karein, 7 din exchange bhi hai ✅`
           : fillTemplate('QUALITY_REASSURANCE', vars);
         return { reply: reassureReply, state: 'UPSELL_SHOW', _trust_audio: true };
+      }
+      // Pause/wait request — "rokye to", "ruko", "wait"
+      const isPauseShow = /\b(rok[iy]?[ea]|ruk[oia]|ruk\s*ja|wait|theher|thr|thehr|abort|bas\s*bas|stop|rok\s*do)\b/i.test(l);
+      if (isPauseShow) {
+        return { reply: 'Ji bilkul, aaram se dekhein! Jab pasand aa jaye to number ya naam bata dein 😊', state: 'UPSELL_SHOW' };
       }
       if (no) {
         // If pending upsell and customer says no → skip just the pending, confirm order
@@ -580,6 +590,14 @@ function handleTemplateState(message, state, storeName, preIntent) {
         state._thanked = false; // reset so delivery Q gets reply
         return { reply: fillTemplate('DELIVERY_POST_ORDER', vars), state: 'ORDER_CONFIRMED' };
       }
+      // Delivery time-of-day question — "time kya hoga", "kis time", "konse waqt", "subah ya sham"
+      const isTimeOfDayQ = /\b(time|waqt|wakt|timing)\s*(kiy?a|kya|konsa|kon\s*sa|bta|batao|btao|hog[aie]|h[eo])\b/i.test(l) ||
+        /\b(kis|konse?|kya)\s*(time|waqt|wakt)\b/i.test(l) ||
+        /\b(subah|sham|dopahar|raat|morning|evening|afternoon)\s*(ko|mein|me|pe|par)?\s*(aaye?g[aie]|milega|hog[aie]|delivery)\b/i.test(l);
+      if (isTimeOfDayQ) {
+        state._thanked = false;
+        return { reply: `${vars.honorific === 'sir' ? 'Sir' : 'Madam'}, din ke time pe delivery hoti hai — koi fix time nahi hota courier walo ka. Lekin rider delivery se pehle call karega, aap ready rakhein 📞`, state: 'ORDER_CONFIRMED' };
+      }
       // Gratitude/bye — reply ONCE with THANKS_REPLY, then go silent
       const isGratitude = /\b(shukri?ya|thanks?|thank\s*you|bye|allah\s*hafiz|khuda\s*hafiz|khush\s*raho?)\b/i.test(l);
       if (isGratitude) {
@@ -699,6 +717,15 @@ function askNextField(state, storeName) {
         const shopMatch = hintLower.match(/(\w+(?:\s+\w+)?)\s+(fabric|shop|store|dukaan|dukan|bakery|kiryana|medical|cloth)\b/i);
         if (shopMatch) {
           state.collected.address_parts.landmark = shopMatch[0].replace(/\b\w/g, c => c.toUpperCase());
+        }
+        // Fallback: if no specific area/landmark extracted but hint has meaningful text,
+        // save as landmark (e.g. "Allah wali per" → landmark = "Allah Wali")
+        if (!areaMatch && !shopMatch && hintLower.length >= 3) {
+          const cleanHint = hintLower.replace(/\b(per|par|pe|pr|pas|paas|ke|ka|ki|mein|me|mai|near|wala|wali|wale)\b/gi, '').trim();
+          if (cleanHint.length >= 3) {
+            state.collected.address_parts.landmark = cleanHint.replace(/\b\w/g, c => c.toUpperCase());
+            console.log(`[HINT→LANDMARK] Saved hint as landmark: "${state.collected.address_parts.landmark}"`);
+          }
         }
         // Extract city/tehsil hint if city not already set
         if (!state.collected.city) {

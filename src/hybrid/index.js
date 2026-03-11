@@ -2911,6 +2911,12 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       if (pre.extracted.area && !state.collected.address_parts.area) {
         state.collected.address_parts.area = pre.extracted.area;
       }
+      // If extra text was given with city (e.g. "Karachi, Allah wali per") — save as landmark hint
+      // This prevents losing address info that customer gives alongside city
+      if (pre.extracted.address_hint && !state.collected.address_parts.landmark) {
+        state._address_hint = pre.extracted.address_hint;
+        console.log(`[CITY+HINT] Saved address hint: "${pre.extracted.address_hint}"`);
+      }
       // If rural part was stored from previous rural_no_city, move to address area
       if (state._rural_part) {
         state.collected.address_parts = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };

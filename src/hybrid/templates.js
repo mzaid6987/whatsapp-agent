@@ -169,8 +169,8 @@ const T = {
     "{area} mein konsa block hai aur gali/street number? 🏘️",
   ],
   ASK_ADDRESS_HOUSE: [
-    "House number ya flat number? 🏠",
-    "House number bata dein? 🏠",
+    "House number, flat number ya plot number bata dein? 🏠",
+    "House/plot number bata dein? 🏠",
   ],
   ASK_ADDRESS_LANDMARK: [
     "Qareeb koi landmark/mashoor jagah hai? 📍 Masjid, school ya dukaan ka naam bata dein taake rider ko aasan ho.",

@@ -111,7 +111,7 @@ function preCheck(message, currentState, collected, state) {
   // Ramzan packages, free data, phishing links etc. — don't waste AI tokens
   // BUT: whitelist our own store domains (website WhatsApp button sends product URL)
   // All our stores: nureva, alvora, elvora, ruvenza, zenora, nuvenza (with/without "the" prefix)
-  const OWN_DOMAINS = /\b(the)?(nureva|alvora|elvora|ruvenza|zenora|nuvenza|nuvenza|alvorashop|elvorastore|novenzashop)(\.shop)\b/i;
+  const OWN_DOMAINS = /\b(the)?(nureva|alvora|elvora|ruvenza|zenora|nuvenza|alvorashop|elvorastore|novenzashop)\.(shop|store)\b/i;
   const hasUrl = /https?:\/\/|www\.|\.com\b|\.online\b|\.site\b|\.pk\b|\.buzz\b|\.top\b|\.live\b|\.html\b|\.org\b|\.net\b|clkbitz|lnkbits/i.test(l);
   const isOwnDomain = OWN_DOMAINS.test(l);
   if (hasUrl && !isOwnDomain && ['IDLE', 'GREETING'].includes(currentState)) {
@@ -513,6 +513,12 @@ function preCheck(message, currentState, collected, state) {
         const areaInCity = matchArea(remaining, allCities[0]);
         if (areaInCity) {
           return { intent: 'city_given', extracted: { city: allCities[0], area: areaInCity } };
+        }
+        // Not a known area but meaningful text (e.g. "Allah wali per") — save as address_hint
+        // so address collection can use it as landmark/area info
+        const cleanRemaining = remaining.replace(/[,،.]+/g, '').trim();
+        if (cleanRemaining.length >= 3 && /[a-z]/i.test(cleanRemaining)) {
+          return { intent: 'city_given', extracted: { city: allCities[0], address_hint: cleanRemaining } };
         }
       }
       return { intent: 'city_given', extracted: { city: allCities[0] } };
