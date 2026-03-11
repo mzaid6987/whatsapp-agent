@@ -1522,12 +1522,14 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       // Labeled format: directly populate address_parts (area, street, house, landmark)
       if (smartDetails.addressParts) {
         const ap = state.collected.address_parts;
-        if (smartDetails.addressParts.area && !ap.area) ap.area = smartDetails.addressParts.area;
-        if (smartDetails.addressParts.street && !ap.street) ap.street = smartDetails.addressParts.street;
-        if (smartDetails.addressParts.house && !ap.house) ap.house = smartDetails.addressParts.house;
-        if (smartDetails.addressParts.landmark && !ap.landmark) ap.landmark = smartDetails.addressParts.landmark;
-        if (smartDetails.addressParts.tehsil) ap.tehsil = smartDetails.addressParts.tehsil;
-        if (smartDetails.addressParts.zilla) ap.zilla = smartDetails.addressParts.zilla;
+        // Safety: ensure all values are strings (AI sometimes returns objects)
+        const str = v => typeof v === 'object' && v !== null ? (v.name || v.value || v.text || Object.values(v).find(x => typeof x === 'string') || '') : v;
+        if (smartDetails.addressParts.area && !ap.area) ap.area = str(smartDetails.addressParts.area);
+        if (smartDetails.addressParts.street && !ap.street) ap.street = str(smartDetails.addressParts.street);
+        if (smartDetails.addressParts.house && !ap.house) ap.house = str(smartDetails.addressParts.house);
+        if (smartDetails.addressParts.landmark && !ap.landmark) ap.landmark = str(smartDetails.addressParts.landmark);
+        if (smartDetails.addressParts.tehsil) ap.tehsil = str(smartDetails.addressParts.tehsil);
+        if (smartDetails.addressParts.zilla) ap.zilla = str(smartDetails.addressParts.zilla);
       }
       // Non-labeled: save as addressHint for COLLECT_ADDRESS flow
       if (!smartDetails.addressParts && (smartDetails.address || smartDetails.addressHint) && !state.addressHint) {

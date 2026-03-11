@@ -707,7 +707,7 @@ function preCheck(message, currentState, collected, state) {
   // 4b. ACKNOWLEDGMENT in collection states — "ok", "acha", "theek", "hmm" → re-ask current field
   // Also: "order krna he", "order karna hai" during collection = just acknowledging, re-ask field
   if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_ADDRESS', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {
-    const isAck = /^(ik|ok+|okay|acha+|ach+a|theek|thik|thk|tik|hmm+|hm+|g|k|jee?|ji|samajh\s*(aa?\s*ga[yi]?|aa?\s*gai)?)\s*[.!]?\s*$/i.test(l);
+    const isAck = /^(ik|ok+|okay|acha+|ach+a|theek|thik|thk|tik|hmm+|hm+|g|k|jee?|ji|ha+n|haan|hn|yes+|yup|samajh\s*(aa?\s*ga[yi]?|aa?\s*gai)?)\s*[.!]?\s*$/i.test(l);
     // In COLLECT_ADDRESS: if address parts are substantially filled, "ok" = confirming address (not just acknowledging)
     // This handles case where address_confirming flag was lost (e.g. server restart)
     if (isAck && currentState === 'COLLECT_ADDRESS' && collected.address_parts) {

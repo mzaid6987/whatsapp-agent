@@ -641,7 +641,13 @@ function buildAddressString(parts, city) {
   let isDeliveryPoint = false;
   let isShopDelivery = false;
   if (parts.landmark && !skip(parts.landmark)) {
-    const lm = parts.landmark.toString();
+    // Safety: if landmark is an object (AI sometimes returns {name:...}), extract the string value
+    let rawLm = parts.landmark;
+    if (typeof rawLm === 'object' && rawLm !== null) {
+      rawLm = rawLm.name || rawLm.value || rawLm.text || Object.values(rawLm).find(v => typeof v === 'string') || '';
+      console.warn('[buildAddressString] Landmark was object, extracted:', rawLm);
+    }
+    const lm = String(rawLm);
     isDeliveryPoint = /\b(dak\s*khana|post\s*office|tcs|leopard|call\s*courier)\b/i.test(lm);
     isShopDelivery = /\b(shop|dukaan|dukan|store|fabric|bakery|kiryana|medical|pharmacy|cloth|kapra|general|mart|karyana|hotel|restaurant|dhaba|office|workshop|godown)\b/i.test(lm);
     if (isDeliveryPoint || isRural || isShopDelivery) {
