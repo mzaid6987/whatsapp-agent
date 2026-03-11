@@ -29,6 +29,17 @@ function qualityGate(response) {
     console.warn(`[QualityGate] Garbage response detected (${text.length} chars → ${stripped.length} meaningful)`);
     return null; // null = fallback to template
   }
+  // Whitespace-heavy garbage — if >80% of chars are whitespace, it's garbage
+  // AI sometimes produces 400 tokens of \n\s with a few real chars buried in it
+  if (text.length > 50 && stripped.length / text.length < 0.2) {
+    console.warn(`[QualityGate] Whitespace-heavy garbage (${stripped.length}/${text.length} = ${(stripped.length/text.length*100).toFixed(0)}% meaningful)`);
+    return null;
+  }
+  // JSON fragment garbage — starts with { but isn't a complete readable response
+  if (/^\s*\{/.test(text) && !/\breply\b/.test(text)) {
+    console.warn(`[QualityGate] JSON fragment garbage detected`);
+    return null;
+  }
 
   // Keep emojis — they improve WhatsApp readability
   // (Previously stripped, but product list + responses need them)

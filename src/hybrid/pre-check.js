@@ -948,6 +948,15 @@ function preCheck(message, currentState, collected, state) {
     if (isHaggleInPI) {
       return { intent: 'haggle' };
     }
+    // Price question — "price kitni hai?", "is ki kimat kya hai?", "ye kitne ka hai?"
+    // Customer asking about currently discussed product → repeat product info (saves AI call)
+    const isPriceAskInPI = /\b(price|rate|qeemat|qimat|kimat|keemat)\s*(kya|kia|kitni|kitna|kitne|batao|btao|bta)\b/i.test(l) ||
+      /\b(kitni|kitna|kitne|kitny)\s*(price|rate|qeemat|kimat|ki|ka|hai|he|h)\b/i.test(l) ||
+      /\b(is\s*k[aie]|isk[aie]|ye|yeh|iska|iski)\s*(price|rate|qeemat|kimat|kitni|kitna|kitne)\b/i.test(l) ||
+      /\b(price|rate)\s*(hai|he|h|kya|kia)\b/i.test(l);
+    if (isPriceAskInPI) {
+      return { intent: 'product_selected', extracted: { product: state.product } };
+    }
   }
 
   // 7. Order intent WITHOUT product mention (product already set in state)
