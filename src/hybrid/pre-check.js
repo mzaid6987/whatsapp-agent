@@ -88,6 +88,11 @@ function preCheck(message, currentState, collected, state) {
   const msg = message.trim();
   const l = msg.toLowerCase().trim();
 
+  // 0a0. VOICE UNCLEAR — Whisper failed or hallucinated → ask customer to type
+  if (/^\[voice message/i.test(msg)) {
+    return { intent: 'voice_unclear' };
+  }
+
   // 0a. GIBBERISH / JUNK — single dot, random chars, emojis only, etc.
   // Treat as greeting so template responds (no AI cost)
   // BUT: "G", "K", "J", "Y", "N" etc are valid short responses (G=ji, K=ok, Y=yes, N=no)

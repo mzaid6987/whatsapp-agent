@@ -272,6 +272,24 @@ async function webhookHandler(req, res) {
           if (!messageText || messageText.trim().length < 2) {
             messageText = '[voice message - samajh nahi aaya]';
           }
+          // Detect Whisper hallucination — silence/noise often transcribed as city names list
+          // Whisper hallucinates prompt context (city names) when given silent/noisy audio
+          if (messageText && messageText.trim()) {
+            const vtLower = messageText.trim().toLowerCase();
+            const HALLUCINATION_CITIES = ['lahore','karachi','islamabad','rawalpindi','faisalabad','multan','peshawar','hyderabad','quetta','sialkot','gujranwala','sahiwal'];
+            const vtWords = vtLower.split(/[\s,]+/).filter(w => w.length > 0);
+            const cityWordCount = vtWords.filter(w => HALLUCINATION_CITIES.includes(w)).length;
+            // If 80%+ of words are city names → hallucination (e.g. "Lahore Karachi Islamabad Rawalpindi Faisalabad")
+            if (vtWords.length >= 2 && cityWordCount / vtWords.length >= 0.8) {
+              console.warn(`[VOICE] Whisper hallucination detected: "${messageText}" (${cityWordCount}/${vtWords.length} city words)`);
+              messageText = '[voice message - samajh nahi aaya]';
+            }
+            // Other common Whisper hallucinations
+            if (/^(thank\s*you\s*for\s*watching|please\s*subscribe|subscribe\s*and|like\s*and\s*subscribe)/i.test(vtLower)) {
+              console.warn(`[VOICE] Whisper hallucination (YouTube): "${messageText}"`);
+              messageText = '[voice message - samajh nahi aaya]';
+            }
+          }
         }
       } catch (err) {
         console.error('[WA] Voice transcription FAILED:', err.message, err.stack);

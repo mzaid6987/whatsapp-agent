@@ -2289,7 +2289,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const cityList = cities.join(' ya ');
       state.current = 'COLLECT_CITY';
       delete state.collected._multipleCities;
-      const mcReply = `${state.collected.name} ${honorific}, aap ne ${cities.length} cities mention ki hain — ${cityList}. Delivery kis city mein karni hai?`;
+      const mcReply = `${state.collected.name || ''} ${honorific}, aap ne ${cities.length} cities mention ki hain — ${cityList}. Delivery kis city mein karni hai?`.trim();
       saveMessages(dbConv, message, mcReply, 'multiple_cities', 'ai→template', state, {
         tokens_in: aiResult.tokens_in, tokens_out: aiResult.tokens_out,
       });
@@ -3175,6 +3175,15 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       }
       const reply = `${state.collected.name || ''} ${honorific}, order mil gaya — bohat acha! Agar product ke baare mein koi sawal ho to poochein 😊`.trim();
       return { reply, state: 'IDLE' };
+    }
+
+    case 'voice_unclear': {
+      // Voice message couldn't be understood (Whisper failed/hallucinated)
+      const vuHonorific = getHonorific(state.collected.name, state.gender);
+      return {
+        reply: `${state.collected.name || ''} ${vuHonorific}, voice samajh nahi aayi — text mein likh ke bata dein? 😊`.trim(),
+        state: state.current
+      };
     }
 
     case 'usage_question': {
