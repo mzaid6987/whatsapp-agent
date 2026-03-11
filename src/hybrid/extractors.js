@@ -172,9 +172,24 @@ function extractCity(msg) {
   }
 
   // Check full city names (word-boundary to avoid partial matches like "raja" → "rajanpur")
+  // Skip cities preceded by "dist"/"district"/"zila"/"zilla" — those are districts, not delivery cities
+  const titleCase = (s) => s.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  let fallbackCity = null;
   for (const c of ALL_CITIES) {
-    if (new RegExp('\\b' + c + '\\b').test(l)) return c.charAt(0).toUpperCase() + c.slice(1);
+    const cityRegex = new RegExp('\\b' + c + '\\b');
+    if (cityRegex.test(l)) {
+      // Check if this city is preceded by "dist" / "district" etc.
+      const isDistrictOnly = new RegExp('\\b(dist\\.?|district|zila|zilla|distt?\\.?)[,\\s]+' + c + '\\b', 'i').test(l);
+      if (isDistrictOnly) {
+        // Save as fallback — if no other city found, still use it
+        if (!fallbackCity) fallbackCity = titleCase(c);
+        continue;
+      }
+      return titleCase(c);
+    }
   }
+  // If only district city found (no standalone city), use it as fallback
+  if (fallbackCity) return fallbackCity;
 
   // Check misspelling aliases (lahire→lahore, faislabad→faisalabad, etc.)
   // First check multi-word aliases (e.g. "mian chunu" → "mian channu")

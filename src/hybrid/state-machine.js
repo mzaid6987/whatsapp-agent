@@ -209,6 +209,16 @@ function handleTemplateState(message, state, storeName, preIntent) {
           return { reply: fillTemplate('HAGGLE_FINAL', vars), state: 'HAGGLING' };
         }
       }
+      // Check for city correction in ORDER_SUMMARY — "City Wah Cantt hai. Yes"
+      // Customer may correct city while also confirming. Apply correction before confirming.
+      const cityCorrectionMatch = /\b(city|shehr|shehar)\s*[.:=]?\s*/i.test(message);
+      if (cityCorrectionMatch || extractCity(message)) {
+        const correctedCity = extractCity(message);
+        if (correctedCity && correctedCity.toLowerCase() !== (state.collected.city || '').toLowerCase()) {
+          state.collected.city = correctedCity;
+          console.log(`[ORDER_SUMMARY] City corrected to: ${correctedCity}`);
+        }
+      }
       if (yes) {
         // Save order to DB IMMEDIATELY so it's never lost (even if customer doesn't reply to upsell)
         const items = (state.products || []).length ? state.products : [state.product];
