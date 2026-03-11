@@ -90,7 +90,9 @@ function preCheck(message, currentState, collected, state) {
 
   // 0a. GIBBERISH / JUNK — single dot, random chars, emojis only, etc.
   // Treat as greeting so template responds (no AI cost)
-  const isJunk = /^[.\-_,;:!?\s*#+@^~`'"(){}[\]<>\/\\|]+$/.test(msg) || msg.length <= 2;
+  // BUT: "G", "K", "J", "Y", "N" etc are valid short responses (G=ji, K=ok, Y=yes, N=no)
+  const isAffirmativeShort = /^[gkyjhn]$/i.test(l);
+  const isJunk = /^[.\-_,;:!?\s*#+@^~`'"(){}[\]<>\/\\|]+$/.test(msg) || (msg.length <= 2 && !isAffirmativeShort);
   if (isJunk && ['IDLE', 'GREETING'].includes(currentState)) {
     return { intent: 'greeting' };
   }

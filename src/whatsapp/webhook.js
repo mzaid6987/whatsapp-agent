@@ -616,7 +616,7 @@ async function webhookHandler(req, res) {
       }
     }
 
-    // Complaint: delayed voice note (1 min) + number text (1 min 30s)
+    // Complaint: delayed voice note (10s) + number text (15s after voice)
     // Runs in background — don't block the response
     if (result._complaint_audio) {
       // Auto-create complaint tracker entry
@@ -656,11 +656,11 @@ async function webhookHandler(req, res) {
             _broadcast({ type: 'new_message', conversationId: _compConvId });
           }
 
-          // Step 2: Send number text (30s after voice note)
+          // Step 2: Send number text (5s after voice note)
           setTimeout(async () => {
             try {
               const sendResult = await sendMessage(_compPhone, _compReply, _compPhoneId, _compToken);
-              console.log(`[WA] Complaint number text sent to ${_compPhone}`);
+              console.log(`[WA] Complaint number text ${sendResult.success ? 'sent' : 'FAILED'} to ${_compPhone}`);
               // Save complaint text to DB (after voice note — correct order)
               if (sendResult.success && _compConvId) {
                 messageModel.create(_compConvId, 'outgoing', 'bot', _compReply, { source: 'complaint_text' });
@@ -670,11 +670,11 @@ async function webhookHandler(req, res) {
             } catch (err) {
               console.error('[WA] Complaint number text error:', err.message);
             }
-          }, 30 * 1000);
+          }, 5 * 1000);
         } catch (err) {
           console.error('[WA] Complaint voice note error:', err.message);
         }
-      }, 60 * 1000);
+      }, 10 * 1000);
     }
 
     // Trust/quality: send voice note 10s after text reply

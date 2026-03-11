@@ -1453,7 +1453,7 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
     conversationModel.updateLastMessage(id, '[🎤 Voice Note]');
     broadcast({ type: 'new_message', conversationId: id });
 
-    // Step 2: Send number text after 30s delay
+    // Step 2: Send number text after 5s delay (was 30s — too risky, server restart kills setTimeout)
     setTimeout(async () => {
       try {
         const sendResult = await sendMessage(intlPhone, complaintText, phoneNumberId, accessToken);
@@ -1462,11 +1462,13 @@ app.post('/api/conversations/:id/send-complaint', requireAuth, async (req, res) 
           messageModel.create(id, 'outgoing', 'bot', complaintText, { source: 'manual_complaint_text' });
           conversationModel.updateLastMessage(id, complaintText);
           broadcast({ type: 'new_message', conversationId: id });
+        } else {
+          console.error('[MANUAL-COMPLAINT] Text send failed:', sendResult.error);
         }
       } catch (err) {
         console.error('[MANUAL-COMPLAINT] Text error:', err.message);
       }
-    }, 30 * 1000);
+    }, 5 * 1000);
 
     // Also mark as complaint + human assigned
     db.prepare('UPDATE conversations SET complaint_flag = 1, needs_human = 1, state = ? WHERE id = ?').run('COMPLAINT', id);
