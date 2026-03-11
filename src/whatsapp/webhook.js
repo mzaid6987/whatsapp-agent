@@ -266,10 +266,26 @@ async function webhookHandler(req, res) {
             incomingMediaType = 'image';
           } catch (e) { console.warn('[WA] Image save failed:', e.message); }
 
-          const result = await analyzeImage(mediaId, accessToken, apiKey);
-          messageText = caption ? `${caption} [Image: ${result.text}]` : `[Image: ${result.text}]`;
-          mediaNote = ' [image→text]';
-          mediaCost = { model: result.model, cost_rs: result.cost_rs, tokens_in: result.tokens_in, tokens_out: result.tokens_out, response_ms: result.response_ms, type: 'image' };
+          // Skip expensive vision analysis for known spammers (save Rs.0.39/image)
+          let skipVision = false;
+          const _cust = customerModel.findByPhone(fromPhone);
+          if (_cust) {
+            const _conv = conversationModel.findActive(_cust.id);
+            if (_conv && (_conv.spam_flag || (_conv.state === 'IDLE' && getDb().prepare(
+              "SELECT COUNT(*) as c FROM messages WHERE conversation_id = ? AND direction = 'incoming' AND content LIKE '[Image:%'"
+            ).get(_conv.id)?.c >= 2))) {
+              skipVision = true;
+              messageText = caption || '[image]';
+              console.log(`[WA] ${fromPhone}: Skipping vision analysis (spam/repeat non-product images)`);
+            }
+          }
+
+          if (!skipVision) {
+            const result = await analyzeImage(mediaId, accessToken, apiKey);
+            messageText = caption ? `${caption} [Image: ${result.text}]` : `[Image: ${result.text}]`;
+            mediaNote = ' [image→text]';
+            mediaCost = { model: result.model, cost_rs: result.cost_rs, tokens_in: result.tokens_in, tokens_out: result.tokens_out, response_ms: result.response_ms, type: 'image' };
+          }
         }
       } catch (err) {
         console.error('[WA] Image analysis failed:', err.message);
@@ -379,6 +395,38 @@ async function webhookHandler(req, res) {
     const stores = getDb().prepare('SELECT * FROM stores').all();
     const store = stores[0];
     const storeName = store?.brand_name || 'Nureva';
+
+    // ---- AUTO-SPAM: detect non-product image broadcasters ----
+    // If customer sends image-only messages that aren't product-related while IDLE,
+    // auto-mark as spam after 2nd such message to save AI costs
+    const _productKeywords = ['trimmer', 'blackhead', 'remover', 'cutting board', 'oil spray', 'ear wax', 'vegetable cutter', 'facial', 'nebulizer', 'knee', 'duster', 'product', 'order', 'price', 'parcel', 'delivery', 'package', 'box', 'label', 'cod', 'cash'];
+    if (incomingMediaType === 'image' && messageText.startsWith('[Image:')) {
+      const desc = messageText.toLowerCase();
+      const isProductRelated = _productKeywords.some(kw => desc.includes(kw));
+      if (!isProductRelated) {
+        const cust = customerModel.findByPhone(fromPhone);
+        if (cust) {
+          const conv = conversationModel.getOrCreateActive(cust.id, storeName.toLowerCase());
+          if (conv && conv.state === 'IDLE') {
+            // Count previous non-product image messages in this conversation
+            const prevImages = getDb().prepare(
+              "SELECT COUNT(*) as c FROM messages WHERE conversation_id = ? AND direction = 'incoming' AND content LIKE '[Image:%'"
+            ).get(conv.id);
+            const count = prevImages?.c || 0;
+            if (count >= 1) {
+              // 2nd+ non-product image → auto-spam, skip AI entirely
+              conversationModel.setSpam(conv.id, true);
+              messageModel.create(conv.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId, media_type: incomingMediaType, media_url: incomingMediaFile });
+              conversationModel.updateLastMessage(conv.id, messageText);
+              conversationModel.setAdminUnread(conv.id, true);
+              console.log(`[SPAM-AUTO] ${fromPhone}: ${count + 1} non-product images → auto-spam`);
+              _broadcast({ type: 'new_message', phone: fromPhone, source: 'whatsapp', contactName, result: { reply: null, incoming: messageText } });
+              return;
+            }
+          }
+        }
+      }
+    }
 
     // Check if conversation is blocked (spam_flag) or assigned to human — don't auto-reply
     const customer = customerModel.findByPhone(fromPhone);
