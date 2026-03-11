@@ -730,9 +730,11 @@ function askNextField(state, storeName) {
         }
         // Fallback: if no specific area/landmark extracted but hint has meaningful text,
         // save as landmark (e.g. "Allah wali per" → landmark = "Allah Wali")
+        // SKIP if text is a question — "konsy city sy delivered hoga??" is NOT a landmark
         if (!areaMatch && !shopMatch && hintLower.length >= 3) {
           const cleanHint = hintLower.replace(/\b(per|par|pe|pr|pas|paas|ke|ka|ki|mein|me|mai|near|wala|wali|wale)\b/gi, '').trim();
-          if (cleanHint.length >= 3) {
+          const isQuestion = /[?؟]/.test(cleanHint) || /\b(kons[iy]|kahan|kidhar|kab|kitna|kitne|kitni|kaise|kya|kia|hoga|hogi|delivered|deliver)\b/i.test(cleanHint);
+          if (cleanHint.length >= 3 && !isQuestion) {
             state.collected.address_parts.landmark = cleanHint.replace(/\b\w/g, c => c.toUpperCase());
             console.log(`[HINT→LANDMARK] Saved hint as landmark: "${state.collected.address_parts.landmark}"`);
           }

@@ -57,7 +57,7 @@ const COMPLAINT_WORDS = [
   'on hi nhi','on hi nahi','on he nhi','on he nahi'
 ];
 
-const TRUST_WORDS = /\b(asli|original|cod|cash\s*on|return\s*policy|exchange\s*policy|warranty|guarantee|quality|bharosa|trust|kaisi?\s*quality|allow\s*to\s*open|open\s*(parcel|box|packet)|parcel\s*(open|khol)|khol\s*k[ae]?\s*(dekh|check)|pehle\s*check|check\s*kar\s*k[ae]?)\b/i;
+const TRUST_WORDS = /\b(asli|original|cod|cash\s*on|return\s*policy|exchange\s*policy|warranty|guarantee|quality|bharosa|trust|reliable|kaisi?\s*quality|allow\s*to\s*open|open\s*(parcel|box|packet)|parcel\s*(open|khol)|khol\s*k[ae]?\s*(dekh|check)|pehle\s*check|check\s*kar\s*k[ae]?)\b/i;
 // Note: "fake" removed from TRUST_WORDS — it's almost always a complaint, not a trust question
 // "achi he na", "theek hogi na ye", "chalegi na", "kaisi hai", "quality kesi he" — quality reassurance questions
 // BUT NOT "kam krta he" / "sahi kam krta he" / "works?" — those are product functionality questions (AI handles)
@@ -317,6 +317,13 @@ function preCheck(message, currentState, collected, state) {
       return { intent: 'address_in_phone_state', extracted: { city: cityInMsg, address_text: msg, area: areaInMsg, landmark } };
     }
 
+    // Gratitude words = acknowledgment after trust answer = continue (same phone)
+    // "Thanks" / "shukriya" after trust Q means "ok, satisfied, continue"
+    const isGratitude = /\b(thanks|thank\s*you|thankyou|shukriya|shukria|meherbani)\b/i.test(l);
+    if (isGratitude) {
+      return { intent: 'same_phone', extracted: { same_phone: true } };
+    }
+
     const startsWithYes = /^(ha+n|ji+|jee|g|yes|yup|ok|haan|hn+)\b/i.test(l.trim());
     const hasYesWord = /\b(ha+n|ji|yes|yup|ik|ok[zgky]?|haan|hn+|g|k|shi|sahi|sa[ih]i?|theek|thik|thk|tik|bilkul|done)\b/i.test(l);
     // Exclude "no" when it's part of "no." / "no " + digit (number abbreviation like "chak no 32")
@@ -573,8 +580,11 @@ function preCheck(message, currentState, collected, state) {
         }
         // Not a known area but meaningful text (e.g. "Allah wali per") — save as address_hint
         // so address collection can use it as landmark/area info
+        // BUT skip if text is a QUESTION — "konsy city sy delivered hoga??" is NOT an address
         const cleanRemaining = remaining.replace(/[,،.]+/g, '').trim();
-        if (cleanRemaining.length >= 3 && /[a-z]/i.test(cleanRemaining)) {
+        const isQuestionText = /[?؟]/.test(cleanRemaining) ||
+          /\b(kons[iy]|kahan|kidhar|kab|kitna|kitne|kitni|kitny|kaise|kaisy|kesy|kya|kia|hoga|hogi|hota|delivered|deliver)\b/i.test(cleanRemaining);
+        if (cleanRemaining.length >= 3 && /[a-z]/i.test(cleanRemaining) && !isQuestionText) {
           return { intent: 'city_given', extracted: { city: allCities[0], address_hint: cleanRemaining } };
         }
       }
