@@ -64,7 +64,7 @@ const TRUST_WORDS = /\b(asli|original|cod|cash\s*on|return\s*policy|exchange\s*p
 const QUALITY_ASK = /(\b(ach+[ia]|theek|thik|thk|chale\s*g[ia])\b.*\b(hai|he|h|na|hogi|hoga|hain)\b|\bkais[ie]\s*h[ae]i?\b|\bkes[ie]\s*h[ae]i?\b|\bquality\s*(kais[ie]|kes[ie]|kaisi|kesi)\s*(h[ae]i?|he)?\b|\bquality\s*[?؟]\s*$|\bquality\s*(hai|he|h|batao|btao|bta|dikhao)?\s*[?؟]\s*$)/im;
 // "kam krta", "kaam karta", "works" — product functionality question, NOT trust
 // Covers typos: kryta, krte, krta, krti, kregi, karti, karta etc.
-const IS_FUNCTIONALITY_Q = /\b(kam\s*kr[yta]*[aie]?|kaam\s*kr[yta]*[aie]?|kam\s*kar[tae]*[aie]?|kaam\s*kar[tae]*[aie]?|works?|work\s*kart?a?)\b/i;
+const IS_FUNCTIONALITY_Q = /\b(kam\s*kr[yta]*[aie]?|kaam\s*kr[yta]*[aie]?|kam\s*kar[tae]*[aie]?|kaam\s*kar[tae]*[aie]?|works?|work\s*kart?a?|bn[ae]?t[aie]?\s*(h[aey]i?|hy)|bant[aie]?\s*(h[aey]i?|hy)|ho\s*t[aie]?\s*(h[aey]i?|hy)|kr\s*sakt[aie]?|kar\s*sakt[aie]?|cut\s*kart?a?|kaat\s*t?a?|kaat\s*sakt[aie]?)\b/i;
 
 function isComplaint(l) {
   return COMPLAINT_WORDS.some(w => l.includes(w));
@@ -273,8 +273,10 @@ function preCheck(message, currentState, collected, state) {
     const pdProd = detectProduct(msg);
     return { intent: 'post_delivery', extracted: pdProd ? { product: pdProd } : {} };
   }
-  // Usage question in any state (even mid-order) — send product video
-  if (isUsageQuestion && !['IDLE', 'GREETING'].includes(currentState)) {
+  // Usage question OR product functionality question in any state (even mid-order) — send product video
+  // "chicken qeema bnata hai?", "ye kam krta hai?" etc. in collection states should NOT go to collection AI
+  // (collection AI has no product info and hallucinates)
+  if ((isUsageQuestion || (IS_FUNCTIONALITY_Q.test(l) && currentState.startsWith('COLLECT_'))) && !['IDLE', 'GREETING'].includes(currentState)) {
     return { intent: 'usage_question' };
   }
 
@@ -680,13 +682,15 @@ function preCheck(message, currentState, collected, state) {
     const words = trimmed.split(/\s+/);
     const looksLikeName = words.length >= 1 && words.length <= 3 &&
       /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 3 && trimmed.length <= 40;
-    const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|kitny|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|mangta|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board|milega|melega|milta|milti|mein|sabzi)\b/i.test(l);
+    const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|kitny|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|hy|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|mangta|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board|milega|melega|milta|milti|mein|sabzi|beef|chicken|mutton|gosht|qeema|keema|meat|bnata|banta|hota|bnta)\b/i.test(l);
+    // Single-letter "B" at end = "bhi" (also) in WhatsApp Urdu — NOT a name initial
+    const endsWithBhi = /\s+b\s*$/i.test(l.trim());
     const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm|ha+n|hn|hanji|hnji)\s*[.!]?\s*$/i.test(l);
     // Common conversational phrases that are NOT names — "ok wait", "no thanks", "let me think" etc.
     const isConversationalPhrase = /\b(wait|ruk[oa]?|soch|think|later|baad|bad|abhi\s*nahi|pehle|phle|already|thanks|shukriya|thank\s*you)\b/i.test(l) ||
       /^(ok\s+wait|no\s+thanks?|not\s+now|let\s+me|hold\s+on|one\s+min|ek\s+min)\b/i.test(l);
     const isProductKeyword = detectProduct(msg) !== null;
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isProductKeyword && words.length >= 2) {
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isProductKeyword && !endsWithBhi && words.length >= 2) {
       // 2+ word name in PRODUCT_INQUIRY = implicit yes + name (e.g. "Shazia Jamshed")
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_in_product_inquiry', extracted: { name } };
