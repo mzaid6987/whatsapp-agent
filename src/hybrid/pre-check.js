@@ -647,6 +647,23 @@ function preCheck(message, currentState, collected, state) {
     }
   }
 
+  // 4a-PI. NAME IN PRODUCT_INQUIRY — customer skipped "haan" and directly gave name after "Order karna hai?"
+  // e.g. Bot: "Order karna hai?" → Customer: "Shazia Jamshed" (implicit yes + name)
+  if (currentState === 'PRODUCT_INQUIRY' && state.product) {
+    const trimmed = msg.trim();
+    const words = trimmed.split(/\s+/);
+    const looksLikeName = words.length >= 1 && words.length <= 3 &&
+      /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 3 && trimmed.length <= 40;
+    const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|mangta|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board)\b/i.test(l);
+    const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm|ha+n|hn|hanji|hnji)\s*[.!]?\s*$/i.test(l);
+    const isProductKeyword = detectProduct(msg) !== null;
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isProductKeyword && words.length >= 2) {
+      // 2+ word name in PRODUCT_INQUIRY = implicit yes + name (e.g. "Shazia Jamshed")
+      const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      return { intent: 'name_in_product_inquiry', extracted: { name } };
+    }
+  }
+
   // 4a0. DISCOUNT/HAGGLE in collection states — "discount to do", "offer do", "sasta kro"
   // Must catch BEFORE name detection so "discount to do" is not saved as name
   if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {

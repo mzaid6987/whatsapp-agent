@@ -691,6 +691,9 @@ function intentToNextState(intent, currentState, extracted, state) {
     case 'name_given':
       if (extracted?.name) return 'COLLECT_PHONE';
       return currentState;
+    case 'name_in_product_inquiry':
+      if (extracted?.name) return 'COLLECT_PHONE'; // Skip COLLECT_NAME — name already given
+      return currentState;
     case 'suspicious_username':
       return 'COLLECT_NAME'; // Stay in COLLECT_NAME — re-ask
     case 'phone_given':
@@ -3280,6 +3283,18 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       const uname = pre.extracted.username || 'yeh';
       console.log(`[PRE-CHECK] Suspicious username detected: "${uname}" — re-asking for real name`);
       return { reply: `"${uname}" to WhatsApp name lag raha hai — apna asli naam bata dein? 😊`, state: 'COLLECT_NAME' };
+    }
+
+    case 'name_in_product_inquiry': {
+      // Customer gave name directly in PRODUCT_INQUIRY (implicit YES + name)
+      // e.g. Bot: "Order karna hai?" → Customer: "Shazia Jamshed"
+      state.collected.name = pre.extracted.name;
+      const honorific2 = getHonorific(state.collected.name, state.gender);
+      const nextField2 = askNextField(state, storeName);
+      if (nextField2) {
+        nextField2.reply = `${state.collected.name} ${honorific2}, ${nextField2.reply}`.trim();
+      }
+      return nextField2;
     }
 
     case 'name_given': {
