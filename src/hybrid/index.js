@@ -3330,11 +3330,8 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       // Customer gave name directly in PRODUCT_INQUIRY (implicit YES + name)
       // e.g. Bot: "Order karna hai?" → Customer: "Shazia Jamshed"
       state.collected.name = pre.extracted.name;
-      const honorific2 = getHonorific(state.collected.name, state.gender);
       const nextField2 = askNextField(state, storeName);
-      if (nextField2) {
-        nextField2.reply = `${state.collected.name} ${honorific2}, ${nextField2.reply}`.trim();
-      }
+      // askNextField templates already include {name} {honorific}, no need to prepend
       return nextField2;
     }
 

@@ -656,8 +656,11 @@ function preCheck(message, currentState, collected, state) {
       /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 3 && trimmed.length <= 40;
     const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|mangta|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board)\b/i.test(l);
     const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm|ha+n|hn|hanji|hnji)\s*[.!]?\s*$/i.test(l);
+    // Common conversational phrases that are NOT names — "ok wait", "no thanks", "let me think" etc.
+    const isConversationalPhrase = /\b(wait|ruk[oa]?|soch|think|later|baad|bad|abhi\s*nahi|pehle|phle|already|thanks|shukriya|thank\s*you)\b/i.test(l) ||
+      /^(ok\s+wait|no\s+thanks?|not\s+now|let\s+me|hold\s+on|one\s+min|ek\s+min)\b/i.test(l);
     const isProductKeyword = detectProduct(msg) !== null;
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isProductKeyword && words.length >= 2) {
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isProductKeyword && words.length >= 2) {
       // 2+ word name in PRODUCT_INQUIRY = implicit yes + name (e.g. "Shazia Jamshed")
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_in_product_inquiry', extracted: { name } };
@@ -694,7 +697,10 @@ function preCheck(message, currentState, collected, state) {
     // Suspicious WhatsApp usernames — common English words that are NOT real names
     // e.g. "Video", "Admin", "User", "Business", "Shop", "Official", "Online"
     const isSuspiciousUsername = /^(admin|user|guest|test|demo|owner|manager|boss|staff|support|service|services|business|shop|store|official|online|digital|media|studio|tech|gaming|gamer|vlogs?|blogger|trader|trading|dealer|reviews?|status|updates?|news|channel|page|group|public|private|personal|main|real|original|backup|old|new|unknown|null|undefined|bot|robot|ai|home|office|work|mobile|android|iphone|samsung|oppo|vivo|realme|redmi|infinix|tecno|nokia|huawei)\s*\d*$/i.test(l);
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername) {
+    // Common conversational phrases that are NOT names — "ok wait", "no thanks", "not now" etc.
+    const isConversationalPhrase = /\b(wait|ruk[oa]?|soch|think|later|baad|bad|abhi\s*nahi|thanks|shukriya|thank\s*you)\b/i.test(l) ||
+      /^(ok\s+wait|no\s+thanks?|not\s+now|let\s+me|hold\s+on|one\s+min|ek\s+min)\b/i.test(l);
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername) {
       // Capitalize properly
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_given', extracted: { name } };
