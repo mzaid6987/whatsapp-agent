@@ -110,7 +110,8 @@ function preCheck(message, currentState, collected, state) {
   // 0b. SPAM DETECTION — messages with URLs from unknown senders = spam/scam
   // Ramzan packages, free data, phishing links etc. — don't waste AI tokens
   // BUT: whitelist our own store domains (website WhatsApp button sends product URL)
-  const OWN_DOMAINS = /\b(nuvenza\.shop|thezenora\.shop|thenureva\.shop|thenuvenza\.shop|theelvorastore\.shop|thealvorashop\.shop|thenovenzashop\.shop)\b/i;
+  // All our stores: nureva, alvora, elvora, ruvenza, zenora, nuvenza (with/without "the" prefix)
+  const OWN_DOMAINS = /\b(the)?(nureva|alvora|elvora|ruvenza|zenora|nuvenza|nuvenza|alvorashop|elvorastore|novenzashop)(\.shop)\b/i;
   const hasUrl = /https?:\/\/|www\.|\.com\b|\.online\b|\.site\b|\.pk\b|\.buzz\b|\.top\b|\.live\b|\.html\b|\.org\b|\.net\b|clkbitz|lnkbits/i.test(l);
   const isOwnDomain = OWN_DOMAINS.test(l);
   if (hasUrl && !isOwnDomain && ['IDLE', 'GREETING'].includes(currentState)) {
