@@ -1384,6 +1384,52 @@ app.post('/api/conversations/:id/block', requireAuth, (req, res) => {
 });
 
 
+// ONE-TIME: Fix falsely spammed website referral customers — unblock + send greeting
+app.post('/api/fix-spam-referrals', requireAuth, async (req, res) => {
+  try {
+    const db = getDb();
+    // Find today's spam-flagged conversations where first message has our store URL
+    const spammed = db.prepare(`
+      SELECT c.id, c.state, cu.phone, cu.name, c.last_message,
+        (SELECT m.content FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at ASC LIMIT 1) as first_msg
+      FROM conversations c
+      JOIN customers cu ON cu.id = c.customer_id
+      WHERE c.spam_flag = 1 AND c.created_at >= datetime('now','localtime','-1 day')
+    `).all();
+
+    const ownDomains = /(nureva|alvora|elvora|ruvenza|zenora|nuvenza)\.shop/i;
+    const toFix = spammed.filter(c => ownDomains.test(c.first_msg || '') || ownDomains.test(c.last_message || ''));
+
+    const accessToken = settingsModel.get('meta_whatsapp_token', '');
+    const phoneNumberId = settingsModel.get('meta_phone_number_id', '');
+    const results = [];
+
+    for (const c of toFix) {
+      // Unblock
+      db.prepare('UPDATE conversations SET spam_flag = 0, state = ? WHERE id = ?').run('GREETING', c.id);
+
+      // Re-process their message through hybrid engine
+      const intlPhone = toInternational(c.phone);
+      const firstMsg = c.first_msg || c.last_message || '';
+      try {
+        const result = await hybrid.handleMessage(firstMsg, c.phone, 'nureva', undefined, {});
+        if (result && result.reply) {
+          await sendMessage(intlPhone, result.reply, phoneNumberId, accessToken);
+          const messageModel = require('./db/models/message');
+          messageModel.create(c.id, 'outgoing', 'bot', result.reply, { source: result.source || 'template' });
+        }
+        results.push({ phone: c.phone, status: 'fixed', reply_sent: !!result?.reply });
+      } catch (e) {
+        results.push({ phone: c.phone, status: 'error', error: e.message });
+      }
+    }
+
+    res.json({ total_spammed_today: spammed.length, matching_own_domain: toFix.length, results });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Toggle follow-up on conversation — manually stop or re-enable follow-up voice note
 app.post('/api/conversations/:id/followup', requireAuth, (req, res) => {
   try {
