@@ -3374,7 +3374,12 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       delete state._ambiguous_products; // Clear ambiguous list after selection
       state.current = 'PRODUCT_INQUIRY';
       const nextVars = buildVars(state, storeName);
-      return { reply: fillTemplate('PRODUCT_INQUIRY', nextVars), state: 'PRODUCT_INQUIRY' };
+      const psReply = { reply: fillTemplate('PRODUCT_INQUIRY', nextVars), state: 'PRODUCT_INQUIRY' };
+      // Auto-send product video with first intro (except Vegetable Cutter id:6 — no video)
+      if (newProd && newProd.id !== 6) {
+        psReply._media = { product_id: newProd.id, type: 'video', product_name: newProd.short };
+      }
+      return psReply;
     }
 
     case 'product_inquiry': {
