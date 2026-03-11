@@ -289,6 +289,32 @@ function preCheck(message, currentState, collected, state) {
       return { intent: 'rural_in_phone_state', extracted: { rural_part: ruralInPhone.ruralPart, rural_type: ruralInPhone.type, city: cityInMsg } };
     }
 
+    // Address info given during delivery phone — "pindi road youneek store", "saddar bazar dukaan"
+    // Customer skipped phone question and gave address → assume same phone + extract address
+    const ADDRESS_KW_IN_PHONE = /\b(road|rd|bazar|bazaar|market|mohall?ah?|colony|sector|block|gali|galli|chowk|chorangi|town|nagar|abad|dukaan|dukan|shop|stor[e]?|masjid|school|hospital|bank|pump|plaza|center|centre|mandi|garhi|kacheri|society|scheme|naka|morr?|chauraha|flyover|bridge|pull|main\s*baz[ae]r|saddar|cantt)\b/i;
+    if (ADDRESS_KW_IN_PHONE.test(l) && !extractPhone(msg)) {
+      const cityInMsg = extractCity(msg);
+      const areaInMsg = extractArea(msg, cityInMsg);
+      // Try to extract store/shop/dukaan name as landmark — "youneek Stor", "Ali ki dukaan"
+      let landmark = null;
+      const storeMatch = msg.match(/\b([a-z][a-z]+)\s+(stor[e]?|shop|dukaan|dukan|mart|pharmacy|medical|kiryana|general)\b/i) ||
+        msg.match(/\b(stor[e]?|shop|dukaan|dukan|mart|pharmacy|medical|kiryana|general)\s+([a-z][a-z]+)\b/i);
+      if (storeMatch) {
+        // Determine which group is name vs type
+        const isTypeFirst = /^(stor[e]?|shop|dukaan|dukan|mart|pharmacy|medical|kiryana|general)$/i.test(storeMatch[1]);
+        const name = isTypeFirst ? (storeMatch[2] || '') : storeMatch[1];
+        const type = isTypeFirst ? storeMatch[1] : storeMatch[2];
+        const titleCase = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+        // Skip if "name" is a filler word like "pta", "he", "ye"
+        if (name.length > 2 && !/^(pta|pata|he|hai|ye|yeh|woh|koi|ek|aik)$/i.test(name)) {
+          landmark = `${titleCase(name)} ${titleCase(type)}`;
+        }
+      }
+      // Also try extractLandmark for other patterns (near X, X ke paas)
+      if (!landmark) landmark = extractLandmark(msg);
+      return { intent: 'address_in_phone_state', extracted: { city: cityInMsg, address_text: msg, area: areaInMsg, landmark } };
+    }
+
     const startsWithYes = /^(ha+n|ji+|jee|g|yes|yup|ok|haan|hn+)\b/i.test(l.trim());
     const hasYesWord = /\b(ha+n|ji|yes|yup|ik|ok[zgky]?|haan|hn+|g|k|shi|sahi|sa[ih]i?|theek|thik|thk|tik|bilkul|done)\b/i.test(l);
     // Exclude "no" when it's part of "no." / "no " + digit (number abbreviation like "chak no 32")
@@ -654,7 +680,7 @@ function preCheck(message, currentState, collected, state) {
     const words = trimmed.split(/\s+/);
     const looksLikeName = words.length >= 1 && words.length <= 3 &&
       /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 3 && trimmed.length <= 40;
-    const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|mangta|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board)\b/i.test(l);
+    const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|kitny|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|mangta|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board|milega|melega|milta|milti|mein|sabzi)\b/i.test(l);
     const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm|ha+n|hn|hanji|hnji)\s*[.!]?\s*$/i.test(l);
     // Common conversational phrases that are NOT names — "ok wait", "no thanks", "let me think" etc.
     const isConversationalPhrase = /\b(wait|ruk[oa]?|soch|think|later|baad|bad|abhi\s*nahi|pehle|phle|already|thanks|shukriya|thank\s*you)\b/i.test(l) ||
@@ -952,6 +978,7 @@ function preCheck(message, currentState, collected, state) {
     // Customer asking about currently discussed product → repeat product info (saves AI call)
     const isPriceAskInPI = /\b(price|rate|qeemat|qimat|kimat|keemat)\s*(kya|kia|kitni|kitna|kitne|batao|btao|bta)\b/i.test(l) ||
       /\b(kitni|kitna|kitne|kitny)\s*(price|rate|qeemat|kimat|ki|ka|hai|he|h)\b/i.test(l) ||
+      /\b(kitni|kitna|kitne|kitny)\s*(m|me|mein|mei|main|may)\s*(mil[ea]?g[aie]?|milta|milti|melega|mele)\b/i.test(l) ||
       /\b(is\s*k[aie]|isk[aie]|ye|yeh|iska|iski)\s*(price|rate|qeemat|kimat|kitni|kitna|kitne)\b/i.test(l) ||
       /\b(price|rate)\s*(hai|he|h|kya|kia)\b/i.test(l);
     if (isPriceAskInPI) {

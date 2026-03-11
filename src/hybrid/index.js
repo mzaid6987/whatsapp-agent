@@ -3300,6 +3300,17 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       return nextField;
     }
 
+    case 'address_in_phone_state': {
+      // Customer gave address info (e.g. "pindi road youneek store") in COLLECT_DELIVERY_PHONE
+      // Assume same phone, save address parts, advance to city or address
+      state.collected.delivery_phone = 'same';
+      if (pre.extracted.city && !state.collected.city) state.collected.city = pre.extracted.city;
+      if (pre.extracted.area) state.collected.address_parts.area = pre.extracted.area;
+      if (pre.extracted.landmark) state.collected.address_parts.landmark = pre.extracted.landmark;
+      const nextFieldAddr = askNextField(state, storeName);
+      return nextFieldAddr;
+    }
+
     case 'rural_in_phone_state': {
       // Customer gave rural address (e.g. "chak no 32 mangla") in COLLECT_DELIVERY_PHONE
       // Assume same phone, store rural info, move to city or rural flow
