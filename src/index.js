@@ -2401,6 +2401,8 @@ app.all('/deploy', (req, res) => {
 const FOLLOWUP_INTERVAL_MS = 60 * 1000;   // Check every 60 seconds
 const FOLLOWUP_SILENCE_MIN = 360;          // Trigger after 360 minutes (6 hours) silent
 const FOLLOWUP_VOICE_FILE = 'followup-voice.mp3';
+const FOLLOWUP_MAX_PER_CYCLE = 3;          // Max follow-ups per cycle (stagger to avoid bulk sends)
+const FOLLOWUP_DELAY_MS = 5000;            // 5 sec delay between each send in same cycle
 const SILENT_EXCLUDE_STATES_FU = ['ORDER_CONFIRMED', 'CANCEL_AFTER_CONFIRM', 'COMPLAINT', 'IDLE', 'UPSELL_HOOK', 'UPSELL_SHOW'];
 
 function startFollowUpScheduler() {
@@ -2436,8 +2438,12 @@ function startFollowUpScheduler() {
       `).all();
 
       const now = Date.now();
+      let sentThisCycle = 0;
 
       for (const c of convos) {
+        // Stagger: max N follow-ups per cycle, rest will be picked up next cycle
+        if (sentThisCycle >= FOLLOWUP_MAX_PER_CYCLE) break;
+
         // Skip: already followed up, spam, complaint, human takeover, excluded states
         if (c.followup_sent) continue;
         if (c.spam_flag || c.complaint_flag || c.needs_human) continue;
@@ -2460,18 +2466,22 @@ function startFollowUpScheduler() {
         const minutesSilent = (now - lastTime) / (1000 * 60);
         if (minutesSilent < FOLLOWUP_SILENCE_MIN) continue;
 
-        // Don't send if customer was silent for too long (>60 min) — likely abandoned
         // Don't send if customer was silent for too long (>24 hours) — likely abandoned
         if (minutesSilent > 1440) {
           db.prepare('UPDATE conversations SET followup_sent = 1 WHERE id = ?').run(c.id);
           continue;
         }
 
+        // Delay between sends in same cycle to avoid burst
+        if (sentThisCycle > 0) {
+          await new Promise(r => setTimeout(r, FOLLOWUP_DELAY_MS));
+        }
+
         // Send voice note follow-up (one time only)
         const intlPhone = toInternational(c.phone);
         const audioUrl = `${serverUrl}/media/${FOLLOWUP_VOICE_FILE}`;
 
-        console.log(`[FOLLOWUP] Sending voice note to ${c.phone} (silent ${Math.round(minutesSilent)}min, state: ${c.state}, conv #${c.id})`);
+        console.log(`[FOLLOWUP] Sending voice note to ${c.phone} (silent ${Math.round(minutesSilent)}min, state: ${c.state}, conv #${c.id}) [${sentThisCycle + 1}/${FOLLOWUP_MAX_PER_CYCLE}]`);
         const result = await sendAudio(intlPhone, audioUrl, phoneNumberId, accessToken);
 
         if (result.success) {
@@ -2482,6 +2492,7 @@ function startFollowUpScheduler() {
           conversationModel.updateLastMessage(c.id, '[Voice Follow-up]');
           broadcast({ type: 'new_message', conversationId: c.id });
           console.log(`[FOLLOWUP] Sent successfully to ${c.phone}`);
+          sentThisCycle++;
         } else {
           console.error(`[FOLLOWUP] Failed for ${c.phone}:`, result.error);
         }
