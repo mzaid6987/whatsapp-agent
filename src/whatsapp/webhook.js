@@ -289,6 +289,32 @@ async function webhookHandler(req, res) {
               console.warn(`[VOICE] Whisper hallucination (YouTube): "${messageText}"`);
               messageText = '[voice message - samajh nahi aaya]';
             }
+            // Detect Whisper repetition hallucination — same phrase repeated 3+ times
+            // e.g. "Hoshiya mosque Hoshiya mosque Hoshiya mosque" or "Prices are very cheap" x14
+            if (messageText && messageText !== '[voice message - samajh nahi aaya]') {
+              // Find repeated phrases (2-6 words) appearing 3+ times
+              const dedupText = messageText.replace(/([a-zA-Z][a-zA-Z\s]{3,40}?)\s*(?:\1\s*){2,}/gi, (match, phrase) => {
+                console.warn(`[VOICE] Whisper repetition detected: "${phrase.trim()}" repeated`);
+                return phrase.trim() + ' ';
+              }).trim();
+              // Strip known English filler hallucinations
+              const cleanedText = dedupText
+                .replace(/\b(prices?\s+are\s+very\s+cheap|thank\s+you\s+for\s+watching|please\s+subscribe)\b/gi, '')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
+              if (cleanedText.length >= 2 && cleanedText !== messageText.trim()) {
+                console.warn(`[VOICE] Deduped: "${messageText}" → "${cleanedText}"`);
+                messageText = cleanedText;
+              }
+              if (!cleanedText || cleanedText.length < 2) {
+                messageText = '[voice message - samajh nahi aaya]';
+              }
+            }
+            // Convert Whisper "bata" between numbers to "/" (e.g. "166 bata 86" → "166/86")
+            // Whisper transcribes "/" as "bata" or "B" in Pakistani voice messages
+            if (messageText && messageText !== '[voice message - samajh nahi aaya]') {
+              messageText = messageText.replace(/(\d+)\s*bata\s*(\d+)/gi, '$1/$2');
+            }
           }
         }
       } catch (err) {

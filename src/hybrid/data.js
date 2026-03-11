@@ -80,7 +80,7 @@ const CITIES_MED = ['faisalabad','multan','peshawar','sialkot','gujranwala','hyd
 // Only top 5 cities abbreviations accepted — baqi sab ke liye proper name required
 const CITY_ABBR = {
   khi:'Karachi', lhr:'Lahore', isb:'Islamabad', rwp:'Rawalpindi', fsd:'Faisalabad',
-  pindi:'Rawalpindi', pidni:'Rawalpindi', pndi:'Rawalpindi'
+  pindi:'Rawalpindi', pidni:'Rawalpindi', pndi:'Rawalpindi', rawpindi:'Rawalpindi', rawalpndi:'Rawalpindi', rwalpindi:'Rawalpindi'
 };
 
 const ALL_CITIES = [

@@ -577,7 +577,7 @@ function preCheck(message, currentState, collected, state) {
       for (const abbr of cityAbbrs) {
         remaining = remaining.replace(new RegExp('\\b' + abbr + '\\b', 'i'), '');
       }
-      remaining = remaining.replace(/\b(ke|ka|ki|mein|me|mai|andar|dena|hai|he|h|pe|par|wahan|yahan|delivery|bhejo|bhej|do|karni|krni)\b/gi, '').trim();
+      remaining = remaining.replace(/\b(ke|ka|ki|mein|me|men|mai|main|may|mn|m|andar|dena|hai|he|h|pe|par|wahan|yahan|delivery|bhejo|bhej|do|karni|krni|se|sy)\b/gi, '').trim();
       if (remaining.length >= 3) {
         const areaInCity = matchArea(remaining, allCities[0]);
         if (areaInCity) {
