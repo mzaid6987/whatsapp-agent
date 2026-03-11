@@ -329,6 +329,14 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'media_request_all', extracted: { media_type: 'video' } };
   }
 
+  // 1a-0. STANDALONE MEDIA WORD — just "Video", "Photo", "Picture" with product selected
+  // Customer wants to see product media — not a name, not a username
+  const isStandaloneMedia = /^(video|vidoe|vedio|vid|photo|picture|pic|image|tasveer|tasver|reel)\s*[?؟]?\s*$/i.test(l);
+  if (isStandaloneMedia && state.product) {
+    const detectedMediaType = /\b(video|vidoe|vedio|vid|reel)\b/i.test(l) ? 'video' : 'image';
+    return { intent: 'media_request', extracted: { product: state.product, media_type: detectedMediaType } };
+  }
+
   // 1a. MEDIA REQUEST — "picture dikhao", "photo bhejo", "video dikhao", "image send karo"
   // Also: "X ki video", "X ki picture" (standalone, no action word needed)
   const isMediaReq = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|bhejdo|send|de|do|dena|chahiye)\b/i.test(l) ||
@@ -647,7 +655,7 @@ function preCheck(message, currentState, collected, state) {
       /\b(lark[ioy]+|ladki|ladies|lady|gents|boys?|girls?|men|women|chot[aie]|bar[aie]|sast[aie]|mehn?g[aie]|ach[aie]|nay[aie]|puran[aie])\b/i.test(l);
     // Suspicious WhatsApp usernames — common English words that are NOT real names
     // e.g. "Video", "Admin", "User", "Business", "Shop", "Official", "Online"
-    const isSuspiciousUsername = /^(video|audio|admin|user|guest|test|demo|owner|manager|boss|staff|support|service|services|business|shop|store|official|online|digital|media|studio|tech|gaming|gamer|vlogs?|blogger|trader|trading|dealer|reviews?|status|updates?|news|channel|page|group|public|private|personal|main|real|original|backup|old|new|unknown|null|undefined|bot|robot|ai|home|office|work|mobile|android|iphone|samsung|oppo|vivo|realme|redmi|infinix|tecno|nokia|huawei)\s*\d*$/i.test(l);
+    const isSuspiciousUsername = /^(admin|user|guest|test|demo|owner|manager|boss|staff|support|service|services|business|shop|store|official|online|digital|media|studio|tech|gaming|gamer|vlogs?|blogger|trader|trading|dealer|reviews?|status|updates?|news|channel|page|group|public|private|personal|main|real|original|backup|old|new|unknown|null|undefined|bot|robot|ai|home|office|work|mobile|android|iphone|samsung|oppo|vivo|realme|redmi|infinix|tecno|nokia|huawei)\s*\d*$/i.test(l);
     if (looksLikeName && !isQuestionWord && !isCommonNonName && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername) {
       // Capitalize properly
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
