@@ -59,7 +59,7 @@ async function downloadMedia(mediaId, accessToken) {
  * Transcribe voice message using OpenAI Whisper
  * Returns the transcribed text
  */
-async function transcribeVoice(mediaId, accessToken, openaiApiKey) {
+async function transcribeVoice(mediaId, accessToken, openaiApiKey, context = {}) {
   const openai = getOpenAI(openaiApiKey);
   console.log(`[Media] Voice: downloading media ${mediaId}...`);
   const { buffer, mimeType } = await downloadMedia(mediaId, accessToken);
@@ -136,10 +136,12 @@ Common Whisper mistakes for this store's context:
 - IMPORTANT: If customer mentions a color + random English word near "order" → likely a product name. Match to closest product.
 - IMPORTANT: "A1" or "number 1" means excellent quality in Pakistani slang. Keep as-is.
 
-Products sold: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Ear Wax Kit, Vegetable Cutter, Facial Hair Remover, Nebulizer, Knee Sleeve, Duster Kit
+Products sold: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Ear Wax Kit, Vegetable Cutter, Facial Hair Remover, Nebulizer, Knee Sleeve, Duster Kit, EMS Butterfly Massager
+- "massager" Whisper often hears as "trimmer" or "master" or "manager" — if customer was discussing massager/EMS product, correct it
+- "butterfly" Whisper may hear as "butter fly" or "beautiful" — correct to "butterfly" if near massager/EMS/pain context
 
 Cities: Lahore, Karachi, Islamabad, Rawalpindi, Faisalabad, Peshawar, Sukkur, Multan, Hyderabad, Quetta, Sialkot, Gujranwala
-
+${context.currentProduct ? `\nIMPORTANT CONTEXT: Customer is currently asking about "${context.currentProduct}". If Whisper transcription mentions a different product but it sounds similar or makes no sense in context, the customer is likely still talking about ${context.currentProduct}. Correct accordingly.` : ''}
 Output ONLY the corrected Roman Urdu text. Nothing else. If the text is already correct, return it as-is.` },
           { role: 'user', content: text }
         ],

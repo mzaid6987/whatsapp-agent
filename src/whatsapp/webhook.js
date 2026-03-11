@@ -252,7 +252,20 @@ async function webhookHandler(req, res) {
             incomingMediaType = 'audio';
           } catch (e) { console.warn('[WA] Voice save failed:', e.message); }
 
-          const result = await transcribeVoice(mediaId, accessToken, apiKey);
+          // Get current product context for better Whisper correction
+          let voiceContext = {};
+          try {
+            const customerModel = require('../db/models/customer');
+            const _vc = customerModel.findByPhone(fromPhone);
+            if (_vc) {
+              const _vconv = conversationModel.findActive(_vc.id);
+              if (_vconv?.state_json) {
+                const _vstate = JSON.parse(_vconv.state_json);
+                if (_vstate.product?.name) voiceContext.currentProduct = _vstate.product.name;
+              }
+            }
+          } catch (e) { /* non-critical */ }
+          const result = await transcribeVoice(mediaId, accessToken, apiKey, voiceContext);
           messageText = result.text;
           mediaNote = ' [voice→text]';
           mediaCost = { model: result.model, cost_rs: result.cost_rs, response_ms: result.response_ms, type: 'voice' };
