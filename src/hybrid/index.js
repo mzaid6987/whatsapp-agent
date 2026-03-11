@@ -1523,6 +1523,21 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       }
     }
 
+    // Name correction — AI says customer corrected their name (e.g. sent real name after username)
+    // Extract name directly from message since AI may not put it in extracted.name
+    if (aiIntent === 'name_correction' && state.current === 'COLLECT_PHONE') {
+      const msgText = message.trim();
+      const words = msgText.split(/\s+/);
+      // 1-3 words, all letters → likely a name
+      const looksLikeName = words.length >= 1 && words.length <= 3 &&
+        /^[A-Za-z\s.]+$/.test(msgText) && msgText.length >= 2 && msgText.length <= 40;
+      if (looksLikeName) {
+        const correctedName = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        state.collected.name = correctedName;
+        console.log(`[AI] Name corrected: "${state.collected.name}" → "${correctedName}"`);
+      }
+    }
+
     // Phone (AI might extract, code validates)
     // GUARD: Only accept AI-extracted phone if the message actually contains digits
     // AI sometimes hallucinates phone from context when customer only sent a name
@@ -2984,6 +2999,19 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       return { reply, state: 'CANCEL_AFTER_CONFIRM' };
     }
 
+    case 'delivery_process_question': {
+      // Customer asking HOW delivery works — "kis trha deliver hoga", "kaise bhejte ho"
+      const honorific = getHonorific(state.collected.name, state.gender);
+      let reply = `${state.collected.name || ''} ${honorific}, hum Postex aur TCS ke through parcel bhijwate hain 🚚 Cash on Delivery (COD) hai — paisa delivery ke waqt dena hai. Pehle check karein phir paisa dein.`.trim();
+      if (state.current.startsWith('COLLECT_')) {
+        const reask = askNextField(state, storeName);
+        if (reask) reply += ' ' + reask.reply;
+      } else {
+        reply += ' Order karna hai?';
+      }
+      return { reply, state: state.current };
+    }
+
     case 'delivery_charge_question': {
       const honorific = getHonorific(state.collected.name, state.gender);
       let reply = `${state.collected.name || ''} ${honorific}, delivery bilkul FREE hai — koi charges nahi. Cash on Delivery (COD) hai, paisa delivery ke waqt dena hai.`.trim();
@@ -3212,7 +3240,17 @@ function handlePreCheck(pre, message, state, storeName, phone) {
     }
 
     case 'product_selected': {
-      state.product = pre.extracted.product;
+      // Dedup: if same product was just introduced within 60s, skip duplicate response
+      const newProd = pre.extracted.product;
+      if (state.product && newProd && state.product.id === newProd.id && state._lastProductIntroAt) {
+        const elapsed = Date.now() - state._lastProductIntroAt;
+        if (elapsed < 60000) {
+          console.log(`[DEDUP] Same product "${newProd.short}" intro ${elapsed}ms ago — skipping duplicate`);
+          return null; // Skip — don't send duplicate product intro
+        }
+      }
+      state.product = newProd;
+      state._lastProductIntroAt = Date.now();
       delete state._ambiguous_products; // Clear ambiguous list after selection
       state.current = 'PRODUCT_INQUIRY';
       const nextVars = buildVars(state, storeName);

@@ -910,6 +910,16 @@ function preCheck(message, currentState, collected, state) {
     }
   }
 
+  // 7a-x. DELIVERY PROCESS question — "kis trha deliver hoga", "delivery kaise hoti hai", "kaise bhejte ho"
+  // Customer asking HOW delivery works (courier? TCS? process?) — not time or charges
+  const isDeliveryProcessQ = /\b(kis\s*tr[ha]+|kais[ey]?|kidher\s*se|konsi?\s*(company|courier))\s*.*(delive?r|bhej|parcel|ship|courier|send)\b/i.test(l) ||
+    /\b(delive?r|parcel|bhej|ship)\s*.*(kis\s*tr[ha]+|kais[ey]?|hot[ia]|hog[ia]|kart[ey]|krte?)\b/i.test(l) ||
+    /\b(delive?r|parcel)\s*(ho\s*sakt[aie]|ho\s*jaye?g[aie]|ho\s*jayg[aie])\b/i.test(l);
+  if (isDeliveryProcessQ) {
+    const dpCity = extractCity(msg);
+    return { intent: 'delivery_process_question', extracted: dpCity ? { city: dpCity } : {} };
+  }
+
   // 7b. DELIVERY CHARGE/COST question — "delivery ke paise?", "delivery free hai?", "shipping charges?"
   const isDeliveryChargeQ = /\b(delivery|shipping|courier)\s*(ke|ki|ka|k|ky)?\s*(pais[ey]|charg[ei]s?|chages?|cost|rate|kitne?|free|muft|patsy)\b/i.test(l) ||
     /\b(pais[ey]|charg[ei]s?|chages?|cost|patsy)\s*(delivery|shipping)\b/i.test(l) ||

@@ -64,7 +64,7 @@ function buildVars(state, storeName) {
       // Show discounted price for main product if haggle discount exists
       const isMainProduct = state.product && p.short === state.product.short && p.price === state.product.price;
       const dp = isMainProduct && state.discount_percent ? Math.round(p.price * (1 - state.discount_percent / 100)) : p.price;
-      return `- ${p.short}: ${fmtPrice(dp)}`;
+      return `- ${p.name}: ${fmtPrice(dp)}`;
     }).join('\n'),
     total: total.toLocaleString(),
     discount_percent: state.discount_percent || 0,
@@ -334,6 +334,19 @@ function handleTemplateState(message, state, storeName, preIntent) {
         }
         return { reply: 'Kis product ki ' + (mediaType === 'video' ? 'video' : 'picture') + ' chahiye? Product ka naam ya number bata dein 😊', state: 'UPSELL_HOOK' };
       }
+      // Quality/reassurance — "theek hoga na?", "kharab to nahi?", "quality kaisi hai?"
+      // Must check BEFORE yes — "theek" triggers yes but "theek hoga na" is a quality question
+      const hasWorryWordHook = /\b(kh?[au]?ra+b|khrab|khrb|toot|toote?g[aie]|break|quality|qlty|original|asli|fake|naqli|copy)\b/i.test(l);
+      const hasNahiHook = /\b(nahi|nhi|na|ni)\b/i.test(l);
+      const hasToNahiHook = /\b(to|toh?)\b/i.test(l) && hasNahiHook;
+      const hasNahiVerbHook = /\b(nahi|nhi|na)\s*(hog[aie]|hota|hoti|ho|hoig)\b/i.test(l);
+      const isQualityAskHook = /\b(quality|qlty)\s*(kais[ie]|kesi|kaisi|theek|thik|achi|acha)\s*(h[ae]i?|he|hogi|hoga)?\s*[?؟]?\s*$/i.test(l) ||
+        /\b(theek|thik|thk|ach+[ia]|chale\s*g[ia])\s*(hog[aie]|hota|hoti|hai|he|h|na)\b/i.test(l) && /[?؟]?\s*$/.test(l);
+      const isReassuranceHook = (hasWorryWordHook && (hasToNahiHook || hasNahiVerbHook)) || isQualityAskHook;
+      if (isReassuranceHook) {
+        const reassureReply = fillTemplate('QUALITY_REASSURANCE', vars) + '\n\nWaise discount products dekhna chahein ge?';
+        return { reply: reassureReply, state: 'UPSELL_HOOK', _trust_audio: true };
+      }
       // Delivery time query — answer it, then continue upsell
       if (/\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|aye?\s*ga)|kitne?\s*din|delivery|tracking|kb\s*tk|kb\s*ayga)\b/i.test(l)) {
         const delReply = fillTemplate('DELIVERY_POST_ORDER', vars);
@@ -373,6 +386,21 @@ function handleTemplateState(message, state, storeName, preIntent) {
           return { reply: null, state: 'UPSELL_SHOW', _media: { product_id: mediaProduct.id, type: mediaType, product_name: mediaProduct.short } };
         }
         return { reply: 'Kis product ki ' + (mediaType === 'video' ? 'video' : 'picture') + ' chahiye? Product ka naam ya number bata dein 😊', state: 'UPSELL_SHOW' };
+      }
+      // Quality/reassurance — "theek hoga na?", "kharab to nahi?", "quality kaisi hai?"
+      const hasWorryWordShow = /\b(kh?[au]?ra+b|khrab|khrb|toot|toote?g[aie]|break|quality|qlty|original|asli|fake|naqli|copy)\b/i.test(l);
+      const hasNahiShow = /\b(nahi|nhi|na|ni)\b/i.test(l);
+      const hasToNahiShow = /\b(to|toh?)\b/i.test(l) && hasNahiShow;
+      const hasNahiVerbShow = /\b(nahi|nhi|na)\s*(hog[aie]|hota|hoti|ho|hoig)\b/i.test(l);
+      const isQualityAskShow = /\b(quality|qlty)\s*(kais[ie]|kesi|kaisi|theek|thik|achi|acha)\s*(h[ae]i?|he|hogi|hoga)?\s*[?؟]?\s*$/i.test(l) ||
+        /\b(theek|thik|thk|ach+[ia]|chale\s*g[ia])\s*(hog[aie]|hota|hoti|hai|he|h|na)\b/i.test(l) && /[?؟]?\s*$/.test(l);
+      const isReassuranceShow = (hasWorryWordShow && (hasToNahiShow || hasNahiVerbShow)) || isQualityAskShow;
+      if (isReassuranceShow) {
+        const reassureProduct = state._pending_upsell || state.product;
+        const reassureReply = reassureProduct
+          ? `Bilkul ${vars.honorific}, fikar na karein! ${reassureProduct.f2 || reassureProduct.f1 || 'Product tested hai'}. Delivery pe pehle check karein, 7 din exchange bhi hai ✅`
+          : fillTemplate('QUALITY_REASSURANCE', vars);
+        return { reply: reassureReply, state: 'UPSELL_SHOW', _trust_audio: true };
       }
       if (no) {
         // If pending upsell and customer says no → skip just the pending, confirm order
