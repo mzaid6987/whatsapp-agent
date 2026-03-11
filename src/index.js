@@ -2540,6 +2540,20 @@ function startFollowUpScheduler() {
 
     console.log('[DB] Ready');
 
+    // Ensure ffmpeg is installed (needed for admin voice note webm→ogg conversion)
+    try {
+      execSync('which ffmpeg', { timeout: 5000 });
+      console.log('[STARTUP] ffmpeg: found');
+    } catch (e) {
+      console.log('[STARTUP] ffmpeg not found — attempting install...');
+      try {
+        execSync('apt-get update -qq && apt-get install -y -qq ffmpeg', { timeout: 120000 });
+        console.log('[STARTUP] ffmpeg: installed successfully');
+      } catch (installErr) {
+        console.warn('[STARTUP] ffmpeg install failed:', installErr.message, '— admin voice notes may not convert properly');
+      }
+    }
+
     // Start follow-up scheduler
     startFollowUpScheduler();
 
