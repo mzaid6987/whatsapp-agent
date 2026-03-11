@@ -844,6 +844,24 @@ function preCheck(message, currentState, collected, state) {
     if (!ap.house && detectedHouse) { parts.house = detectedHouse; foundAny = true; }
     if (!ap.landmark && detectedLandmark) { parts.landmark = detectedLandmark; foundAny = true; }
 
+    // When area is extracted from message, check if remaining text contains landmark keywords
+    // e.g. "New Karachi Kali market" → area=New Karachi, remaining "Kali market" → landmark
+    if (detectedArea && !ap.landmark && !detectedLandmark && !parts.landmark) {
+      const areaLower = detectedArea.toLowerCase();
+      const remaining = l.replace(new RegExp(areaLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '').trim();
+      if (remaining.length >= 3) {
+        const hasLandmarkKw = /\b(market|maarket|markit|bazar|bazaar|masjid|mosque|hospital|school|college|chowk|chouk|chowrangi|pump|petrol|station|stop|gate|darwaza|park|ground|maidan|plaza|tower|center|centre|mill|factory|godown|church|mandir|gurdwara|imambargah|dargah|hotel|restaurant|bakery|pharmacy|medical|clinic|shop|store|dukaan|complex)\b/i.test(remaining);
+        if (hasLandmarkKw) {
+          // Clean remaining text and save as landmark
+          const cleanRemaining = remaining.replace(/^[\s,.-]+|[\s,.-]+$/g, '').trim();
+          if (cleanRemaining.length >= 3) {
+            parts.landmark = cleanRemaining.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+            foundAny = true;
+          }
+        }
+      }
+    }
+
     // Handle refusal for current missing field
     if (isRefusal || isDontKnowArea) {
       if (!ap.area && isDontKnowArea) { parts.area = 'nahi_pata'; foundAny = true; }

@@ -320,6 +320,12 @@ function handleTemplateState(message, state, storeName, preIntent) {
         state.current = 'COLLECT_CITY';
         return { reply: fillTemplate('CHANGE_CITY', vars), state: 'COLLECT_CITY' };
       }
+      // Free delivery confirmation — "delivery free haina", "feri haina", "feeri haona"
+      const isFreeDeliveryQ = /\b(free|fre+i?|feri|fe+ri|muft)\s*(h[ae]i?n?a?|hona|hoga|hogi|hai\s*na|he\s*na|he\s*k[ey]?|na)\b/i.test(l) ||
+        /\b(delivery|delivry|dlivry)\s*(to|toh?)?\s*(free|fre+i?|feri|fe+ri|muft)\s*(h[ae]i?n?a?|hona|hoga|hogi|hai\s*na|he\s*na|he\s*k[ey]?|na)?\b/i.test(l);
+      if (isFreeDeliveryQ) {
+        return { reply: 'Ji sir, delivery bilkul FREE hai — koi extra charge nahi ✅\n\nOrder place kar dun? Haan bolen ya kuch change karna ho to bata dein.', state: 'ORDER_SUMMARY' };
+      }
       // Delivery time question — answer it, then re-ask confirm
       if (/\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|aye?\s*ga)|kitne?\s*din|delivery|tracking|kb\s*tk|kb\s*ayga)\b/i.test(l)) {
         const delReply = fillTemplate('DELIVERY_POST_ORDER', vars);
@@ -357,6 +363,12 @@ function handleTemplateState(message, state, storeName, preIntent) {
         const reassureReply = fillTemplate('QUALITY_REASSURANCE', vars) + '\n\nWaise discount products dekhna chahein ge?';
         return { reply: reassureReply, state: 'UPSELL_HOOK', _trust_audio: true };
       }
+      // Free delivery confirmation in upsell — "delivery free haina"
+      const isFreeDelUpsell = /\b(free|fre+i?|feri|fe+ri|muft)\s*(h[ae]i?n?a?|hona|hoga|hogi|hai\s*na|he\s*na|he\s*k[ey]?|na)\b/i.test(l) ||
+        /\b(delivery|delivry|dlivry)\s*(to|toh?)?\s*(free|fre+i?|feri|fe+ri|muft)\s*(h[ae]i?n?a?|hona|hoga|hogi|hai\s*na|he\s*na|he\s*k[ey]?|na)?\b/i.test(l);
+      if (isFreeDelUpsell) {
+        return { reply: 'Ji bilkul, delivery FREE hai ✅\n\nWaise discount products dekhna chahein ge?', state: 'UPSELL_HOOK' };
+      }
       // Delivery time query — answer it, then continue upsell
       if (/\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|aye?\s*ga)|kitne?\s*din|delivery|tracking|kb\s*tk|kb\s*ayga)\b/i.test(l)) {
         const delReply = fillTemplate('DELIVERY_POST_ORDER', vars);
@@ -367,7 +379,7 @@ function handleTemplateState(message, state, storeName, preIntent) {
       if (isPauseHook) {
         return { reply: 'Ji bilkul, aaram se dekhein! Jab tayar hon to bata dein 😊', state: 'UPSELL_HOOK' };
       }
-      if (yes || l.includes('dikhao') || l.includes('dikao') || l.includes('dikha') || l.includes('dekhao') || /\b(discount|offer|sast[ai])\b/i.test(l)) {
+      if (yes || l.includes('dikhao') || l.includes('dikao') || l.includes('dikha') || l.includes('dekhao') || /\b(dikha\s*d[eao]n?|dikha\s*do|dikha\s*ye|dikha\s*in|dikha\s*den|dekha\s*d[eao]n?|dekha\s*do|dikh[ao]\s*d[eao]|dikhaden|dikhado|dikhaye|dikhain)\b/i.test(l) || /\b(discount|offer|sast[ai])\b/i.test(l)) {
         state.current = 'UPSELL_SHOW';
         let uList = state.upsell_candidates.map((p, i) => {
           const upsellPrice = Math.max((p.upsell_price || p.price) - 500, 499);
@@ -596,6 +608,13 @@ function handleTemplateState(message, state, storeName, preIntent) {
         const reply = `${state.collected.name || ''} ${honorific}, aapka parcel dispatch ho chuka hai — ab cancel nahi ho sakta. Delivery ke waqt rider se mil jayega. Shukriya!`.trim();
         return { reply, state: 'CANCEL_AFTER_CONFIRM' };
       }
+      // Free delivery confirmation in ORDER_CONFIRMED
+      const isFreeDelConf = /\b(free|fre+i?|feri|fe+ri|muft)\s*(h[ae]i?n?a?|hona|hoga|hogi|hai\s*na|he\s*na|he\s*k[ey]?|na)\b/i.test(l) ||
+        /\b(delivery|delivry|dlivry)\s*(to|toh?)?\s*(free|fre+i?|feri|fe+ri|muft)\s*(h[ae]i?n?a?|hona|hoga|hogi|hai\s*na|he\s*na|he\s*k[ey]?|na)?\b/i.test(l);
+      if (isFreeDelConf) {
+        state._thanked = false;
+        return { reply: 'Ji sir, delivery bilkul FREE hai — koi extra charge nahi ✅', state: 'ORDER_CONFIRMED' };
+      }
       if (/\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|aye?\s*ga)|kitne?\s*din|delivery|tracking)\b/i.test(l)) {
         state._thanked = false; // reset so delivery Q gets reply
         return { reply: fillTemplate('DELIVERY_POST_ORDER', vars), state: 'ORDER_CONFIRMED' };
@@ -632,6 +651,21 @@ function handleTemplateState(message, state, storeName, preIntent) {
         state._thanked = false;
         const honorific = getHonorific(state.collected.name);
         return { reply: `${honorific === 'sir' ? 'Sir' : 'Madam'}, yeh already discounted price pe hai. COD hai — paisa delivery ke waqt dena hai, koi advance nahi. ${vars.delivery_time} mein delivery ho jaegi.`, state: 'ORDER_CONFIRMED' };
+      }
+      // Upsell/product catalog request — "dikhaden", "dikhao", "aur kya hai", "aur products"
+      const isShowProductsReq = /\b(dikha\s*d[eao]n?|dikha\s*do|dikha\s*ye|dikha\s*in|dikhaden|dikhado|dikhaye|dikhain|dikhao|dikao|dekhao|dekha\s*d[eao]n?)\b/i.test(l) ||
+        /\b(aur|or)\s*(kiy?a|kya|products?|cheez[ea]?[ns]?)\s*(h[ae]i?|he|hain|hein)?\b/i.test(l) ||
+        /\b(products?|cheez[ea]?[ns]?)\s*(dikha|dikhao|dikhaden|batao|btao)\b/i.test(l);
+      if (isShowProductsReq && state.upsell_candidates && state.upsell_candidates.length > 0) {
+        state._thanked = false;
+        state.current = 'UPSELL_SHOW';
+        let uList = state.upsell_candidates.map((p, i) => {
+          const upsellPrice = Math.max((p.upsell_price || p.price) - 500, 499);
+          return `${i + 1}. ${p.short} — ${fmtPrice(upsellPrice)}`;
+        }).join('\n');
+        const uVars = { ...vars, upsell_list: uList };
+        const _upsellVideos = state.upsell_candidates.map(p => ({ product_id: p.id, type: 'video', product_name: p.short }));
+        return { reply: fillTemplate('UPSELL_SHOW', uVars), state: 'UPSELL_SHOW', _media_batch: _upsellVideos };
       }
       // New product inquiry after order
       const newProduct = detectProduct(message);
