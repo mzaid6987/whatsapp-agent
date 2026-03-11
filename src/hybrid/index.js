@@ -3080,7 +3080,22 @@ function handlePreCheck(pre, message, state, storeName, phone) {
 
     case 'delivery_charge_question': {
       const honorific = getHonorific(state.collected.name, state.gender);
-      let reply = `${state.collected.name || ''} ${honorific}, delivery bilkul FREE hai — koi charges nahi. Cash on Delivery (COD) hai, paisa delivery ke waqt dena hai.`.trim();
+      const ml = message.toLowerCase();
+      // Check if customer also asked about product details/packing
+      const askedDetail = /\b(detail|details|batao|bta\s*d[eo]|bata\s*d[eo]|btao|btaye|bataye|kya\s*hai|kia\s*hai|features?|specs?)\b/i.test(ml);
+      const askedPacking = /\b(pack(ing)?|box|dabb?a|wrap|safe|packing\s*kya|pack\s*kya)\b/i.test(ml);
+      let reply = '';
+      // If product context exists and customer asked about detail/packing, address those first
+      if (state.product && (askedDetail || askedPacking)) {
+        const p = state.product;
+        reply += `${state.collected.name || ''} ${honorific}, ${p.name} Rs.${p.price.toLocaleString()} ki hai 🏷️ ${p.f1}. ${p.f2}.`.trim();
+        if (askedPacking) {
+          reply += ' Packing bilkul safe hai — bubble wrap aur box mein properly pack ho ke aata hai 📦';
+        }
+        reply += ` Aur delivery bilkul FREE hai — Cash on Delivery (COD) hai, paisa delivery ke waqt dena hai.`;
+      } else {
+        reply += `${state.collected.name || ''} ${honorific}, delivery bilkul FREE hai — koi charges nahi. Cash on Delivery (COD) hai, paisa delivery ke waqt dena hai.`.trim();
+      }
       // Re-ask current collection question so flow doesn't stall
       if (state.current.startsWith('COLLECT_')) {
         const reask = askNextField(state, storeName);
