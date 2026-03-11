@@ -307,12 +307,55 @@ async function webhookHandler(req, res) {
         } catch (e) { console.warn('[WA] Video save failed:', e.message); }
       }
       messageText = caption || '[video]';
+    } else if (msg.type === 'interactive') {
+      // Interactive messages: button replies, list replies, product messages
+      const interactive = msg.interactive || {};
+      if (interactive.type === 'button_reply') {
+        messageText = interactive.button_reply?.title || interactive.button_reply?.id || '[button reply]';
+      } else if (interactive.type === 'list_reply') {
+        messageText = interactive.list_reply?.title || interactive.list_reply?.description || interactive.list_reply?.id || '[list reply]';
+      } else if (interactive.type === 'product_list' || interactive.type === 'product') {
+        // Customer sent a product from catalog
+        const prodName = interactive.product_list?.product_retailer_id || interactive.product?.product_retailer_id || '';
+        messageText = prodName ? `[Product: ${prodName}]` : '[product message]';
+      } else if (interactive.type === 'nfm_reply') {
+        // Flow reply (form submission)
+        const body = interactive.nfm_reply?.body || interactive.nfm_reply?.response_json || '';
+        messageText = typeof body === 'string' ? body : JSON.stringify(body);
+      } else {
+        messageText = interactive.body?.text || `[interactive: ${interactive.type || 'unknown'}]`;
+      }
+      console.log(`[WA] Interactive (${interactive.type}) from ${fromPhone}: "${messageText}"`);
+    } else if (msg.type === 'order') {
+      // WhatsApp catalog order — extract product details
+      const order = msg.order || {};
+      const items = order.product_items || [];
+      if (items.length > 0) {
+        const itemNames = items.map(i => `${i.product_retailer_id || 'product'} (qty: ${i.quantity || 1})`).join(', ');
+        messageText = `[Order: ${itemNames}]`;
+      } else {
+        messageText = '[order message]';
+      }
+      console.log(`[WA] Order from ${fromPhone}: "${messageText}"`);
+    } else if (msg.type === 'button') {
+      // Quick reply button response
+      messageText = msg.button?.text || msg.button?.payload || '[button]';
+      console.log(`[WA] Button reply from ${fromPhone}: "${messageText}"`);
+    } else if (msg.type === 'referral') {
+      // Customer clicked on an ad / referral link
+      const ref = msg.referral || {};
+      messageText = ref.body || msg.text?.body || '[ad click]';
+      console.log(`[WA] Referral from ${fromPhone}: "${messageText}"`);
     } else {
-      // Other types (sticker, document, etc.) — not supported yet
+      // Other types (sticker, document, etc.)
       messageText = `[${msg.type}]`;
+      console.log(`[WA] Unknown type (${msg.type}) from ${fromPhone} — raw keys: ${Object.keys(msg).join(',')}`);
     }
 
-    if (!messageText.trim()) return;
+    if (!messageText.trim()) {
+      console.warn(`[WA] Empty message from ${fromPhone} — type: ${msg.type}, keys: ${Object.keys(msg).join(',')}, raw: ${JSON.stringify(msg).slice(0, 500)}`);
+      return;
+    }
 
     console.log(`[WA] ${fromPhone}${mediaNote}: "${messageText}"`);
 
