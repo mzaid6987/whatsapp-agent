@@ -365,21 +365,43 @@ async function webhookHandler(req, res) {
       console.log(`[WA] Referral from ${fromPhone}: "${messageText}"`);
     } else {
       // Other types (sticker, document, location, contacts, unsupported, etc.)
-      // Don't pass to bot — these are not processable text and cause wrong product matches
-      console.log(`[WA] Unsupported type (${msg.type}) from ${fromPhone} — ignoring. Raw keys: ${Object.keys(msg).join(',')}`);
-      // Try to save to DB for admin visibility
+      // Don't pass to bot engine — these cause wrong product matches
+      const msgTypeLabel = msg.type || 'unsupported';
+      console.log(`[WA] Unsupported type (${msgTypeLabel}) from ${fromPhone} — sending polite reply. Raw keys: ${Object.keys(msg).join(',')}`);
+
+      // Send a polite reply so customer doesn't feel ignored
+      const replyMap = {
+        sticker: '😊 Apna sawal ya order text mein likh ke bhejein — main madad karti hun!',
+        document: 'Ji, document mil gaya. Agar koi sawal hai to text mein likh dein 😊',
+        location: 'Ji location mil gayi. Agar order dena hai to text mein batayein 😊',
+        contacts: 'Ji, contact mil gaya. Agar koi sawal hai to text mein likh dein 😊',
+      };
+      const politeReply = replyMap[msgTypeLabel] || 'Ji, yeh samajh nahi aaya — apna sawal text mein likh ke bhejein 😊';
+
       try {
         const customerModel = require('../db/models/customer');
         const _cust = customerModel.findByPhone(fromPhone);
         if (_cust) {
           const _conv = conversationModel.findActive(_cust.id);
           if (_conv) {
-            messageModel.create(_conv.id, 'incoming', 'customer', `[📎 ${msg.type || 'unsupported'}]`, { source: 'unsupported_media' });
-            conversationModel.updateLastMessage(_conv.id, `[📎 ${msg.type || 'unsupported'}]`);
-            _broadcast({ type: 'new_message', conversationId: _conv.id });
+            // Check if bot is disabled or human-assigned — don't reply if so
+            if (!_conv.needs_human && !_conv.is_spam) {
+              await sendMessage(fromPhone, politeReply, phoneNumberId, accessToken);
+              markAsRead(messageId, phoneNumberId, accessToken);
+              // Save both messages to DB
+              messageModel.create(_conv.id, 'incoming', 'customer', `[📎 ${msgTypeLabel}]`, { source: 'unsupported_media' });
+              messageModel.create(_conv.id, 'outgoing', 'bot', politeReply, { source: 'template' });
+              conversationModel.updateLastMessage(_conv.id, politeReply);
+              _broadcast({ type: 'new_message', conversationId: _conv.id });
+            } else {
+              // Human-assigned — just save incoming, no bot reply
+              messageModel.create(_conv.id, 'incoming', 'customer', `[📎 ${msgTypeLabel}]`, { source: 'unsupported_media' });
+              conversationModel.updateLastMessage(_conv.id, `[📎 ${msgTypeLabel}]`);
+              _broadcast({ type: 'new_message', conversationId: _conv.id });
+            }
           }
         }
-      } catch (e) { /* non-critical — just skip saving */ }
+      } catch (e) { console.error('[WA] Unsupported type handler error:', e.message); }
       return;
     }
 
