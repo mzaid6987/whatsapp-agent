@@ -1013,7 +1013,32 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
       };
     }
-    const flexYes = /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|done|theek|thik|thk|tik|hn|hm+|g+|acha|accha|achha|bhej\s*d[oae]|bhejd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|kr\s*d[oae]|kard[oae]|krd[oae])\b/i.test(l) && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
+    // "rider aajata hai" / "rider aajateen hai" / "address thek hai" = acceptance
+    const isRiderAcceptance = /\b(rider|courier)\s*.*(aa\s*jat[aei]|ajat[aei]|aajat[aei]|aa\s*jaye?|ajaye?|pohch|pahoch|deliver)\b/i.test(l);
+    if (isRiderAcceptance && /\b(thek|theek|thik|sahi|bilkul)\b/i.test(l)) {
+      state.address_confirming = false;
+      const addrStr = buildAddressString(state.collected.address_parts, state.collected.city);
+      state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
+      const dp = state.collected.delivery_phone;
+      if (dp && dp !== 'same' && dp !== state.collected.phone) {
+        state.collected.address += ` (agar call na lug rahi ho ya signal issue ho to ${dp} pr bhi call krlena)`;
+      }
+      const smResult = buildOrderSummary(state, storeName);
+      state.current = smResult.state;
+      state.messages.push({ role: 'user', content: message });
+      state.messages.push({ role: 'assistant', content: smResult.reply });
+      if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+      const reply = qualityGate(smResult.reply);
+      saveMessages(dbConv, message, reply, 'yes', 'template', state);
+      saveState(dbConv, state);
+      return {
+        reply, state: state.current, collected: { ...state.collected },
+        needs_human: false, source: 'template', intent: 'yes',
+        tokens_in: 0, tokens_out: 0, response_ms: Date.now() - startTime,
+        db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+      };
+    }
+    const flexYes = /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|done|theek|thek|thik|thk|tik|hn|hm+|g+|acha|accha|achha|bhej\s*d[oae]|bhejd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|kr\s*d[oae]|kard[oae]|krd[oae])\b/i.test(l) && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
     const flexNo = /\b(nahi+|nhi*|nh|no+|galat|nope|na+h|mat|cancel)\b/i.test(l) && !isConditionalNah;
 
     if (flexYes) {

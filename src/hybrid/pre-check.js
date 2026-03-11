@@ -706,7 +706,7 @@ function preCheck(message, currentState, collected, state) {
     const words = trimmed.split(/\s+/);
     const looksLikeName = words.length >= 1 && words.length <= 3 &&
       /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 3 && trimmed.length <= 40;
-    const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|kitny|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|hy|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|chahiya|chahya|chaiya|mangta|mangwa|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board|milega|melega|milta|milti|mein|sabzi|beef|chicken|mutton|gosht|qeema|keema|meat|bnata|banta|hota|bnta|mujhe|mujhy|mjhe|yah|yeh|ye|lena|dena|karna|krna)\b/i.test(l);
+    const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|kitny|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|hy|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|chahiya|chahya|chaiya|mangta|mangwa|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board|milega|melega|milta|milti|mein|sabzi|beef|chicken|mutton|gosht|qeema|keema|meat|bnata|banta|hota|bnta|mujhe|mujhy|mjhe|yah|yeh|ye|lena|dena|karna|krna|dono|sath|saath|mil|milengy|miljiengy|miljaenge|miljayenge|ayenge|aenge|ajaenge|ajayenge|pehle|phle|zaroor|zaror)\b/i.test(l);
     // Single-letter "B" at end = "bhi" (also) in WhatsApp Urdu — NOT a name initial
     const endsWithBhi = /\s+b\s*$/i.test(l.trim());
     const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm|ha+n|hn|hanji|hnji)\s*[.!]?\s*$/i.test(l);
@@ -1087,12 +1087,13 @@ function preCheck(message, currentState, collected, state) {
 
   // 7b2. DELIVERY TIME question — "kb tk ayga?", "kitne din lagenge", "kab milega"
   const isDeliveryTimeQ = /\b(k[aeu]?b\s*(t[aeu]?k|aaye?|milega|ayga|ayega|ajayga|ajaye?ga|aye?\s*ga|pohch|pohnch))\b/i.test(l) ||
-    /\b(kitn[ewy]?\s*(din|dino[nm]?|days?|waqt|time))\b/i.test(l) ||
+    /\b(kitn[ewy]?|katni|katny|katne)\s*(din|dino[nm]?|deno|days?|waqt|time)\b/i.test(l) ||
     /\b(k[aeu]b\s*(aaye|milega|ayega|ayga|ajayga|ajaye?ga|pohchega|deliver))\b/i.test(l) ||
     /\b(delivery\s*(time|din|days?|kitne?|kab|kb|kub))\b/i.test(l) ||
     /\b(kb\s*t[aeu]?k\s*(ayga|aayga|ajayga|ajaye?ga|milega|pohchega)?)\b/i.test(l) ||
     /\b(parcel|order)\s*(kab|kb|kub)\s*(aaye?ga|ajaye?ga|milega|pohche?ga)?\b/i.test(l) ||
-    /\b(aa\s*jaye?\s*ga|mil\s*jaye?\s*ga|pohch\s*jaye?\s*ga)\b/i.test(l);
+    /\b(aa\s*jaye?\s*ga|mil\s*jaye?\s*ga|pohch\s*jaye?\s*ga)\b/i.test(l) ||
+    /\b(katni|katny|katne)\s*(deno|dino|din)\s*(m|me|mein|mai)?\s*(mil|mily?|mileg[aie]?|ayg[aie]?|aayg[aie]?)\b/i.test(l);
   if (isDeliveryTimeQ) {
     // Check if message ALSO has order intent — "order karna hai ... kab tak ayega"
     const hasOrderWords = /\b(order|mangwa|chahiye|chahea|krna|karna|krdo|kardo|kar\s*do|book)\b/i.test(l);
