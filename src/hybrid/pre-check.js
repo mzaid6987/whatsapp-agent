@@ -281,8 +281,13 @@ function preCheck(message, currentState, collected, state) {
   }
 
   // 0c. "SAB KI" / "ALL" after pending media request — send all product videos/pics
-  if (state && state._pending_media_type && /^(sab|sb|sari|saari|all|sabki|sb\s*ki|sab\s*ki|sari\s*ki)\s*[.!]?\s*$/i.test(l)) {
+  // Also matches "sb ki dikhao", "sab ki bhejo", "all products", etc.
+  if (state && state._pending_media_type && /^(sab|sb|sari|saari|all|sabki|sb\s*ki|sab\s*ki|sari\s*ki)(\s*(dikhao|dikha|bhejo|bhej|send|de|do|dena|products?))?\s*[.!]?\s*$/i.test(l)) {
     return { intent: 'media_request_all', extracted: { media_type: state._pending_media_type } };
+  }
+  // Also catch "sab ki dikhao" even without _pending_media_type (standalone request after product list)
+  if (/^(sab|sb|sari|saari|all)\s*(ki|ke)?\s*(dikha|dikhao|bhej|bhejo|send|de|do|dena)\s*[.!]?\s*$/i.test(l) && currentState === 'PRODUCT_SELECTION') {
+    return { intent: 'media_request_all', extracted: { media_type: 'video' } };
   }
 
   // 1a. MEDIA REQUEST — "picture dikhao", "photo bhejo", "video dikhao", "image send karo"
