@@ -2308,8 +2308,8 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     }
 
     // All fields complete check (except address which has its own flow)
-    if (state.collected.name && state.collected.phone && state.collected.city &&
-        state.collected.address && state.product && !['COLLECT_ADDRESS', 'ORDER_SUMMARY', 'UPSELL_HOOK', 'UPSELL_SHOW', 'ORDER_CONFIRMED'].includes(state.current)) {
+    if (state.collected.name && state.collected.phone && state.collected.delivery_phone !== null && state.collected.city &&
+        state.collected.address && state.product && !['COLLECT_ADDRESS', 'COLLECT_DELIVERY_PHONE', 'ORDER_SUMMARY', 'UPSELL_HOOK', 'UPSELL_SHOW', 'ORDER_CONFIRMED'].includes(state.current)) {
       const smResult = buildOrderSummary(state, storeName);
       return returnTemplate(smResult);
     }

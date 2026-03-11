@@ -1008,12 +1008,12 @@ function preCheck(message, currentState, collected, state) {
   }
 
   // 7b2. DELIVERY TIME question — "kb tk ayga?", "kitne din lagenge", "kab milega"
-  const isDeliveryTimeQ = /\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|ajayga|ajaye?ga|aye?\s*ga|pohch|pohnch))\b/i.test(l) ||
+  const isDeliveryTimeQ = /\b(k[aeu]?b\s*(t[aeu]?k|aaye?|milega|ayga|ayega|ajayga|ajaye?ga|aye?\s*ga|pohch|pohnch))\b/i.test(l) ||
     /\b(kitn[ewy]?\s*(din|dino[nm]?|days?|waqt|time))\b/i.test(l) ||
-    /\b(kab\s*(aaye|milega|ayega|ayga|ajayga|ajaye?ga|pohchega|deliver))\b/i.test(l) ||
-    /\b(delivery\s*(time|din|days?|kitne?|kab|kb))\b/i.test(l) ||
-    /\b(kb\s*tk\s*(ayga|aayga|ajayga|ajaye?ga|milega|pohchega)?)\b/i.test(l) ||
-    /\b(parcel|order)\s*(kab|kb)\s*(aaye?ga|ajaye?ga|milega|pohche?ga)?\b/i.test(l) ||
+    /\b(k[aeu]b\s*(aaye|milega|ayega|ayga|ajayga|ajaye?ga|pohchega|deliver))\b/i.test(l) ||
+    /\b(delivery\s*(time|din|days?|kitne?|kab|kb|kub))\b/i.test(l) ||
+    /\b(kb\s*t[aeu]?k\s*(ayga|aayga|ajayga|ajaye?ga|milega|pohchega)?)\b/i.test(l) ||
+    /\b(parcel|order)\s*(kab|kb|kub)\s*(aaye?ga|ajaye?ga|milega|pohche?ga)?\b/i.test(l) ||
     /\b(aa\s*jaye?\s*ga|mil\s*jaye?\s*ga|pohch\s*jaye?\s*ga)\b/i.test(l);
   if (isDeliveryTimeQ) {
     // Check if message ALSO has order intent — "order karna hai ... kab tak ayega"
