@@ -2068,8 +2068,10 @@ app.all('/deploy', (req, res) => {
   }
   try {
     const appRoot = path.join(__dirname, '..');
-    const pullResult = execSync('git pull origin main', { cwd: appRoot, timeout: 30000 }).toString();
-    console.log('[DEPLOY] git pull:', pullResult);
+    // Force-sync with remote (fixes "Already up to date" issue)
+    execSync('git fetch origin main', { cwd: appRoot, timeout: 30000 });
+    const pullResult = execSync('git reset --hard origin/main', { cwd: appRoot, timeout: 30000 }).toString();
+    console.log('[DEPLOY] git fetch+reset:', pullResult);
 
     res.json({ success: true, output: pullResult, restarting: true });
 
