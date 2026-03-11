@@ -1076,7 +1076,7 @@ function preCheck(message, currentState, collected, state) {
   // "name: X, number: Y, address: Z" → extract fields, skip greeting/yes/no detection
   {
     const hasNameField = /\b(na+me?|naam)\b/i.test(l);
-    const hasPhoneField = /\b(number|phone|mobile|whatsapp|nmbr|nomber)\b/i.test(l);
+    const hasPhoneField = /\b(number|phone|mobile|whatsapp|nmbr|nomber|ph[\s.]*no)\b/i.test(l);
     const hasAddressField = /\b(addre(?:ss|es|s|e)|adre(?:ss|es|s|e)?|adrees|city|mohall?ah?|tehsil|tahseel|zilla|zilah|district|gali|street|sector|famous\s*jagah?|mashh?oor)\b/i.test(l);
     // Also check if a known city name is in the message (even without "city:" label)
     const hasCityInMsg = extractCity(msg) !== null;
@@ -1091,6 +1091,25 @@ function preCheck(message, currentState, collected, state) {
 
     if ((fieldsMentioned >= 2 || hasColonLabels || bulkByContent) && msg.length > 30 && currentState !== 'COLLECT_ADDRESS') {
       const extracted = {};
+
+      // Pre-process: normalize dots-as-spaces (common in caps text like "ALTAF.HUSSAIN.S.O.TAJ")
+      // Only when dots are between UPPERCASE words (not normal sentences with periods)
+      let normalizedMsg = msg;
+      if (/^[A-Z0-9\s.,\-:\/()]+$/.test(msg.trim())) {
+        // All-caps message — dots likely used as separators
+        normalizedMsg = msg.replace(/\.+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+      }
+
+      // Detect "S.O." / "s/o" / "D.O." / "d/o" / "W.O." / "w/o" name pattern
+      // "ALTAF HUSSAIN S/O TAJ MUHAMMAD" or "ALTAF.HUSSAIN S.O.TAJ MAHAMMAHD"
+      if (!extracted.name) {
+        const soMatch = normalizedMsg.match(/^([A-Za-z][A-Za-z\s]{1,30}?)\s+(?:S[\s./]*O[\s./]*|s\/o|D[\s./]*O[\s./]*|d\/o|W[\s./]*O[\s./]*|w\/o)\s*([A-Za-z][A-Za-z\s]{1,30}?)(?:\s+(?:DISTRICT|MAIN|PH|PHONE|CITY|ADDRESS|MOHALL|NEAR|BLOCK|SECTOR|HOUSE|FLAT|0\d)|\s*$)/i);
+        if (soMatch) {
+          const titleCase = (s) => s.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+          extracted.name = titleCase(soMatch[1].trim());
+          // Store father name as context (not used in order but useful)
+        }
+      }
 
       // Name — parenthesized name like (sultan) OR "name:eman" / "name: eman" colon format
       const parenName = msg.match(/\(([A-Za-z\s]{2,30})\)/);
@@ -1309,6 +1328,25 @@ function preCheck(message, currentState, collected, state) {
             extracted.address_text = extracted.address_text.replace(PROVINCES, '').replace(/^[,.\s]+|[,.\s]+$/g, '').replace(/\s{2,}/g, ' ').trim();
           }
         }
+      }
+
+      // Clean address_text — strip greetings, filler, and non-address text (common in voice transcriptions)
+      if (extracted.address_text) {
+        // Strip greetings at start
+        extracted.address_text = extracted.address_text
+          // Strip greetings
+          .replace(/^(assalam[uo]?\s*al[ae]ikum|aoa|salam|w[ao]l[ae]ikum\s*assalam|hello|hi)\s*[,.\s]*/gi, '')
+          .replace(/^(syed|sir|madam|bhai|yaar|sahab|sahib|janab)\s*[,.\s]*/gi, '')
+          // Strip voice filler — "mujhe aik X chahiye", "aik A1 machine cheez address hai"
+          .replace(/^(mujhe|muje|mjhe|mje)\s+.{0,40}?(hai|he|h|chahiye|chahea)\b[.,\s]*/gi, '')
+          .replace(/^(aik|ek|1)\s+.{0,30}?(hai|he|h|chahiye|chahea)\b[.,\s]*/gi, '')
+          .replace(/^(ye|yeh|mera|meri|hamara|hamari|apna|apni)\s+(address|order|naam|name)\s*(hai|he|h|ye|yeh)?\s*[,.\s]*/gi, '')
+          .replace(/^(address|addres|adres)\s*(hai|he|h|ye|yeh)?\s*[,.\s]*/gi, '')
+          // Strip province/division/sooba prefixes
+          .replace(/\b(sooba|soba|province|state)\s+[A-Za-z\s]+?\s*(division|zila|district|,)/gi, '$2')
+          .replace(/\b(division)\s+[A-Za-z]+\s*,?\s*/gi, '')
+          .replace(/\b(zila|zilah|district)\s+/gi, 'District ')
+          .replace(/^[,.\s]+|[,.\s]+$/g, '').replace(/\s{2,}/g, ' ').trim();
       }
 
       // Product — "trimer chahea", "facial remover" etc. in bulk message
