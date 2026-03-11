@@ -690,6 +690,15 @@ function preCheck(message, currentState, collected, state) {
     }
   }
 
+  // 4a-WANT. "Yah chahiya mujhe" / "mujhe chahiye" / "ye chahiye" = ORDER INTENT, NOT name
+  // Must come BEFORE name_in_product_inquiry check to prevent false name detection
+  if (currentState === 'PRODUCT_INQUIRY' && state.product) {
+    if (/\b(chahiy[ae]|chaiy[ae]|chay[ae]|chahea|chahye|chaea|chahe)\b/i.test(l) &&
+        /\b(mujhe|mujhy|mjhe|mjhy|ye|yeh|yah|ya|muje|wo|woh|humein|hame|hamein)\b/i.test(l)) {
+      return { intent: 'order_intent', extracted: {} };
+    }
+  }
+
   // 4a-PI. NAME IN PRODUCT_INQUIRY — customer skipped "haan" and directly gave name after "Order karna hai?"
   // e.g. Bot: "Order karna hai?" → Customer: "Shazia Jamshed" (implicit yes + name)
   if (currentState === 'PRODUCT_INQUIRY' && state.product) {
@@ -697,7 +706,7 @@ function preCheck(message, currentState, collected, state) {
     const words = trimmed.split(/\s+/);
     const looksLikeName = words.length >= 1 && words.length <= 3 &&
       /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 3 && trimmed.length <= 40;
-    const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|kitny|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|hy|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|mangta|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board|milega|melega|milta|milti|mein|sabzi|beef|chicken|mutton|gosht|qeema|keema|meat|bnata|banta|hota|bnta)\b/i.test(l);
+    const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|kitny|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|hy|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|chahiya|chahya|chaiya|mangta|mangwa|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board|milega|melega|milta|milti|mein|sabzi|beef|chicken|mutton|gosht|qeema|keema|meat|bnata|banta|hota|bnta|mujhe|mujhy|mjhe|yah|yeh|ye|lena|dena|karna|krna)\b/i.test(l);
     // Single-letter "B" at end = "bhi" (also) in WhatsApp Urdu — NOT a name initial
     const endsWithBhi = /\s+b\s*$/i.test(l.trim());
     const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm|ha+n|hn|hanji|hnji)\s*[.!]?\s*$/i.test(l);
@@ -1019,7 +1028,7 @@ function preCheck(message, currentState, collected, state) {
       return { intent: 'haggle' };
     }
 
-    const hasOrderAction = /\b(order|mangwa|mangana|book|chahiye|chaiye|chaye|chahea|chahye|chaea|chahe)\b/i.test(l);
+    const hasOrderAction = /\b(order|mangwa|mangana|book|chahiye|chahiya|chahya|chaiye|chaiya|chaye|chahea|chahye|chaea|chahe)\b/i.test(l);
     const hasOrderConfirm = /\b(kardo|kar\s*do|karna|krna|krdo|kr\s*do|kro|karo|kar|de\s*do|dedo|bhej\s*do|bhejdo|bhejwa\s*do|bhijwa\s*do|bhejwao|confirm|mangwao|mangwana)\b/i.test(l);
     const hasYesWord = /\b(ha+n|ji|yes|yup|theek|thik|thk|tik|ik|ok|done|bilkul|sahi|acha|accha|achha)\b/i.test(l);
     if ((hasOrderAction && hasOrderConfirm) || (hasYesWord && hasOrderConfirm)) {
