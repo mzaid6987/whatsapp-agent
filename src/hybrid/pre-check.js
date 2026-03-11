@@ -208,11 +208,12 @@ function preCheck(message, currentState, collected, state) {
   const isUsageQuestion = /\b(how\s*to\s*use|kaise?\s*(chala|use|istemal|istmal)|chala+na+\s*(kaise?|kesy)|use\s*kar(na|ne|ni)|features?\s*(kya|kia|batao|samjh)|instructions?|taree?qa)\b/i.test(l) ||
     /\b(is\s*ko|isko|ise|ye)\s*(chala|use|on|start|operate)\b/i.test(l);
   if ((isPostDelivery || isUsageQuestion) && ['IDLE', 'GREETING', 'PRODUCT_SELECTION'].includes(currentState)) {
-    return { intent: 'post_delivery', needs_human: true };
+    const pdProd = detectProduct(msg);
+    return { intent: 'post_delivery', extracted: pdProd ? { product: pdProd } : {} };
   }
-  // Usage question in any state (even mid-order) — customer asking how to use product they already have
+  // Usage question in any state (even mid-order) — send product video
   if (isUsageQuestion && !['IDLE', 'GREETING'].includes(currentState)) {
-    return { intent: 'usage_question', needs_human: true };
+    return { intent: 'usage_question' };
   }
 
   // 0d. COLLECT_DELIVERY_PHONE early check — compound voice messages like

@@ -2924,15 +2924,27 @@ function handlePreCheck(pre, message, state, storeName, phone) {
 
     case 'post_delivery': {
       const honorific = getHonorific(state.collected.name, state.gender);
-      const reply = `${state.collected.name || ''} ${honorific}, order mil gaya — bohat acha! Koi sawal ho product ke baare mein to poochein, hamari team abhi madad karti hai 😊`.trim();
-      return { reply, state: 'IDLE', needs_human: true };
+      // Detect product from message if not already set
+      const pdProduct = pre.extracted?.product || state.product;
+      if (pdProduct) {
+        state.product = typeof pdProduct === 'string' ? state.product : pdProduct;
+      }
+      const reply = `${state.collected.name || ''} ${honorific}, order mil gaya — bohat acha! Agar product ke baare mein koi sawal ho to poochein 😊`.trim();
+      return { reply, state: 'IDLE' };
     }
 
     case 'usage_question': {
-      const honorific = getHonorific(state.collected.name, state.gender);
-      const pName = state.product ? state.product.short : 'product';
-      const reply = `${state.collected.name || ''} ${honorific}, ${pName} ke baare mein aapka sawal hamari team ko forward kar diya hai — woh abhi guide karein ge 😊`.trim();
-      return { reply, state: state.current, needs_human: true };
+      // Send product video as usage instructions
+      const mediaProduct = state.product;
+      if (mediaProduct) {
+        return {
+          reply: null,
+          state: state.current,
+          _media: { product_id: mediaProduct.id, type: 'video', product_name: mediaProduct.short }
+        };
+      }
+      // No product set — ask which product
+      return { reply: 'Kis product ke baare mein pooch rahe hain? Product ka naam bata dein 😊', state: state.current };
     }
 
     case 'acknowledgment': {
