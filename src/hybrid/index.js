@@ -801,6 +801,43 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   }
 
   // ============================================
+  // PATH 0B: GIFT CARD INTERCEPT — customer mentions gift card or sends gift card image
+  // Set gift_card_flag → send congratulations → bot goes silent after this
+  // ============================================
+  {
+    const cl = message.toLowerCase().trim();
+    const isGiftCardMsg = /\b(gift\s*card|giftcard|gift\s*kard|gft\s*card|gft\s*kard)\b/i.test(cl) ||
+      (/\b(gift)\b/i.test(cl) && /\b(card|kard|mila|aya|aaya|aai|aayi|mil\s*gaya|mil\s*gya|received)\b/i.test(cl)) ||
+      /\[Image:.*\b(gift\s*card|giftcard|gift.*card|coupon|voucher|discount\s*card|scratch\s*card)\b/i.test(cl);
+    if (isGiftCardMsg) {
+      const reply = 'Congratulations! 🎉 Ap gift card ke lea eligible hain, mujhe thora sa time dein, me ap ko message karti hu.';
+      state.messages.push({ role: 'user', content: message });
+      state.messages.push({ role: 'assistant', content: reply });
+      if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+      saveMessages(dbConv, message, reply, 'template', 'template', state, {
+        debug: { path: 'PATH0B_GIFT_CARD', state_before: state.current, detected_intent: 'gift_card', collected: { ...state.collected } },
+      });
+      // Set gift_card_flag — bot will stop responding after this
+      if (dbConv) {
+        const db = require('../db').getDb();
+        db.prepare('UPDATE conversations SET gift_card_flag = 1 WHERE id = ?').run(dbConv.id);
+      }
+      saveState(dbConv, state);
+      saveCustomer(dbCustomer, state);
+      return {
+        reply,
+        state: state.current,
+        collected: { ...state.collected },
+        source: 'template',
+        intent: 'gift_card',
+        tokens_in: 0, tokens_out: 0,
+        response_ms: Date.now() - startTime,
+        db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+      };
+    }
+  }
+
+  // ============================================
   // PATH 1: Template-only states (zero AI cost)
   // ============================================
   if (TEMPLATE_STATES.includes(state.current)) {

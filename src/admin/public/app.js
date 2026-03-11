@@ -176,6 +176,7 @@ function renderChatList(convos) {
     const isComplaint = !!(c.complaint_flag || c.state === 'COMPLAINT');
     if (c.spam_flag) labels.push('<span class="label-badge label-spam">SPAM</span>');
     if (isComplaint) labels.push('<span class="label-badge label-complaint">COMPLAINT</span>');
+    if (c.gift_card_flag) labels.push('<span class="label-badge label-gift-card">GIFT CARD</span>');
     if (c.needs_human && !c.spam_flag && !isComplaint) labels.push('<span class="label-badge label-human">HUMAN</span>');
     if (isOrderState) labels.push('<span class="label-badge label-order">ORDER</span>');
     if (c.state === 'CANCEL_AFTER_CONFIRM') labels.push('<span class="label-badge label-cancel">CANCEL</span>');
@@ -183,7 +184,7 @@ function renderChatList(convos) {
     // Silent customer timer — live calculated from last_msg_time
     const liveHours = (c.last_msg_direction === 'outgoing' && c.last_msg_time) ? calcSilentHoursLive(c.last_msg_time) : null;
     const liveIs24h = liveHours !== null && liveHours >= 24;
-    const showSilent = liveHours !== null && !c.spam_flag && !c.complaint_flag && !c.needs_human && !['ORDER_CONFIRMED','UPSELL_HOOK','UPSELL_SHOW','CANCEL_AFTER_CONFIRM','COMPLAINT'].includes(c.state);
+    const showSilent = liveHours !== null && !c.spam_flag && !c.complaint_flag && !c.gift_card_flag && !c.needs_human && !['ORDER_CONFIRMED','UPSELL_HOOK','UPSELL_SHOW','CANCEL_AFTER_CONFIRM','COMPLAINT'].includes(c.state);
     if (showSilent && liveIs24h) {
       labels.push(`<span class="label-badge label-silent24">24h+ ${formatSilentTimer(liveHours)}</span>`);
     } else if (showSilent && liveHours >= 0) {
@@ -204,7 +205,7 @@ function renderChatList(convos) {
       <div class="${itemClass}" onclick="openChat(${c.id})" data-id="${c.id}"
            data-filter-bot="${!c.needs_human && !c.spam_flag && !isComplaint}" data-filter-human="${!!c.needs_human && !isComplaint}"
            data-filter-order="${isOrderState}" data-filter-complaint="${isComplaint}"
-           data-filter-cancel="${c.state === 'CANCEL_AFTER_CONFIRM'}"
+           data-filter-cancel="${c.state === 'CANCEL_AFTER_CONFIRM'}" data-filter-giftcard="${!!c.gift_card_flag}"
            data-filter-unreplied="${!!c.unreplied}" data-filter-spam="${!!c.spam_flag}" data-filter-silent24="${!!c._live_is_24h}" data-name="${name.toLowerCase()}" data-phone="${c.phone || c.customer?.phone || ''}" data-date="${(c.created_at || '').slice(0, 10)}">
         <div class="chat-avatar">${initials}</div>
         <div class="chat-item-info">

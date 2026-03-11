@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   is_active       INTEGER DEFAULT 1,
   needs_human     INTEGER DEFAULT 0,
   complaint_flag  INTEGER DEFAULT 0,
+  gift_card_flag  INTEGER DEFAULT 0,
   admin_unread    INTEGER DEFAULT 1,
   last_message    TEXT,
   last_message_at TEXT,

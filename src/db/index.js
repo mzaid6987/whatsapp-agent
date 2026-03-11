@@ -189,6 +189,7 @@ async function initDb() {
   try { db.exec('ALTER TABLE auto_templates ADD COLUMN is_active INTEGER DEFAULT 1'); } catch (e) {}
   try { db.exec('ALTER TABLE messages ADD COLUMN media_type TEXT'); } catch (e) {}
   try { db.exec('ALTER TABLE messages ADD COLUMN media_url TEXT'); } catch (e) {}
+  try { db.exec('ALTER TABLE conversations ADD COLUMN gift_card_flag INTEGER DEFAULT 0'); } catch (e) {}
 
   console.log('[DB] SQLite (sql.js) initialized at', DB_PATH);
   return db;

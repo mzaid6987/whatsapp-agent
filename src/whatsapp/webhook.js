@@ -495,6 +495,21 @@ async function webhookHandler(req, res) {
         });
         return;
       }
+      // Gift card flagged — save message silently, no bot response
+      if (convo && convo.gift_card_flag) {
+        messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId, media_type: incomingMediaType, media_url: incomingMediaFile });
+        conversationModel.updateLastMessage(convo.id, messageText);
+        conversationModel.setAdminUnread(convo.id, true);
+        console.log(`[WA] ${fromPhone}: "${messageText}" — gift_card_flag, skipping bot reply`);
+        _broadcast({
+          type: 'new_message',
+          phone: fromPhone,
+          source: 'whatsapp',
+          contactName,
+          result: { reply: null, incoming: messageText },
+        });
+        return;
+      }
       if (convo && convo.needs_human) {
         // Save message but don't reply — human agent will handle
         messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId, media_type: incomingMediaType, media_url: incomingMediaFile });

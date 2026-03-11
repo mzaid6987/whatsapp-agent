@@ -512,6 +512,12 @@ body:has(.chats-container) {
   color: #6C757D;
 }
 
+.label-gift-card {
+  background: #D4EDDA;
+  color: #155724;
+  font-weight: 600;
+}
+
 .label-human {
   background: #D4E4F7;
   color: #1a4a7a;

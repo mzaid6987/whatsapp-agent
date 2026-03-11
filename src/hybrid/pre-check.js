@@ -114,6 +114,15 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'spam' };
   }
 
+  // 0b0. GIFT CARD DETECTION — customer mentions gift card or sends gift card image
+  // Works in ALL states — parcel ke sath gift card aata hai, customer image ya text bhejta hai
+  const isGiftCard = /\b(gift\s*card|giftcard|gift\s*kard|gft\s*card|gft\s*kard)\b/i.test(l) ||
+    /\b(gift)\b/i.test(l) && /\b(card|kard|mila|aya|aaya|aai|aayi|mil\s*gaya|mil\s*gya|received)\b/i.test(l) ||
+    /\[Image:.*\b(gift\s*card|giftcard|gift.*card|coupon|voucher|discount\s*card|scratch\s*card)\b/i.test(l);
+  if (isGiftCard) {
+    return { intent: 'gift_card' };
+  }
+
   // 0b1. BOT IDENTITY — "tumhara naam kya hai", "what is your name", "aapka naam", "tum kaun ho"
   // Must be EARLY so it works in ALL states (COLLECT_NAME, COLLECT_ADDRESS, ORDER_SUMMARY etc.)
   const isBotIdentityQ = /\b(tumhara|tumhary|apka|aapka|tera|ap\s*ka|aap\s*ka)\s*(naam|name)\b/i.test(l) ||
