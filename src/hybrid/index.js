@@ -876,6 +876,52 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   }
 
   // ============================================
+  // PATH 0D: WEBSITE REFERRAL INTERCEPT — runs BEFORE template states
+  // Customer in COMPLAINT/ORDER_CONFIRMED/etc sends new "I want to order" from website → reset to new order
+  // ============================================
+  if (TEMPLATE_STATES.includes(state.current)) {
+    const cl = message.toLowerCase().trim();
+    const OWN_DOMAINS = /\b(the)?(nureva|alvora|elvora|ruvenza|zenora|nuvenza|alvorashop|elvorastore|novenzashop)\.(shop|store)\b/i;
+    const isOwnDomain = OWN_DOMAINS.test(cl);
+    const isOrderFromWeb = isOwnDomain && /i\s*want\s*to\s*order/i.test(cl);
+    if (isOrderFromWeb) {
+      // Extract product from quoted text
+      const quotedProduct = message.match(/["""]([^"""]+)["""]/);
+      const product = quotedProduct ? detectProduct(quotedProduct[1].trim()) : null;
+      if (product) {
+        console.log(`[WEB-REFERRAL-INTERCEPT] Customer in ${state.current} sent new order from website → resetting to PRODUCT_INQUIRY`);
+        // Reset state for new order
+        state.current = 'PRODUCT_INQUIRY';
+        state.product = product;
+        state.collected.product = product.short;
+        // Clear complaint flags
+        delete state._complaint_replied;
+        delete state._complaint_audio;
+        const vars = buildVars(state, storeName);
+        const reply = qualityGate(fillTemplate('PRODUCT_INQUIRY', vars));
+        state.messages.push({ role: 'user', content: message });
+        state.messages.push({ role: 'assistant', content: reply });
+        if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+        saveMessages(dbConv, message, reply, 'template', 'pre-check', state, {
+          debug: { path: 'PATH0D_WEB_REFERRAL_INTERCEPT', state_before: 'COMPLAINT', state_after: 'PRODUCT_INQUIRY', detected_intent: 'product_selected', product: product.short, collected: { ...state.collected } },
+        });
+        saveState(dbConv, state);
+        saveCustomer(dbCustomer, state);
+        return {
+          reply,
+          state: 'PRODUCT_INQUIRY',
+          collected: { ...state.collected },
+          source: 'pre-check',
+          intent: 'product_selected',
+          tokens_in: 0, tokens_out: 0,
+          response_ms: Date.now() - startTime,
+          db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+        };
+      }
+    }
+  }
+
+  // ============================================
   // PATH 1: Template-only states (zero AI cost)
   // ============================================
   if (TEMPLATE_STATES.includes(state.current)) {
