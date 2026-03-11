@@ -1032,6 +1032,14 @@ function preCheck(message, currentState, collected, state) {
     const hasOrderConfirm = /\b(kardo|kar\s*do|karna|krna|krdo|kr\s*do|kro|karo|kar|de\s*do|dedo|bhej\s*do|bhejdo|bhejwa\s*do|bhijwa\s*do|bhejwao|confirm|mangwao|mangwana)\b/i.test(l);
     const hasYesWord = /\b(ha+n|ji|yes|yup|theek|thik|thk|tik|ik|ok|done|bilkul|sahi|acha|accha|achha)\b/i.test(l);
     if ((hasOrderAction && hasOrderConfirm) || (hasYesWord && hasOrderConfirm)) {
+      // Check if message ALSO has delivery/price questions — "prices aur delivery kharchain bataen taake order karna chahten"
+      // Customer asking questions FIRST, order intent is conditional ("taake" = so that)
+      const hasDeliveryPriceQ = /\b(price[s]?|rate[s]?|kharcha|kharchain|kharche|kharchay|charg[ei]s?|charges?|cost|kitna?\s*(lag|hog|pais)|delivery\s*(k[eaiy]+\s*)?(pais[ey]|charg|kharcha|free|kitna?)|pais[ey])\b/i.test(l);
+      const hasAskingWord = /\b(bata[eoy]n?|btao|btaen|btaye|poch|puch|mukammal|detail|batana|btana)\b/i.test(l);
+      if (hasDeliveryPriceQ && hasAskingWord) {
+        // Prioritize the question — customer wants answers before ordering
+        return { intent: 'delivery_charge_question', extracted: { has_order_intent: true } };
+      }
       // Extract product + city from same message so we don't lose them
       const oiProduct = detectProduct(msg);
       const oiCity = extractCity(msg);
@@ -1065,11 +1073,11 @@ function preCheck(message, currentState, collected, state) {
   }
 
   // 7b. DELIVERY CHARGE/COST question — "delivery ke paise?", "delivery free hai?", "shipping charges?"
-  const isDeliveryChargeQ = /\b(delivery|shipping|courier)\s*(ke|ki|ka|k|ky)?\s*(pais[ey]|charg[ei]s?|chages?|cost|rate|kitne?|free|muft|patsy)\b/i.test(l) ||
-    /\b(pais[ey]|charg[ei]s?|chages?|cost|patsy)\s*(delivery|shipping)\b/i.test(l) ||
+  const isDeliveryChargeQ = /\b(delivery|shipping|courier)\s*(ke|ki|ka|k|ky)?\s*(pais[ey]|charg[ei]s?|chages?|cost|rate|kitne?|free|muft|patsy|kharcha|kharchain|kharche|kharchay)\b/i.test(l) ||
+    /\b(pais[ey]|charg[ei]s?|chages?|cost|patsy|kharcha|kharchain|kharche)\s*(delivery|shipping)\b/i.test(l) ||
     /\b(delivery|shipping)\s*(free|muft)\s*(hai|he|h)?\b/i.test(l) ||
     /\bfree\s*(delivery|shipping)\b/i.test(l) ||
-    /\bdelivery\b.*\b(patsy|paise|paisy|free|muft|charg|chage)\b/i.test(l) ||
+    /\bdelivery\b.*\b(patsy|paise|paisy|free|muft|charg|chage|kharcha|kharchain)\b/i.test(l) ||
     /\b(delivery|shipping)\s*(kia|kya|kaise|kaisy|kitni|kitny|kab)\s*(hai|ha|he|h|hoti|hogi)?\b/i.test(l) ||
     /\bdelivery\s*\?\s*$/i.test(l) ||
     /\bdelivery\s+chag/i.test(l);
