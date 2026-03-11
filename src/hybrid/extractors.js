@@ -530,17 +530,26 @@ const GENERIC_LANDMARKS = ['masjid','mosque','school','hospital','dukaan','shop'
 function extractLandmark(msg) {
   const l = msg.toLowerCase();
 
+  // Skip if message is clearly "just deliver here" / "come and give it" — not a landmark
+  if (/\b(aa\s*ke|aake|a\s*ke)\s*(de|dy|dena|dedo|dijiye)/i.test(l)) return null;
+
   // "near X" / "X ke paas" / "X ke qareeb" / "X ke samne"
   const nearPatterns = [
-    /(?:near|nazd[ei]k|ke?\s*(?:paas|pass|qareeb|samne|saamne))\s+(.{3,40}?)(?:\.|,|$)/i,
-    /(.{3,40}?)\s+(?:ke?\s*(?:paas|pass|qareeb|samne|saamne))/i,
+    /(?:near|nazd[ei]k)\s+(.{3,40}?)(?:\.|,|$)/i,
+    /(.{3,40}?)\s+(?:ke?\s*(?:paas|pass|qareeb|samne|saamne))(?:\s|,|\.|$)/i,
   ];
 
   for (const re of nearPatterns) {
     const m = msg.match(re);
     if (m) {
-      const raw = m[1].trim();
-      return classifyLandmark(raw);
+      let raw = m[1].trim();
+      // Clean up filler words that aren't part of landmark name
+      raw = raw.replace(/^(bas|sirf|bss|hi|he|bus)\s+/i, '').trim();
+      raw = raw.replace(/\s+(hi|he|pe|par|mein|me|wahan|yahan)$/i, '').trim();
+      if (raw.length < 3) continue; // Too short after cleanup
+      // ALWAYS return a string — classifyLandmark returns metadata object, extract .text
+      const classified = classifyLandmark(raw);
+      return classified ? classified.text : raw;
     }
   }
 

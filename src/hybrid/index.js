@@ -2718,6 +2718,14 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       return { reply: `Number mil gaya 👍 ${vars.honorific}, apna naam bata dein?`, state: 'COLLECT_NAME' };
     }
 
+    case 'name_and_phone_given': {
+      // Customer gave both name + phone in one message (e.g. "Rehman 03001234567")
+      state.collected.phone = pre.extracted.phone;
+      state.collected.name = pre.extracted.name;
+      // Skip to delivery phone ask
+      return { reply: `Rider aapko isi number (${pre.extracted.phone}) pe call karega 📞 Call receive kar lein ge?`, state: 'COLLECT_DELIVERY_PHONE' };
+    }
+
     case 'wa_number_in_name_state': {
       // Customer said "use this WhatsApp number" during COLLECT_NAME — save WA phone, still ask name
       // phone is international format (923001234567) → convert to local (03001234567)

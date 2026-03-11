@@ -537,7 +537,13 @@ function preCheck(message, currentState, collected, state) {
     if (phone && !isBulkCandidate) {
       const validation = validatePhone(phone);
       if (validation.valid) {
-        return { intent: 'phone_in_name_state', extracted: { phone: validation.phone } };
+        const extracted = { phone: validation.phone };
+        // Also extract name if there's text before/after the phone (e.g. "Rehman 03001234567")
+        const textWithoutPhone = msg.replace(/[\+]?0?[0-9\s\-]{10,13}/g, '').trim();
+        if (textWithoutPhone && /^[A-Za-z\s]{2,30}$/.test(textWithoutPhone) && textWithoutPhone.split(/\s+/).length <= 3) {
+          extracted.name = textWithoutPhone.replace(/\b[a-z]/g, c => c.toUpperCase());
+        }
+        return { intent: extracted.name ? 'name_and_phone_given' : 'phone_in_name_state', extracted };
       }
     }
     // Pure digits that look like phone (only if NOT bulk)
