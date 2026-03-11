@@ -88,7 +88,7 @@ const MALE_NAMES_ENDING_A = new Set([
   'mustapha','kufa','safa','marwa','arfa','mushfiqua','uqba','muawiya','aqsa',
   'eesa','moosa','hazifa','isa','hudaifa','khuzaima','owaisa','usaama',
   'dua','jumma','baba','chacha','mela','abba','nana','dada','mama',
-  'zia','reza','nawaza','fida','ghulama','liaqua','baqa','raja',
+  'zia','reza','nawaza','fida','ghulama','liaqua','baqa','raja','lala',
 
   // === Christian Male — ending in 'a' ===
   'joshua','ezra','luca','nicola','andrea','alpha','costa','korina',

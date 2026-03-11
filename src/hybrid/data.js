@@ -129,7 +129,7 @@ function getHonorific(name, genderOverride) {
   if (MALE_NAMES_ENDING_A.has(firstName)) return 'sir';
 
   // 2. Check known female names (570+ Pakistani Muslim + Christian + Hindu)
-  if (FEMALE_NAMES.has(firstName)) return 'madam';
+  const isFirstFemale = FEMALE_NAMES.has(firstName);
 
   // 3. Check known male names (570+ Pakistani Muslim + Christian + Hindu)
   if (MALE_NAMES.has(firstName)) return 'sir';
@@ -137,6 +137,21 @@ function getHonorific(name, genderOverride) {
   // 4. Male pattern exceptions — check BEFORE female patterns
   // Names ending in "ullah" or "allah" are ALWAYS male (Fazalullah, Abdullah, Ataullah, Saifullah, etc.)
   if (/(?:ullah|allah|uddin|ulhaq|ulmulk|ulislam|urrasheed|urrehman|urrahim)$/i.test(firstName)) return 'sir';
+
+  // 4b. Secondary name check — check remaining parts for gender clues
+  // e.g. "Lala Riaz Khan" — "Lala" unknown but "Riaz"/"Khan" = male
+  // e.g. "Gul Khan" — "Gul" is female name but "Khan" = male indicator
+  const nameParts = name.trim().split(/\s+/).map(p => p.toLowerCase());
+  if (nameParts.length >= 2) {
+    const MALE_INDICATORS = new Set(['khan','muhammad','mohammad','mohd','md','hussain','nawaz','iqbal','ashraf','akbar','aslam','anwar','arshad','baig','beg','chaudhry','chaudhary','mian','syed']);
+    for (let i = 1; i < nameParts.length; i++) {
+      if (MALE_NAMES.has(nameParts[i]) || MALE_NAMES_ENDING_A.has(nameParts[i]) || MALE_INDICATORS.has(nameParts[i])) return 'sir';
+      if (FEMALE_NAMES.has(nameParts[i])) return 'madam';
+    }
+  }
+
+  // 4c. If first name is known female and no secondary override, return madam
+  if (isFirstFemale) return 'madam';
 
   // 5. Pattern-based: Pakistani female names commonly end in these
   if (/(?:een|ina|ish|esha|iza|ila|iya|eena|eema|ima|iba|ira|iha|ija|ika|ita|iza|uja|uma|uha|uka|ula|ura|uza)$/i.test(firstName)) return 'madam';
