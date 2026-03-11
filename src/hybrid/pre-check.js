@@ -123,6 +123,17 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'gift_card' };
   }
 
+  // 0b0b. VOICE MESSAGE REQUEST — customer asks for voice message / call
+  // "voice message karo", "voice bhejo", "call karo", "bol ke batao", "voice note bhejo"
+  const isVoiceMsgReq = /\b(voice\s*(msg|message|note|call)?|vc|voic)\s*(kr[od]?o?|kar[od]?o?|bhej[od]?o?|send|de\s*do|dedo|d[eo]|bana|bnao?)\b/i.test(l) ||
+    /\b(call|kall|col)\s*(kr[od]?o?|kar[od]?o?|laga[od]?o?)\b/i.test(l) ||
+    /\b(bol\s*ke|bol\s*kr|bolke|bolkr)\s*(bata[od]?o?|smjha[od]?o?|samjha[od]?o?)\b/i.test(l) ||
+    /\b(awaaz|awaz|aawaz)\s*(mein|me|mai|m)\s*(bata[od]?o?|bhej[od]?o?|bol[od]?o?)\b/i.test(l) ||
+    /\b(voice\s*(msg|message|note)|voice)\s*(chahiye|chahie|chaiye|mangta|mangti)\b/i.test(l);
+  if (isVoiceMsgReq) {
+    return { intent: 'voice_msg_request' };
+  }
+
   // 0b1. BOT IDENTITY — "tumhara naam kya hai", "what is your name", "aapka naam", "tum kaun ho"
   // Must be EARLY so it works in ALL states (COLLECT_NAME, COLLECT_ADDRESS, ORDER_SUMMARY etc.)
   const isBotIdentityQ = /\b(tumhara|tumhary|apka|aapka|tera|ap\s*ka|aap\s*ka)\s*(naam|name)\b/i.test(l) ||

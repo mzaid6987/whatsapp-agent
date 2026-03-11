@@ -518,6 +518,12 @@ body:has(.chats-container) {
   font-weight: 600;
 }
 
+.label-voice-msg {
+  background: #E8DAEF;
+  color: #6C3483;
+  font-weight: 600;
+}
+
 .label-human {
   background: #D4E4F7;
   color: #1a4a7a;

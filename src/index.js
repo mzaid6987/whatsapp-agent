@@ -717,7 +717,7 @@ app.get('/api/conversations', requireAuth, (req, res) => {
       c.silent_hours = null;
       c.is_24h_silent = false;
       // Skip: spam, complaint, human takeover, excluded states
-      if (c.spam_flag || c.complaint_flag || c.needs_human || SILENT_EXCLUDE_STATES.includes(c.state)) continue;
+      if (c.spam_flag || c.complaint_flag || c.gift_card_flag || c.voice_msg_flag || c.needs_human || SILENT_EXCLUDE_STATES.includes(c.state)) continue;
       // If last message was outgoing (bot/human sent) and customer hasn't replied
       if (c.last_msg_direction === 'outgoing' && c.last_msg_time) {
         // SQLite stores localtime (PKT = UTC+5), append timezone for correct parsing

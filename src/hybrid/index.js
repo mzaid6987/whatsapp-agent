@@ -838,6 +838,44 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   }
 
   // ============================================
+  // PATH 0C: VOICE MESSAGE REQUEST — customer asks for voice message/call
+  // Set voice_msg_flag → reply "thora sabr karein" → bot goes silent
+  // ============================================
+  {
+    const cl = message.toLowerCase().trim();
+    const isVoiceMsgReq = /\b(voice\s*(msg|message|note|call)?|vc|voic)\s*(kr[od]?o?|kar[od]?o?|bhej[od]?o?|send|de\s*do|dedo|d[eo]|bana|bnao?)\b/i.test(cl) ||
+      /\b(call|kall|col)\s*(kr[od]?o?|kar[od]?o?|laga[od]?o?)\b/i.test(cl) ||
+      /\b(bol\s*ke|bol\s*kr|bolke|bolkr)\s*(bata[od]?o?|smjha[od]?o?|samjha[od]?o?)\b/i.test(cl) ||
+      /\b(awaaz|awaz|aawaz)\s*(mein|me|mai|m)\s*(bata[od]?o?|bhej[od]?o?|bol[od]?o?)\b/i.test(cl) ||
+      /\b(voice\s*(msg|message|note)|voice)\s*(chahiye|chahie|chaiye|mangta|mangti)\b/i.test(cl);
+    if (isVoiceMsgReq) {
+      const reply = 'Okay thora sabr karein please, me ap ko message karti hu 🙏';
+      state.messages.push({ role: 'user', content: message });
+      state.messages.push({ role: 'assistant', content: reply });
+      if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+      saveMessages(dbConv, message, reply, 'template', 'template', state, {
+        debug: { path: 'PATH0C_VOICE_MSG_REQUEST', state_before: state.current, detected_intent: 'voice_msg_request', collected: { ...state.collected } },
+      });
+      if (dbConv) {
+        const db = require('../db').getDb();
+        db.prepare('UPDATE conversations SET voice_msg_flag = 1 WHERE id = ?').run(dbConv.id);
+      }
+      saveState(dbConv, state);
+      saveCustomer(dbCustomer, state);
+      return {
+        reply,
+        state: state.current,
+        collected: { ...state.collected },
+        source: 'template',
+        intent: 'voice_msg_request',
+        tokens_in: 0, tokens_out: 0,
+        response_ms: Date.now() - startTime,
+        db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+      };
+    }
+  }
+
+  // ============================================
   // PATH 1: Template-only states (zero AI cost)
   // ============================================
   if (TEMPLATE_STATES.includes(state.current)) {

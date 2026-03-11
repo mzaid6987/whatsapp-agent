@@ -495,12 +495,13 @@ async function webhookHandler(req, res) {
         });
         return;
       }
-      // Gift card flagged — save message silently, no bot response
-      if (convo && convo.gift_card_flag) {
+      // Gift card or voice message flagged — save message silently, no bot response
+      if (convo && (convo.gift_card_flag || convo.voice_msg_flag)) {
         messageModel.create(convo.id, 'incoming', 'customer', messageText, { source: 'whatsapp', wa_message_id: messageId, media_type: incomingMediaType, media_url: incomingMediaFile });
         conversationModel.updateLastMessage(convo.id, messageText);
         conversationModel.setAdminUnread(convo.id, true);
-        console.log(`[WA] ${fromPhone}: "${messageText}" — gift_card_flag, skipping bot reply`);
+        const flagType = convo.gift_card_flag ? 'gift_card_flag' : 'voice_msg_flag';
+        console.log(`[WA] ${fromPhone}: "${messageText}" — ${flagType}, skipping bot reply`);
         _broadcast({
           type: 'new_message',
           phone: fromPhone,
