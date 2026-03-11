@@ -364,9 +364,23 @@ async function webhookHandler(req, res) {
       messageText = ref.body || msg.text?.body || '[ad click]';
       console.log(`[WA] Referral from ${fromPhone}: "${messageText}"`);
     } else {
-      // Other types (sticker, document, etc.)
-      messageText = `[${msg.type}]`;
-      console.log(`[WA] Unknown type (${msg.type}) from ${fromPhone} — raw keys: ${Object.keys(msg).join(',')}`);
+      // Other types (sticker, document, location, contacts, unsupported, etc.)
+      // Don't pass to bot — these are not processable text and cause wrong product matches
+      console.log(`[WA] Unsupported type (${msg.type}) from ${fromPhone} — ignoring. Raw keys: ${Object.keys(msg).join(',')}`);
+      // Try to save to DB for admin visibility
+      try {
+        const customerModel = require('../db/models/customer');
+        const _cust = customerModel.findByPhone(fromPhone);
+        if (_cust) {
+          const _conv = conversationModel.findActive(_cust.id);
+          if (_conv) {
+            messageModel.create(_conv.id, 'incoming', 'customer', `[📎 ${msg.type || 'unsupported'}]`, { source: 'unsupported_media' });
+            conversationModel.updateLastMessage(_conv.id, `[📎 ${msg.type || 'unsupported'}]`);
+            _broadcast({ type: 'new_message', conversationId: _conv.id });
+          }
+        }
+      } catch (e) { /* non-critical — just skip saving */ }
+      return;
     }
 
     if (!messageText.trim()) {
