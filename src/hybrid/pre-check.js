@@ -661,16 +661,22 @@ function preCheck(message, currentState, collected, state) {
 
     // "nahi pata" / "number nahi" / "pata nahi" for current step → set nahi_pata
     const isRefusal = /^(nahi?|nhi|no|ni|nope|na+h?|pata?\s*nahi?|nahi?\s*pata?|nahi?\s*he|number\s*nahi?|nahi?\s*number|ghar\s*(he|hai)\s*bas)\s*[.!]?\s*$/i.test(l);
+    // "Area nahi lagta koi" / "koi area nahi" / "nahi pata area" / "area maloom nahi" = DON'T KNOW area
+    const isDontKnowArea = /\b(area|ilaq[ae]|muhall[ae]|colony|sector)\s*(nh?|nahi?|nhi|maloom\s*nahi?|pata?\s*nahi?|lagta?\s*koi|nahi?\s*lagta?|nahi?\s*he|he\s*nahi?)\b/i.test(l) ||
+      /\b(nh?|nahi?|nhi)\s*(lagta|maloom|pata)\s*(koi|area|ilaq[ae])?\b/i.test(l) ||
+      /\b(koi|kio)\s*(area|ilaq[ae])\s*(nh?|nahi?|nhi)\b/i.test(l);
 
     // Fill only MISSING parts (don't overwrite existing)
-    if (!ap.area && detectedArea) { parts.area = detectedArea; foundAny = true; }
+    // Skip area detection if customer is saying "I don't know my area"
+    if (!ap.area && detectedArea && !isDontKnowArea) { parts.area = detectedArea; foundAny = true; }
     if (!ap.street && detectedStreet) { parts.street = detectedStreet; foundAny = true; }
     if (!ap.house && detectedHouse) { parts.house = detectedHouse; foundAny = true; }
     if (!ap.landmark && detectedLandmark) { parts.landmark = detectedLandmark; foundAny = true; }
 
     // Handle refusal for current missing field
-    if (isRefusal) {
-      if (ap.area && !ap.street) { parts.street = 'nahi_pata'; foundAny = true; }
+    if (isRefusal || isDontKnowArea) {
+      if (!ap.area && isDontKnowArea) { parts.area = 'nahi_pata'; foundAny = true; }
+      else if (ap.area && !ap.street) { parts.street = 'nahi_pata'; foundAny = true; }
       else if (ap.area && ap.street && !ap.house) { parts.house = 'nahi_pata'; foundAny = true; }
       else if (ap.area && (ap.house || ap.house === 'nahi_pata') && !ap.landmark) { parts.landmark = 'nahi_pata'; foundAny = true; }
     }
@@ -700,6 +706,17 @@ function preCheck(message, currentState, collected, state) {
   // Also: "order krna he", "order karna hai" during collection = just acknowledging, re-ask field
   if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_ADDRESS', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {
     const isAck = /^(ik|ok+|okay|acha+|ach+a|theek|thik|thk|tik|hmm+|hm+|g|k|jee?|ji|samajh\s*(aa?\s*ga[yi]?|aa?\s*gai)?)\s*[.!]?\s*$/i.test(l);
+    // In COLLECT_ADDRESS: if address parts are substantially filled, "ok" = confirming address (not just acknowledging)
+    // This handles case where address_confirming flag was lost (e.g. server restart)
+    if (isAck && currentState === 'COLLECT_ADDRESS' && collected.address_parts) {
+      const ap = collected.address_parts;
+      const filledCount = [ap.area, ap.street, ap.house, ap.landmark].filter(v => v && v !== 'nahi_pata').length;
+      const nahiCount = [ap.area, ap.street, ap.house, ap.landmark].filter(v => v === 'nahi_pata').length;
+      if (filledCount + nahiCount >= 2) {
+        // Enough address info exists — treat as address confirmation
+        return { intent: 'address_confirm_yes' };
+      }
+    }
     if (isAck) return { intent: 'acknowledgment' };
     // "order krna he", "order karo", "haan order krna" = ack during collection (product already set)
     const isOrderAck = collected.product && /\b(order\s*(kr|kar|kro|karo|krna|karna|krdo|kardo|krn?a?\s*(hai|he|h|chahta|chahti)?)|haan?\s*order)\b/i.test(l) && l.trim().split(/\s+/).length <= 5;
@@ -856,7 +873,7 @@ function preCheck(message, currentState, collected, state) {
 
   // 7b2. DELIVERY TIME question — "kb tk ayga?", "kitne din lagenge", "kab milega"
   const isDeliveryTimeQ = /\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|ajayga|ajaye?ga|aye?\s*ga|pohch|pohnch))\b/i.test(l) ||
-    /\b(kitn[ew]?\s*(din|dino[nm]?|days?|waqt|time))\b/i.test(l) ||
+    /\b(kitn[ewy]?\s*(din|dino[nm]?|days?|waqt|time))\b/i.test(l) ||
     /\b(kab\s*(aaye|milega|ayega|ayga|ajayga|ajaye?ga|pohchega|deliver))\b/i.test(l) ||
     /\b(delivery\s*(time|din|days?|kitne?|kab|kb))\b/i.test(l) ||
     /\b(kb\s*tk\s*(ayga|aayga|ajayga|ajaye?ga|milega|pohchega)?)\b/i.test(l) ||

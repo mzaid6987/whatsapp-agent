@@ -1652,14 +1652,19 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
           ap.area = newParts.area;
         }
       }
-      if (valid(newParts.street) && !isRefusal(newParts.street)) {
-        // If AI put a landmark-type word in street (hospital, masjid, school etc.), move to landmark
-        const isLandmarkInStreet = /\b(hospital|hosptal|masjid|mosque|school|bank|petrol\s*pump|chowk|chorangi|park|market|bazaar|plaza|clinic|dispensary|library|church|mandir|gurdwara|dargah|factory|mill|company|office)\b/i.test(newParts.street);
-        if (isLandmarkInStreet && !ap.landmark) {
-          ap.landmark = newParts.street;
-          console.log(`[Address] AI street "${newParts.street}" is a landmark — moved to landmark field`);
-        } else if (!isLandmarkInStreet) {
-          ap.street = newParts.street;
+      if (valid(newParts.street)) {
+        if (isRefusal(newParts.street)) {
+          // "nahi_pata" for street → set it so we don't keep asking
+          ap.street = 'nahi_pata';
+        } else {
+          // If AI put a landmark-type word in street (hospital, masjid, school etc.), move to landmark
+          const isLandmarkInStreet = /\b(hospital|hosptal|masjid|mosque|school|bank|petrol\s*pump|chowk|chorangi|park|market|bazaar|plaza|clinic|dispensary|library|church|mandir|gurdwara|dargah|factory|mill|company|office)\b/i.test(newParts.street);
+          if (isLandmarkInStreet && !ap.landmark) {
+            ap.landmark = newParts.street;
+            console.log(`[Address] AI street "${newParts.street}" is a landmark — moved to landmark field`);
+          } else if (!isLandmarkInStreet) {
+            ap.street = newParts.street;
+          }
         }
       }
       if (valid(newParts.house)) {
@@ -2717,6 +2722,23 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       const waLocal = phone.startsWith('92') ? '0' + phone.slice(2) : phone;
       state.collected.phone = waLocal;
       return { reply: `Number mil gaya 👍 ${vars.honorific}, apna naam bata dein?`, state: 'COLLECT_NAME' };
+    }
+
+    case 'address_confirm_yes': {
+      // "ok"/"okay" when address parts are filled = confirming address (even after server restart)
+      state.address_confirming = false;
+      const addrStr = buildAddressString(state.collected.address_parts, state.collected.city);
+      state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
+      const dp = state.collected.delivery_phone;
+      if (dp && dp !== 'same' && dp !== state.collected.phone) {
+        state.collected.address += ` (agar call na lug rahi ho ya signal issue ho to ${dp} pr bhi call krlena)`;
+      }
+      const acSmResult = buildOrderSummary(state, storeName);
+      state.current = acSmResult.state;
+      state.messages.push({ role: 'user', content: message });
+      state.messages.push({ role: 'assistant', content: acSmResult.reply });
+      if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+      return { reply: qualityGate(acSmResult.reply), state: state.current };
     }
 
     case 'acknowledgment': {
