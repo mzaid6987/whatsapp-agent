@@ -1271,8 +1271,9 @@ function preCheck(message, currentState, collected, state) {
           }
           // Remove name labels
           beforeCity = beforeCity.replace(/\b(?:na+me?|naam)\s*[:\.\-="']\s*"?[A-Za-z\s]{1,30}"?\s*/gi, '').trim();
-          // Remove number/phone labels
-          beforeCity = beforeCity.replace(/\b(?:number|phone|mobile|nmbr|nomber)\s*[:\.\-="']?\s*\d*/gi, '').trim();
+          // Remove phone/mobile labels (but NOT "flat number 101" / "house number 5" type address numbers)
+          beforeCity = beforeCity.replace(/\b(?:phone|mobile|mob)\s*(?:number|no|nmbr|nomber)?\s*[:\.\-="']?\s*\d*/gi, '').trim();
+          beforeCity = beforeCity.replace(/\b(?:number|nmbr|nomber)\s*[:\.\-="']\s*0?3\d{9}/gi, '').trim();
           // Clean leading/trailing commas, dots, spaces
           beforeCity = beforeCity.replace(/^[,.\s]+|[,.\s]+$/g, '').trim();
           beforeCity = beforeCity.replace(/\s{2,}/g, ' ').trim();
@@ -1287,7 +1288,8 @@ function preCheck(message, currentState, collected, state) {
             afterCity = afterCity.replace(/^[,.\s]+/, '').trim();
             afterCity = afterCity.replace(/\b0[3]\d{9}\b/g, '').trim();
             afterCity = afterCity.replace(/\b(?:na+me?|naam)\s*[:\.\-="']\s*"?[A-Za-z\s]{1,30}"?\s*/gi, '').trim();
-            afterCity = afterCity.replace(/\b(?:number|phone|mobile|nmbr|nomber)\s*[:\.\-="']?\s*\d*/gi, '').trim();
+            afterCity = afterCity.replace(/\b(?:phone|mobile|mob)\s*(?:number|no|nmbr|nomber)?\s*[:\.\-="']?\s*\d*/gi, '').trim();
+            afterCity = afterCity.replace(/\b(?:number|nmbr|nomber)\s*[:\.\-="']\s*0?3\d{9}/gi, '').trim();
             // Strip province names
             afterCity = afterCity.replace(PROVINCES, '').trim();
             afterCity = afterCity.replace(/^[,.\s]+|[,.\s]+$/g, '').replace(/\s{2,}/g, ' ').trim();
