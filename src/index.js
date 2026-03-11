@@ -1385,7 +1385,7 @@ app.post('/api/conversations/:id/block', requireAuth, (req, res) => {
 
 
 // ONE-TIME: Fix falsely spammed website referral customers — unblock + send greeting
-app.post('/api/fix-spam-referrals', requireAuth, async (req, res) => {
+app.get('/api/fix-spam-referrals', requireAuth, async (req, res) => {
   try {
     const db = getDb();
     // Find today's spam-flagged conversations where first message has our store URL
