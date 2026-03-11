@@ -202,7 +202,24 @@ async function webhookHandler(req, res) {
     let incomingMediaType = null; // 'image', 'audio', 'video' — for dashboard preview
     let incomingMediaFile = null; // saved filename in chat-media/
 
-    if (msg.type === 'text') {
+    // Reactions — handle BEFORE text extraction so they don't enter batching as '[reaction]'
+    if (msg.type === 'reaction') {
+      const emoji = msg.reaction?.emoji || '';
+      const positiveReactions = ['👍', '❤️', '❤', '♥️', '🙏', '✅', '👌'];
+      if (positiveReactions.includes(emoji) && emoji) {
+        console.log(`[WA] ${fromPhone}: positive reaction ${emoji} — treating as YES`);
+        messageText = 'haan';
+        // Skip batching — process immediately as a standalone "haan"
+        // (otherwise it corrupts the batch with [reaction] text)
+      } else {
+        console.log(`[WA] ${fromPhone}: reaction ${emoji} — ignored`);
+        return;
+      }
+    }
+
+    if (msg.type === 'reaction') {
+      // Already handled above — messageText is set to 'haan' or returned
+    } else if (msg.type === 'text') {
       // Wait for any ongoing media processing for this phone (image/voice takes 3-5s)
       // so text + media get batched together instead of separate responses
       await waitForMediaLock(fromPhone);
@@ -412,19 +429,7 @@ async function webhookHandler(req, res) {
       return;
     }
 
-    // Reactions — thumbs up / heart = treat as "haan" (YES), others = ignore
-    if (msg.type === 'reaction') {
-      const emoji = msg.reaction?.emoji || '';
-      const positiveReactions = ['👍', '❤️', '❤', '♥️', '🙏', '✅', '👌'];
-      if (positiveReactions.includes(emoji) && emoji) {
-        console.log(`[WA] ${fromPhone}: positive reaction ${emoji} — treating as YES`);
-        messageText = 'haan';
-        // Fall through to normal message processing
-      } else {
-        console.log(`[WA] ${fromPhone}: reaction ${emoji} — ignored`);
-        return;
-      }
-    }
+    // (Reactions handled above, before text extraction)
 
     // Unsupported media types (sticker, document, location, contacts)
     if (['sticker', 'document', 'location', 'contacts'].includes(msg.type)) {
