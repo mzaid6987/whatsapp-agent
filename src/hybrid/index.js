@@ -2238,6 +2238,26 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     }
     if ((aiIntent === 'order_intent' ||
          (aiIntent === 'yes' && ['PRODUCT_INQUIRY', 'HAGGLING'].includes(state.current))) && state.product) {
+      // Apply ALL extracted data before advancing — customer may send everything at once
+      // (name, phone, city, address in one message, especially Urdu script users)
+      if (extracted.name && !state.collected.name) {
+        const eName = extracted.name.trim();
+        if (eName.length >= 2 && eName.length <= 50) state.collected.name = eName;
+      }
+      if (extracted.address && !state.collected.address) {
+        state.addressHint = extracted.address;
+      }
+      // phone_numbers array (AI sometimes returns array for multiple numbers)
+      if (extracted.phone_numbers && Array.isArray(extracted.phone_numbers) && !state.collected.phone) {
+        for (const pn of extracted.phone_numbers) {
+          const clean = String(pn).replace(/\D/g, '');
+          const validation = validatePhone(clean);
+          if (validation.valid) {
+            state.collected.phone = validation.phone;
+            break;
+          }
+        }
+      }
       const nextField = askNextField(state, storeName);
       if (nextField) return returnTemplate(nextField);
     }
