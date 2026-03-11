@@ -1072,7 +1072,34 @@ app.get('/api/bulk-debug-export/download', requireAuth, (req, res) => {
 
     // Generate batch ID for tracking
     const batchId = `batch-${Date.now()}`;
-    let fullReport = `===== BULK DEBUG EXPORT =====\n`;
+    let fullReport = '';
+
+    // Embedded analysis instructions for Claude
+    fullReport += `===== INSTRUCTIONS FOR AI ANALYSIS =====\n`;
+    fullReport += `You are analyzing real WhatsApp bot conversations from a Pakistani e-commerce store.\n`;
+    fullReport += `The bot sells beauty/skincare products via WhatsApp using a hybrid system:\n`;
+    fullReport += `- Template responses (free, regex-based) handle 85-90% of messages\n`;
+    fullReport += `- Claude Haiku AI handles complex/ambiguous messages (10-15%)\n`;
+    fullReport += `- State machine: IDLE → PRODUCT_SELECTION → PRODUCT_INQUIRY → COLLECT_NAME → COLLECT_PHONE → COLLECT_DELIVERY_PHONE → COLLECT_CITY → COLLECT_ADDRESS → ORDER_SUMMARY → ORDER_CONFIRMED\n`;
+    fullReport += `- Language: Roman Urdu (Urdu written in English script)\n\n`;
+    fullReport += `ANALYZE each chat and identify:\n`;
+    fullReport += `1. WRONG RESPONSES: Where bot gave incorrect/irrelevant reply (wrong intent detection, wrong state transition)\n`;
+    fullReport += `2. CUSTOMER CONFUSION: Where customer got confused or frustrated by bot response\n`;
+    fullReport += `3. STUCK LOOPS: Where bot kept repeating same question or customer kept giving same answer\n`;
+    fullReport += `4. UNNECESSARY AI CALLS: Where template could have handled but AI was called (wasted cost)\n`;
+    fullReport += `5. ADDRESS ISSUES: Where address collection went wrong (city as area, loop, lost data)\n`;
+    fullReport += `6. DROP-OFFS: Where customer stopped responding and WHY (bot's fault or customer's choice)\n`;
+    fullReport += `7. MISSING INTENTS: Customer said something valid but bot didn't understand (needs new regex/template)\n`;
+    fullReport += `8. TONE ISSUES: Where bot sounded too formal, too casual, or unnatural for WhatsApp\n\n`;
+    fullReport += `After analysis, provide SPECIFIC code fixes for:\n`;
+    fullReport += `- src/hybrid/pre-check.js (regex patterns, intent detection)\n`;
+    fullReport += `- src/hybrid/index.js (state handling, response logic)\n`;
+    fullReport += `- src/ai/prompt-composer.js (AI system prompt improvements)\n`;
+    fullReport += `- src/hybrid/templates.js (new template responses needed)\n\n`;
+    fullReport += `Format: List each issue with chat ID, message number, what went wrong, and the fix.\n`;
+    fullReport += `${'='.repeat(70)}\n\n`;
+
+    fullReport += `===== BULK DEBUG EXPORT =====\n`;
     fullReport += `Export Time: ${new Date().toLocaleString()}\n`;
     fullReport += `Hours Window: Last ${hours} hours (since ${cutoff})\n`;
     fullReport += `Conversations: ${convIds.length}\n`;
