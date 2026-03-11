@@ -645,10 +645,17 @@ function preCheck(message, currentState, collected, state) {
     // Product qualifier patterns — "larkio vala", "ladies wala", "chota wala", "gents ka" = NOT a name
     const isProductQualifier = /\b(wal[aie]|val[aie]|ke\s*li[ey]e?|ka|ki)\s*$/i.test(l) &&
       /\b(lark[ioy]+|ladki|ladies|lady|gents|boys?|girls?|men|women|chot[aie]|bar[aie]|sast[aie]|mehn?g[aie]|ach[aie]|nay[aie]|puran[aie])\b/i.test(l);
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier) {
+    // Suspicious WhatsApp usernames — common English words that are NOT real names
+    // e.g. "Video", "Admin", "User", "Business", "Shop", "Official", "Online"
+    const isSuspiciousUsername = /^(video|audio|admin|user|guest|test|demo|owner|manager|boss|staff|support|service|services|business|shop|store|official|online|digital|media|studio|tech|gaming|gamer|vlogs?|blogger|trader|trading|dealer|reviews?|status|updates?|news|channel|page|group|public|private|personal|main|real|original|backup|old|new|unknown|null|undefined|bot|robot|ai|home|office|work|mobile|android|iphone|samsung|oppo|vivo|realme|redmi|infinix|tecno|nokia|huawei)\s*\d*$/i.test(l);
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername) {
       // Capitalize properly
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_given', extracted: { name } };
+    }
+    // Suspicious WhatsApp username detected — re-ask for real name
+    if (looksLikeName && isSuspiciousUsername) {
+      return { intent: 'suspicious_username', extracted: { username: trimmed } };
     }
   }
 

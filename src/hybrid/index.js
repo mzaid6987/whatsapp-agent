@@ -691,6 +691,8 @@ function intentToNextState(intent, currentState, extracted, state) {
     case 'name_given':
       if (extracted?.name) return 'COLLECT_PHONE';
       return currentState;
+    case 'suspicious_username':
+      return 'COLLECT_NAME'; // Stay in COLLECT_NAME — re-ask
     case 'phone_given':
       return 'COLLECT_DELIVERY_PHONE';
     case 'city_given':
@@ -3268,6 +3270,13 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       // Rural without city — ask for city/tehsil
       const ruralVars = { ...vars, rural_part: pre.extracted.rural_part };
       return { reply: fillTemplate('ASK_RURAL_CITY', ruralVars), state: 'COLLECT_CITY' };
+    }
+
+    case 'suspicious_username': {
+      // WhatsApp display name detected (e.g. "Video", "Admin", "Business")
+      const uname = pre.extracted.username || 'yeh';
+      console.log(`[PRE-CHECK] Suspicious username detected: "${uname}" — re-asking for real name`);
+      return { reply: `"${uname}" to WhatsApp name lag raha hai — apna asli naam bata dein? 😊`, state: 'COLLECT_NAME' };
     }
 
     case 'name_given': {
