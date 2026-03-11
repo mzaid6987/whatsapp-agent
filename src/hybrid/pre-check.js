@@ -201,6 +201,20 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'complaint' };
   }
 
+  // 0c2. POST-DELIVERY SUPPORT — customer already received order, asking about usage/voucher/etc.
+  // "parcel aa gaya", "order mil gaya", "maine order liya tha" WITHOUT complaint = post-delivery
+  const isPostDelivery = isPastOrder && !hasNegativeContext;
+  // "how to use", "kaise chalana", "use karna hai", "chalana kaise hai", "features kya hain"
+  const isUsageQuestion = /\b(how\s*to\s*use|kaise?\s*(chala|use|istemal|istmal)|chala+na+\s*(kaise?|kesy)|use\s*kar(na|ne|ni)|features?\s*(kya|kia|batao|samjh)|instructions?|taree?qa)\b/i.test(l) ||
+    /\b(is\s*ko|isko|ise|ye)\s*(chala|use|on|start|operate)\b/i.test(l);
+  if ((isPostDelivery || isUsageQuestion) && ['IDLE', 'GREETING', 'PRODUCT_SELECTION'].includes(currentState)) {
+    return { intent: 'post_delivery', needs_human: true };
+  }
+  // Usage question in any state (even mid-order) — customer asking how to use product they already have
+  if (isUsageQuestion && !['IDLE', 'GREETING'].includes(currentState)) {
+    return { intent: 'usage_question', needs_human: true };
+  }
+
   // 0d. COLLECT_DELIVERY_PHONE early check — compound voice messages like
   // "haan call receive karlunga ... kharab to nahi hai" start with YES but contain complaint words later
   // Must check BEFORE complaint detection to not lose the delivery phone confirmation
@@ -815,6 +829,11 @@ function preCheck(message, currentState, collected, state) {
     // Flexible yes in PRODUCT_INQUIRY or HAGGLING = wants to order
     // Multi-word like "theek hai haan karo", "ok done", "bilkul theek"
     // BUT NOT functionality questions: "sahi kam krta he", "theek kaam karta hai"
+    // BUT bare "ok"/"acha"/"hmm" ALONE = just acknowledging, NOT order intent
+    const isBareAcknowledgment = /^(ok|o?k+a*y+|acha|achha|accha|hm+|theek|thik|thk|tik|alright)\s*[.!]?\s*$/i.test(l);
+    if (isBareAcknowledgment && currentState === 'PRODUCT_INQUIRY') {
+      return { intent: 'acknowledgment' };
+    }
     const flexYes = hasYesWord && !/\b(nahi|nhi|no|galat|nope|na+h|mat|cancel)\b/i.test(l);
     if ((isYes(l) || flexYes) && !IS_FUNCTIONALITY_Q.test(l)) {
       return { intent: 'yes' };

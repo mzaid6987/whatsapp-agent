@@ -2195,7 +2195,13 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     state.messages.push({ role: 'assistant', content: aiResult.reply });
     if (state.messages.length > 10) state.messages = state.messages.slice(-10);
 
-    const reply = qualityGate(aiResult.reply);
+    let reply = qualityGate(aiResult.reply);
+    // Garbage AI response fallback — re-ask current field via template
+    if (!reply) {
+      console.warn('[HYBRID] Garbage AI response detected — falling back to template re-ask');
+      const reask = state.current.startsWith('COLLECT_') ? askNextField(state, storeName) : null;
+      reply = reask ? reask.reply : 'Ji sir, batayein kaise madad karun? 😊';
+    }
 
     // Auto-learn: save this AI response as a pattern for future reuse
     saveAutoPattern(message, state.current, state.product?.id, reply);
@@ -2914,6 +2920,26 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       const honorific = getHonorific(state.collected.name, state.gender);
       const reply = `${state.collected.name || ''} ${honorific}, koi baat nahi — jab bhi chahein rabta kar lein! Hamari website bhi dekh sakte hain: https://theelvora.store/ 😊`.trim();
       return { reply, state: 'IDLE' };
+    }
+
+    case 'post_delivery': {
+      const honorific = getHonorific(state.collected.name, state.gender);
+      const reply = `${state.collected.name || ''} ${honorific}, order mil gaya — bohat acha! Koi sawal ho product ke baare mein to poochein, hamari team abhi madad karti hai 😊`.trim();
+      return { reply, state: 'IDLE', needs_human: true };
+    }
+
+    case 'usage_question': {
+      const honorific = getHonorific(state.collected.name, state.gender);
+      const pName = state.product ? state.product.short : 'product';
+      const reply = `${state.collected.name || ''} ${honorific}, ${pName} ke baare mein aapka sawal hamari team ko forward kar diya hai — woh abhi guide karein ge 😊`.trim();
+      return { reply, state: state.current, needs_human: true };
+    }
+
+    case 'acknowledgment': {
+      // Bare "ok"/"acha" in PRODUCT_INQUIRY — just acknowledging, not ordering
+      const honorific = getHonorific(state.collected.name, state.gender);
+      const reply = `${state.collected.name || ''} ${honorific}, order karna hai? 😊`.trim();
+      return { reply, state: state.current };
     }
 
     case 'product_reassurance': {

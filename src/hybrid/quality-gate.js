@@ -23,6 +23,13 @@ function qualityGate(response) {
   if (!response) return response;
   let text = response;
 
+  // Garbage detection — AI sometimes returns empty whitespace/newlines (token waste)
+  const stripped = text.replace(/[\s\r\n]+/g, '').trim();
+  if (stripped.length < 3) {
+    console.warn(`[QualityGate] Garbage response detected (${text.length} chars → ${stripped.length} meaningful)`);
+    return null; // null = fallback to template
+  }
+
   // Keep emojis — they improve WhatsApp readability
   // (Previously stripped, but product list + responses need them)
 
