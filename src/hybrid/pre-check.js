@@ -145,6 +145,8 @@ function preCheck(message, currentState, collected, state) {
   // 0b0b. VOICE MESSAGE REQUEST — customer asks for voice message / call
   // "voice message karo", "voice bhejo", "call karo", "bol ke batao", "voice note bhejo"
   const isVoiceMsgReq = /\b(voice\s*(msg|message|note|call)?|vc|voic)\s*(kr[od]?o?|kar[od]?o?|bhej[od]?o?|send|de\s*do|dedo|d[eo]|bana|bnao?)\b/i.test(l) ||
+    /\b(voice)\s*(pe|pr|par|mein|me|mai|m|se)\s*(baat|bat|bta|samjha|smjha)\s*(kr[od]?o?|kar[od]?o?)\b/i.test(l) ||
+    /\b(voice)\s*(mein|me|mai|m|pe|pr|par|se)\s*(bata[od]?o?|samjha[od]?o?|smjha[od]?o?|bol[od]?o?)\b/i.test(l) ||
     /\b(call|kall|col)\s*(kr[od]?o?|kar[od]?o?|laga[od]?o?)\b/i.test(l) ||
     /\b(bol\s*ke|bol\s*kr|bolke|bolkr)\s*(bata[od]?o?|smjha[od]?o?|samjha[od]?o?)\b/i.test(l) ||
     /\b(awaaz|awaz|aawaz)\s*(mein|me|mai|m)\s*(bata[od]?o?|bhej[od]?o?|bol[od]?o?)\b/i.test(l) ||
