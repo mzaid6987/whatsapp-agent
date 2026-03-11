@@ -929,6 +929,21 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'no_order_now' };
   }
 
+  // 6c. HAGGLE detection in PRODUCT_INQUIRY — "rate kam ho sakta?", "discount do", "price kam kro"
+  // Must catch BEFORE order intent so "kam kro" is not confused with order
+  if (currentState === 'PRODUCT_INQUIRY' && state.product) {
+    const isHaggleInPI = /\b(disc?o?u?n?t|discoutn|disocunt|discont)\b/i.test(l) ||
+      /\b(sast[aie]|ssta)\s*(kr[oa]?|kard?o?|do|dedo|de\s*do|mein|me|mai|m)\b/i.test(l) ||
+      /\b(rate|price|qeemat|qimat|kimat|keemat)\s*(kuch+|thod[aie]?|thora)?\s*(kam|km)\s*(kr[oa]?|kard?o?|do|dedo|ho|hojaye?|hosakta|ho\s*sakta|hoskta)\b/i.test(l) ||
+      /\b(kam|km)\s*(kr[oa]?|kard?o?|do|dedo)\s*(rate|price|qeemat)?\b/i.test(l) ||
+      /\b(kuch+|thod[aie]?|thora)\s*(kam|km)\s*(ho|kr|kar|kro|karo|do)\b/i.test(l) ||
+      /\b(offer|offr)\s*(hai|he|h|do|dedo|milega|milta)?\b/i.test(l) ||
+      /\b(meh[ea]?n?g[aie]|bohot?\s*(meh[ea]?n?g|zyada))\b/i.test(l);
+    if (isHaggleInPI) {
+      return { intent: 'haggle' };
+    }
+  }
+
   // 7. Order intent WITHOUT product mention (product already set in state)
   // "order kardo", "theek hai kardo", "haan order kar do", "theek hai haan karo" etc.
   if (['PRODUCT_INQUIRY', 'HAGGLING'].includes(currentState)) {

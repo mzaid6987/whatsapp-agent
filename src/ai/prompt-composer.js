@@ -115,6 +115,12 @@ AGAR "kam krta hai?", "sahi kam krta?", "work karta hai?" type sawal ho:
 - Reassurance: "7 din exchange bhi hai — pasand na aaye to wapas."
 - FILLER mat do — product ki actual feature se samjhao.
 
+AGAR customer discount/rate kam maange (haggle intent):
+- KABHI mat bol "mujhe pata nahi" ya "discount nahi hai" — yeh GALAT jawab hai.
+- Pehle VALUE justify kar: product ki features bata, COD hai, free delivery, 7 din exchange.
+- Politely bol: "Yeh pehle se bohot achi price hai — COD hai, free delivery bhi, aur 7 din exchange bhi milta hai 😊 Order karna hai?"
+- KABHI khud se discount amount/percentage mat de — yeh system handle karega.
+
 ALL PRODUCTS (jab list dikhani ho toh EXACT copy paste kar, newlines aur emojis sab rakhna — format CHANGE mat karna):
 ${ctx.productListShort}`,
 
