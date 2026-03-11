@@ -206,6 +206,16 @@ CREATE TABLE IF NOT EXISTS complaint_remarks (
   created_at      TEXT DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_remarks_complaint ON complaint_remarks(complaint_id);
+
+-- Debug export tracking (prevents duplicate bulk exports)
+CREATE TABLE IF NOT EXISTS debug_exports (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  conv_id         INTEGER NOT NULL,
+  exported_at     TEXT DEFAULT (datetime('now','localtime')),
+  batch_id        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_debug_exports_conv ON debug_exports(conv_id);
+CREATE INDEX IF NOT EXISTS idx_debug_exports_batch ON debug_exports(batch_id);
 `;
 
 module.exports = { SCHEMA };

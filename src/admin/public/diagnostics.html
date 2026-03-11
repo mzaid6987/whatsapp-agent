@@ -151,6 +151,41 @@
       <div id="funnelContainer" style="display:flex; flex-direction:column; gap:6px;"></div>
     </div>
 
+    <!-- Bulk Debug Export -->
+    <div style="background:#fff; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.1); margin-bottom:20px;">
+      <h3 style="margin:0 0 12px;">Bulk Debug Export (for AI Learning)</h3>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+        <select id="exportHours" style="padding:8px 12px; border-radius:8px; border:1px solid #ddd; font-size:14px;">
+          <option value="3">Last 3 hours</option>
+          <option value="6">Last 6 hours</option>
+          <option value="12">Last 12 hours</option>
+          <option value="24" selected>Last 24 hours</option>
+          <option value="48">Last 48 hours</option>
+          <option value="72">Last 72 hours</option>
+        </select>
+        <select id="exportLimit" style="padding:8px 12px; border-radius:8px; border:1px solid #ddd; font-size:14px;">
+          <option value="10">Max 10 chats</option>
+          <option value="20" selected>Max 20 chats</option>
+          <option value="50">Max 50 chats</option>
+          <option value="100">Max 100 chats</option>
+        </select>
+        <label style="display:flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+          <input type="checkbox" id="skipExported" checked style="width:16px; height:16px;">
+          Skip already exported
+        </label>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button onclick="previewBulkExport()" style="padding:8px 16px; background:#6366F1; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px;">Preview</button>
+        <button onclick="downloadBulkExport()" id="downloadBtn" style="padding:8px 16px; background:#10B981; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px;" disabled>Download .txt</button>
+        <button onclick="resetExportTracking()" style="padding:8px 16px; background:#EF4444; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:13px;">Reset Tracking</button>
+        <span id="exportInfo" style="font-size:13px; color:#666;"></span>
+      </div>
+      <div id="exportPreview" style="margin-top:12px; display:none;">
+        <div style="font-size:12px; color:#888; margin-bottom:6px;">Chats to be exported:</div>
+        <div id="exportList" style="max-height:200px; overflow-y:auto; font-size:12px; border:1px solid #e5e7eb; border-radius:8px; padding:8px;"></div>
+      </div>
+    </div>
+
     <!-- Issues List -->
     <div style="background:#fff; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.1);">
       <h3 style="margin:0 0 12px;">Issues Found</h3>
@@ -261,6 +296,61 @@
         ORDER_SUMMARY: '#EF4444', UPSELL_HOOK: '#F97316', UPSELL_SHOW: '#FB923C'
       };
       return colors[state] || '#6B7280';
+    }
+
+    // ---- Bulk Debug Export ----
+    async function previewBulkExport() {
+      const hours = document.getElementById('exportHours').value;
+      const skipExported = document.getElementById('skipExported').checked;
+      const info = document.getElementById('exportInfo');
+      info.textContent = 'Loading...';
+
+      try {
+        const resp = await api(`/api/bulk-debug-export/preview?hours=${hours}&skip_exported=${skipExported}`);
+        info.textContent = `${resp.available} new chats available | ${resp.total_exported_ever} already exported`;
+
+        const preview = document.getElementById('exportPreview');
+        const list = document.getElementById('exportList');
+        const btn = document.getElementById('downloadBtn');
+
+        if (resp.available > 0) {
+          preview.style.display = 'block';
+          btn.disabled = false;
+          list.innerHTML = resp.conversations.map(c =>
+            `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #f3f4f6;">
+              <span><b>${c.name}</b> (${c.phone})</span>
+              <span style="color:#888;">${c.state} | ${c.msg_count} msgs | ${c.created_at}</span>
+            </div>`
+          ).join('');
+        } else {
+          preview.style.display = 'none';
+          btn.disabled = true;
+          list.innerHTML = '';
+        }
+      } catch (e) {
+        info.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    function downloadBulkExport() {
+      const hours = document.getElementById('exportHours').value;
+      const skipExported = document.getElementById('skipExported').checked;
+      const limit = document.getElementById('exportLimit').value;
+      window.location.href = `/api/bulk-debug-export/download?hours=${hours}&skip_exported=${skipExported}&limit=${limit}`;
+      // Refresh preview after download (chats will now be marked as exported)
+      setTimeout(() => previewBulkExport(), 2000);
+    }
+
+    async function resetExportTracking() {
+      if (!confirm('Reset export tracking? All chats will be available for re-export.')) return;
+      try {
+        await api('/api/bulk-debug-export/reset', { method: 'POST' });
+        document.getElementById('exportInfo').textContent = 'Tracking reset!';
+        document.getElementById('downloadBtn').disabled = true;
+        document.getElementById('exportPreview').style.display = 'none';
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
     }
 
     // Load on page ready

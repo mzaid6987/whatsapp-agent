@@ -995,6 +995,269 @@ app.get('/api/conversations/:id/debug-export', requireAuth, (req, res) => {
   }
 });
 
+// Bulk debug export — preview (count new chats available)
+app.get('/api/bulk-debug-export/preview', requireAuth, (req, res) => {
+  try {
+    const hours = parseInt(req.query.hours) || 24;
+    const skipExported = req.query.skip_exported !== 'false'; // default true
+    const db = getDb();
+
+    const cutoff = new Date(Date.now() - hours * 3600000).toISOString().replace('T', ' ').slice(0, 19);
+
+    // Get conversations where first message is within last X hours
+    let query = `
+      SELECT c.id, c.state, c.created_at, cu.name, cu.phone,
+        (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) as msg_count
+      FROM conversations c
+      LEFT JOIN customers cu ON c.customer_id = cu.id
+      WHERE c.created_at >= ?
+    `;
+    const params = [cutoff];
+
+    if (skipExported) {
+      query += ` AND c.id NOT IN (SELECT conv_id FROM debug_exports)`;
+    }
+    query += ` ORDER BY c.created_at DESC`;
+
+    const convs = db.prepare(query).all(...params);
+    const totalExported = db.prepare('SELECT COUNT(DISTINCT conv_id) as cnt FROM debug_exports').get()?.cnt || 0;
+
+    res.json({
+      available: convs.length,
+      total_exported_ever: totalExported,
+      hours,
+      cutoff,
+      conversations: convs.map(c => ({
+        id: c.id,
+        name: c.name || 'Unknown',
+        phone: c.phone || 'N/A',
+        state: c.state,
+        msg_count: c.msg_count,
+        created_at: c.created_at
+      }))
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Bulk debug export — download combined .txt
+app.get('/api/bulk-debug-export/download', requireAuth, (req, res) => {
+  try {
+    const hours = parseInt(req.query.hours) || 24;
+    const skipExported = req.query.skip_exported !== 'false';
+    const limit = parseInt(req.query.limit) || 50; // max chats per download
+    const db = getDb();
+    const { AI_MODEL, AI_MODEL_NAME, AI_PRICING } = require('./ai/claude');
+
+    const cutoff = new Date(Date.now() - hours * 3600000).toISOString().replace('T', ' ').slice(0, 19);
+
+    let query = `
+      SELECT c.id FROM conversations c
+      WHERE c.created_at >= ?
+    `;
+    const params = [cutoff];
+    if (skipExported) {
+      query += ` AND c.id NOT IN (SELECT conv_id FROM debug_exports)`;
+    }
+    query += ` ORDER BY c.created_at ASC LIMIT ?`;
+    params.push(limit);
+
+    const convIds = db.prepare(query).all(...params).map(r => r.id);
+
+    if (!convIds.length) {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      return res.send('No new conversations to export.');
+    }
+
+    // Generate batch ID for tracking
+    const batchId = `batch-${Date.now()}`;
+    let fullReport = `===== BULK DEBUG EXPORT =====\n`;
+    fullReport += `Export Time: ${new Date().toLocaleString()}\n`;
+    fullReport += `Hours Window: Last ${hours} hours (since ${cutoff})\n`;
+    fullReport += `Conversations: ${convIds.length}\n`;
+    fullReport += `Skip Already Exported: ${skipExported}\n`;
+    fullReport += `Batch ID: ${batchId}\n`;
+    fullReport += `AI Model: ${AI_MODEL_NAME} (${AI_MODEL})\n`;
+    fullReport += '='.repeat(70) + '\n\n';
+
+    let grandTotalAiCost = 0;
+    let grandTotalMsgs = 0;
+    let grandAiCalls = 0;
+    let grandTemplateCalls = 0;
+
+    // Reuse the same debug report logic from single export
+    const insertExport = db.prepare('INSERT INTO debug_exports (conv_id, batch_id) VALUES (?, ?)');
+
+    for (const convId of convIds) {
+      const conv = db.prepare('SELECT * FROM conversations WHERE id = ?').get(convId);
+      const msgs = messageModel.getForConversation(convId);
+      const customer = conv?.customer_id ? db.prepare('SELECT * FROM customers WHERE id = ?').get(conv.customer_id) : null;
+
+      fullReport += `${'#'.repeat(70)}\n`;
+      fullReport += `# CHAT ${convId} — ${customer?.name || 'Unknown'} | ${customer?.phone || 'N/A'}\n`;
+      fullReport += `# State: ${conv?.state || 'N/A'} | Messages: ${msgs.length}\n`;
+      fullReport += `# Product: ${conv?.product_json ? (() => { try { return JSON.parse(conv.product_json)?.short || 'N/A'; } catch(e) { return 'N/A'; } })() : 'N/A'}\n`;
+      fullReport += `# Collected: ${conv?.collected_json || 'N/A'}\n`;
+
+      const firstMsg = msgs[0]?.created_at;
+      const lastMsg = msgs[msgs.length - 1]?.created_at;
+      if (firstMsg && lastMsg) {
+        const durationMs = new Date(lastMsg) - new Date(firstMsg);
+        const durationMin = Math.round(durationMs / 60000);
+        fullReport += `# Duration: ${durationMin} min (${firstMsg} → ${lastMsg})\n`;
+      }
+      fullReport += `${'#'.repeat(70)}\n\n`;
+
+      let totalAiCost = 0;
+      let aiCount = 0;
+      let templateCount = 0;
+      let prevTime = null;
+
+      msgs.forEach((m, i) => {
+        const time = m.created_at || '';
+        const dir = m.direction === 'incoming' ? '>>> CUSTOMER' : '<<< BOT';
+        const source = m.source ? ` [${m.source.toUpperCase()}]` : '';
+
+        let gapStr = '';
+        if (m.direction === 'incoming' && prevTime && time) {
+          const gapMs = new Date(time) - new Date(prevTime);
+          const gapSec = Math.round(gapMs / 1000);
+          if (gapSec > 5) {
+            gapStr = gapSec >= 60 ? ` (${Math.round(gapSec / 60)}m ${gapSec % 60}s gap)` : ` (${gapSec}s gap)`;
+          }
+        }
+        if (time) prevTime = time;
+
+        fullReport += `--- Message ${i + 1} | ${time}${gapStr} ---\n`;
+        fullReport += `${dir}${source}\n`;
+        fullReport += `${m.content}\n`;
+
+        if (m.direction === 'incoming' && m.debug_json) {
+          try {
+            const mediaDebug = JSON.parse(m.debug_json);
+            if (mediaDebug._media_type) {
+              const mediaCostRs = mediaDebug._media_cost_rs || 0;
+              totalAiCost += mediaCostRs;
+              fullReport += `  Media: ${mediaDebug._media_type} | Model: ${mediaDebug._media_model} | Cost: Rs.${mediaCostRs.toFixed(2)} | Time: ${mediaDebug._media_response_ms || 0}ms\n`;
+            }
+          } catch(e) {}
+        }
+
+        if (m.direction === 'outgoing') {
+          const isAi = m.source === 'ai' || (m.source && m.source.includes('ai'));
+          if (isAi && (m.tokens_in || m.tokens_out)) {
+            aiCount++;
+            let debugObj = null;
+            try { debugObj = m.debug_json ? JSON.parse(m.debug_json) : null; } catch(e) {}
+            const storedCost = debugObj?._cost_rs;
+            const cost = storedCost != null ? storedCost : ((m.tokens_in || 0) * AI_PRICING.input + (m.tokens_out || 0) * AI_PRICING.output) / 1000000 * 300;
+            totalAiCost += cost;
+            const modelTag = debugObj?._model ? ` [${debugObj._model}]` : '';
+            fullReport += `  Tokens: ${m.tokens_in || 0} in / ${m.tokens_out || 0} out | Cost: Rs.${cost.toFixed(2)}${modelTag} | Time: ${m.response_ms || 0}ms\n`;
+          } else {
+            templateCount++;
+            fullReport += `  Cost: Rs.0 (template)\n`;
+          }
+
+          if (m.debug_json) {
+            try {
+              const debug = JSON.parse(m.debug_json);
+              fullReport += `  PATH: ${debug.path || 'N/A'}\n`;
+              if (debug.state_before) fullReport += `  State: ${debug.state_before} → ${debug.state_after || debug.state || 'same'}\n`;
+              if (debug.intent) fullReport += `  Intent detected: ${debug.intent}\n`;
+              if (debug.ai_intent) fullReport += `  AI Intent: ${debug.ai_intent}\n`;
+              if (debug.ai_extracted) fullReport += `  AI Extracted: ${JSON.stringify(debug.ai_extracted)}\n`;
+              if (debug.extracted) fullReport += `  Pre-check Extracted: ${JSON.stringify(debug.extracted)}\n`;
+              if (debug.smart_fill) {
+                if (typeof debug.smart_fill === 'object') {
+                  fullReport += `  Smart Fill: ${debug.smart_fill.ran ? 'YES' : 'NO'} (trigger: ${debug.smart_fill.trigger || 'none'})\n`;
+                  if (debug.smart_fill.raw_result) fullReport += `  Smart Fill Extracted: ${JSON.stringify(debug.smart_fill.raw_result)}\n`;
+                } else {
+                  fullReport += `  Smart Fill: ${debug.smart_fill}\n`;
+                }
+              }
+              if (debug.pre_check_result) fullReport += `  Pre-check Result: ${JSON.stringify(debug.pre_check_result)}\n`;
+              if (debug.collected_before) fullReport += `  Collected BEFORE: ${JSON.stringify(debug.collected_before)}\n`;
+              if (debug.address_parts_before) fullReport += `  Address Parts BEFORE: ${JSON.stringify(debug.address_parts_before)}\n`;
+              if (debug.collected) fullReport += `  Collected AFTER: ${JSON.stringify(debug.collected)}\n`;
+              if (debug.address_parts) fullReport += `  Address Parts AFTER: ${JSON.stringify(debug.address_parts)}\n`;
+              if (debug.address_hint) fullReport += `  Address Hint: ${debug.address_hint}\n`;
+              if (debug.is_rural) fullReport += `  Rural: YES\n`;
+              if (debug.haggle_round) fullReport += `  Haggle Round: ${debug.haggle_round}\n`;
+              if (debug.template_used) fullReport += `  Template: ${debug.template_used}\n`;
+              if (debug.product) fullReport += `  Product: ${debug.product}\n`;
+              if (debug.ai_raw_response) {
+                fullReport += `\n  === AI RAW RESPONSE ===\n`;
+                fullReport += `  ${JSON.stringify(debug.ai_raw_response, null, 2).split('\n').join('\n  ')}\n`;
+              }
+              if (debug.context_messages) {
+                fullReport += `\n  === CONTEXT MESSAGES SENT TO AI (${debug.context_messages.length}) ===\n`;
+                debug.context_messages.forEach((cm, ci) => {
+                  fullReport += `  [${ci + 1}] ${cm.role}: ${cm.content}\n`;
+                });
+              }
+              if (debug.system_prompt) {
+                fullReport += `\n  === SYSTEM PROMPT (${debug.system_prompt.length} chars) ===\n`;
+                fullReport += `  ${debug.system_prompt.split('\n').join('\n  ')}\n`;
+              }
+            } catch (e) { /* ignore parse errors */ }
+          }
+        }
+
+        if (m.admin_feedback) {
+          fullReport += `  >> ADMIN FEEDBACK: ${m.admin_feedback}\n`;
+        }
+        fullReport += '\n';
+      });
+
+      fullReport += `----- CHAT ${convId} SUMMARY -----\n`;
+      fullReport += `Messages: ${msgs.length} (${msgs.filter(m => m.direction === 'incoming').length} customer, ${msgs.filter(m => m.direction === 'outgoing').length} bot)\n`;
+      fullReport += `AI: ${aiCount} | Template: ${templateCount} | Cost: Rs.${totalAiCost.toFixed(2)}\n`;
+      fullReport += `Template Ratio: ${templateCount + aiCount > 0 ? Math.round(templateCount / (templateCount + aiCount) * 100) : 0}%\n`;
+      fullReport += '\n\n';
+
+      grandTotalAiCost += totalAiCost;
+      grandTotalMsgs += msgs.length;
+      grandAiCalls += aiCount;
+      grandTemplateCalls += templateCount;
+
+      // Mark as exported
+      insertExport.run(convId, batchId);
+    }
+
+    // Grand summary at the end
+    fullReport += '='.repeat(70) + '\n';
+    fullReport += `GRAND SUMMARY\n`;
+    fullReport += `Total Chats Exported: ${convIds.length}\n`;
+    fullReport += `Total Messages: ${grandTotalMsgs}\n`;
+    fullReport += `Total AI Calls: ${grandAiCalls} | Template Calls: ${grandTemplateCalls}\n`;
+    fullReport += `Total AI Cost: Rs.${grandTotalAiCost.toFixed(2)}\n`;
+    fullReport += `Overall Template Ratio: ${grandTemplateCalls + grandAiCalls > 0 ? Math.round(grandTemplateCalls / (grandTemplateCalls + grandAiCalls) * 100) : 0}%\n`;
+    fullReport += `Batch ID: ${batchId}\n`;
+    fullReport += '='.repeat(70) + '\n';
+
+    const filename = `bulk-debug-${convIds.length}chats-${new Date().toISOString().slice(0, 10)}.txt`;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(fullReport);
+  } catch (e) {
+    console.error('[BulkExport] Error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Bulk debug export — reset exported tracking
+app.post('/api/bulk-debug-export/reset', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    const deleted = db.prepare('DELETE FROM debug_exports').run();
+    res.json({ ok: true, cleared: deleted.changes });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Human agent reply — send WhatsApp message + save to DB
 app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
   console.log('[API] Reply endpoint hit, convId:', req.params.id, 'body:', req.body);
