@@ -17,7 +17,7 @@ const PRODUCTS = [
     desc:'Blackheads, whiteheads aur dead skin nikalta hai bina dard ke. Nose, chin, forehead — sab jagah use ho sakta hai. Regular use se pores tight hote hain.' },
 
   { id:3, name:'Stainless Steel Cutting Board Large Size', short:'Cutting Board', price:1799,
-    kw:['cutting board','chopping','steel board','steel sheet','sheet','chopping board'],
+    kw:['cutting board','chopping','steel board','steel sheet','sheet','chopping board','stainless steel','stainless'],
     f1:'Food grade stainless steel — 39cm x 48cm large size',
     f2:'Non-porous hai bacteria nahi lagta, scratch-proof, easy to clean — paani se dho lo bas',
     desc:'Wooden boards ki tarah bacteria nahi absorb karta. Easy to clean — paani se dho lo bas. Kitchen mein sabzi, gosht sab kaat sakte ho safely.' },

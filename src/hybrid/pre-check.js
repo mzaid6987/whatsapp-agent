@@ -124,7 +124,26 @@ function preCheck(message, currentState, collected, state) {
     const quotedProduct = msg.match(/["""]([^"""]+)["""]/);
     if (quotedProduct) {
       const productName = quotedProduct[1].trim();
-      const product = detectProduct(productName);
+      let product = detectProduct(productName);
+      // Fallback: if detectProduct fails, try matching against product names directly
+      // Website sends full product name like "Stainless Steel Cutting Board Large Size (39cm by 48cm)"
+      if (!product) {
+        const cleanName = productName.replace(/\([^)]*\)/g, '').trim().toLowerCase(); // strip (39cm by 48cm)
+        const { PRODUCTS } = require('./data');
+        for (const p of PRODUCTS) {
+          if (cleanName.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(cleanName)) {
+            product = p;
+            break;
+          }
+          // Also check if most words in product name appear in the input
+          const pWords = p.name.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+          const matchCount = pWords.filter(w => cleanName.includes(w)).length;
+          if (matchCount >= pWords.length * 0.6 && matchCount >= 2) {
+            product = p;
+            break;
+          }
+        }
+      }
       if (product) {
         return { intent: 'product_selected', extracted: { product, source: 'website_referral' } };
       }
