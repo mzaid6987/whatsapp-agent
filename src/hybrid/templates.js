@@ -266,7 +266,7 @@ const T = {
     "{honorific}, quality ki fikar mat karein 😊 Customers satisfied hain. COD hai, pehle check karein phir payment. 7 din exchange guarantee.",
   ],
   TRUST_GENERAL: [
-    "{honorific}, paisa delivery ke waqt dena hai 💵 7 din exchange guarantee ✅ FREE delivery 🚚 Aap check karke paisa dein.",
+    "{honorific}, paisa delivery ke waqt dena hai 💵 Parcel khol ke check kar sakte hain rider ke saamne — pehle check, phir payment ✅ 7 din exchange guarantee bhi hai 🚚",
   ],
 
   // ==========================================
