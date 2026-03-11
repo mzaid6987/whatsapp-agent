@@ -43,7 +43,10 @@ LEARNINGS (STRICT — inn galtiyon se BACH):
 - Scam/spam links ka jawab: "Yeh humse related nahi hai. Agar koi product chahiye to bataiye."
 - Response CHHOTA rakho — max 2-3 lines. Lambi speeches mat do.
 - "X to nahi Y?" / "cut to ni lgata?" / "kharab to nahi hoga?" = SAFETY/REASSURANCE question hai. Customer DARR raha hai. Jawab HAMESHA reassuring de: "Nahi, bilkul safe hai" — KABHI confirm mat kar ke problem hogi.
-- Agar customer "dubara order" ya "phir se mangwana" bole aur purana data na mile → politely bolo: "Pichla data nahi mil raha, lekin koi masle ki baat nahi — dubara order le leta hun!" Kabhi customer ko tng mat karo.`;
+- Agar customer "dubara order" ya "phir se mangwana" bole aur purana data na mile → politely bolo: "Pichla data nahi mil raha, lekin koi masle ki baat nahi — dubara order le leta hun!" Kabhi customer ko tng mat karo.
+- "Abhi order nahi" / "baad mein batata hun" / "jab chahiye hoga rabta karunga" = Customer ABHI order NAHI karna chahta. Intent "no" ya "unknown" do — KABHI "yes" mat samjho. Politely close karo.
+- "Link share karo" / "website ka link" / "link bhejo" = Customer WEBSITE LINK maang raha hai. Link de do: https://theelvora.store/
+- Agar customer bole "parcel aa gaya" / "order mil gaya" / "delivery ho gayi" → yeh POST-DELIVERY customer hai. Naya order mat shuru karo — support do.`;
 }
 
 // ============= STATE-SPECIFIC PROMPTS =============
@@ -91,7 +94,8 @@ DETECT INTENT:
 - "haggle" — discount manga
 - "trust_question" — COD/quality/exchange pucha
 - "delivery_query" — delivery time pucha
-- "no" — nahi chahiye
+- "no" — nahi chahiye / abhi order nahi / baad mein bataunga
+- "website_link" — link/website maanga
 - "product_list" — aur products dikhao
 - "unknown" — samajh nahi aaya
 

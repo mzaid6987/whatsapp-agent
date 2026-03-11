@@ -767,6 +767,25 @@ function preCheck(message, currentState, collected, state) {
     if (isNo(l)) return { intent: 'no' };
   }
 
+  // 6z. WEBSITE/LINK REQUEST — "link bhejo", "website ka link", "link share karo"
+  const isLinkRequest = /\b(link|website|web\s*site|url)\s*(share|bhej|de|do|send|dedo|bhejo|kar\s*do|batao|btao|dikhao)\b/i.test(l) ||
+    /\b(share|bhej|de|send|dedo|bhejo)\s*(link|website)\b/i.test(l) ||
+    /\b(apn[ia]|hamari|shop\s*ki|store\s*ki)\s*(website|link|site)\b/i.test(l);
+  if (isLinkRequest) {
+    return { intent: 'website_link' };
+  }
+
+  // 6z2. "ABHI ORDER NAHI" — customer explicitly refuses to order right now
+  // "abhi nahi", "abhi order nahi", "baad mein", "jab chahiye hoga batata hun", "filhal nahi"
+  const isNoOrder = /\b(abhi|ab|filhal|filhaal)\s*(koi|kio|kuch)?\s*(order|zaroorat|zarurat)?\s*(nahi|nhi|ni|na|nai)\b/i.test(l) ||
+    /\b(abhi|ab)\s*(nahi|nhi|ni|nai)\s*(chahiye|chaiye|chaye)\b/i.test(l) ||
+    /\b(baad|bad)\s*(mein|me|mai|m)\s*(bata|contact|rabta|call)\b/i.test(l) ||
+    /\b(jab\s*(chahiye|chaiye|chaye|zaroorat|zarurat)\s*(hog[ai]|ho)\s*(to|toh?)?\s*(bata|contact|rabta))\b/i.test(l) ||
+    /\b(jab\s*(order|zaroorat)\s*(chaya|chahiye|hog[ai])\s*(to|toh?)?\s*(rabta|contact|bata))\b/i.test(l);
+  if (isNoOrder && !['IDLE', 'GREETING'].includes(currentState)) {
+    return { intent: 'no_order_now' };
+  }
+
   // 7. Order intent WITHOUT product mention (product already set in state)
   // "order kardo", "theek hai kardo", "haan order kar do", "theek hai haan karo" etc.
   if (['PRODUCT_INQUIRY', 'HAGGLING'].includes(currentState)) {

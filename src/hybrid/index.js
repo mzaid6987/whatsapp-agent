@@ -2898,6 +2898,24 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       return { reply, state: state.current };
     }
 
+    case 'website_link': {
+      const honorific = getHonorific(state.collected.name, state.gender);
+      let reply = `${state.collected.name || ''} ${honorific}, hamari website ka link yeh hai: https://theelvora.store/ 🌐`.trim();
+      if (state.current.startsWith('COLLECT_')) {
+        const reask = askNextField(state, storeName);
+        if (reask) reply += '\n\n' + reask.reply;
+      } else {
+        reply += '\nKoi product pasand aaye to batayein! 😊';
+      }
+      return { reply, state: state.current };
+    }
+
+    case 'no_order_now': {
+      const honorific = getHonorific(state.collected.name, state.gender);
+      const reply = `${state.collected.name || ''} ${honorific}, koi baat nahi — jab bhi chahein rabta kar lein! Hamari website bhi dekh sakte hain: https://theelvora.store/ 😊`.trim();
+      return { reply, state: 'IDLE' };
+    }
+
     case 'product_reassurance': {
       const honorific = getHonorific(state.collected.name, state.gender);
       const pName = state.product ? state.product.short : 'yeh product';
