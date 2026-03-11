@@ -255,4 +255,50 @@ function saveIncomingMedia(buffer, type, phone, mimeType) {
   return filename;
 }
 
-module.exports = { transcribeVoice, analyzeImage, downloadMedia, saveIncomingMedia };
+/**
+ * Generate a voice note from text using OpenAI TTS API.
+ * Saves as mp3 in uploads/media/ and returns the filename.
+ * @param {string} text — Text to convert to speech
+ * @param {string} openaiApiKey — OpenAI API key
+ * @param {object} options — { voice: 'nova', speed: 1.0 }
+ * @returns {Promise<string>} filename (e.g. "tts_1741234567890.mp3")
+ */
+async function generateVoiceNote(text, openaiApiKey, options = {}) {
+  const openai = getOpenAI(openaiApiKey);
+  const voice = options.voice || 'nova'; // nova = friendly female voice (fits Zoya persona)
+  const speed = options.speed || 1.0;
+  const MEDIA_DIR = path.join(__dirname, '../../uploads/media');
+  if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR, { recursive: true });
+
+  const filename = `tts_${Date.now()}.mp3`;
+  const filePath = path.join(MEDIA_DIR, filename);
+
+  const response = await openai.audio.speech.create({
+    model: 'tts-1',
+    voice,
+    input: text,
+    speed,
+    response_format: 'mp3',
+  });
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  fs.writeFileSync(filePath, buffer);
+  console.log(`[TTS] Generated voice note: ${filename} (${buffer.length} bytes, voice: ${voice})`);
+
+  // Cleanup old TTS files (older than 24h) to prevent disk fill
+  try {
+    const files = fs.readdirSync(MEDIA_DIR).filter(f => f.startsWith('tts_') && f.endsWith('.mp3'));
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    for (const f of files) {
+      const ts = parseInt(f.replace('tts_', '').replace('.mp3', ''), 10);
+      if (ts && ts < cutoff) {
+        fs.unlinkSync(path.join(MEDIA_DIR, f));
+        console.log(`[TTS] Cleaned up old file: ${f}`);
+      }
+    }
+  } catch (e) { /* cleanup errors are non-critical */ }
+
+  return filename;
+}
+
+module.exports = { transcribeVoice, analyzeImage, downloadMedia, saveIncomingMedia, generateVoiceNote };

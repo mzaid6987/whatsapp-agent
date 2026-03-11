@@ -732,6 +732,16 @@ async function webhookHandler(req, res) {
       }
     }
 
+    // Voice reply needed — notify admin panel to record and send voice note
+    if (result._needs_voice_reply) {
+      _broadcast({
+        type: 'voice_reply_needed',
+        conversationId: result.db_conversation_id,
+        phone: fromPhone,
+        phoneNumberId,
+      });
+    }
+
     // Handle batch media — send videos for multiple products AFTER text reply
     // (product list text goes first, then all videos follow)
     if (result._media_batch && result._media_batch.length > 0) {

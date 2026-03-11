@@ -1516,10 +1516,27 @@ app.post('/api/conversations/:id/send-media', requireAuth, express.raw({ type: '
     if (!parts.media?.buffer) return res.status(400).json({ error: 'No file uploaded' });
     if (!['image', 'video', 'audio'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
-    const ext = path.extname(parts.media.filename || '') || '.bin';
-    const mediaFilename = `admin_${Date.now()}${ext}`;
-    const filePath = path.join(CHAT_MEDIA_DIR, mediaFilename);
+    let ext = path.extname(parts.media.filename || '') || '.bin';
+    let mediaFilename = `admin_${Date.now()}${ext}`;
+    let filePath = path.join(CHAT_MEDIA_DIR, mediaFilename);
     fs.writeFileSync(filePath, parts.media.buffer);
+
+    // Convert webm audio → ogg for WhatsApp compatibility (same Opus codec, different container)
+    if (type === 'audio' && ext === '.webm') {
+      try {
+        const { execSync } = require('child_process');
+        const oggFilename = mediaFilename.replace('.webm', '.ogg');
+        const oggPath = path.join(CHAT_MEDIA_DIR, oggFilename);
+        execSync(`ffmpeg -i "${filePath}" -c:a libopus -b:a 64k "${oggPath}" -y`, { timeout: 15000 });
+        try { fs.unlinkSync(filePath); } catch (e) {} // remove webm
+        mediaFilename = oggFilename;
+        filePath = oggPath;
+        console.log(`[MEDIA] Converted webm → ogg: ${oggFilename}`);
+      } catch (ffErr) {
+        // ffmpeg not available — try serving webm directly (WhatsApp may accept it)
+        console.warn(`[MEDIA] ffmpeg conversion failed (${ffErr.message}) — sending webm as-is`);
+      }
+    }
 
     const conv = conversationModel.findById(convId);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });

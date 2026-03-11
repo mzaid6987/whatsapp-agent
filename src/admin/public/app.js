@@ -354,17 +354,20 @@ async function openChat(chatId) {
   const chatInput = document.getElementById('chatInput');
   const sendBtn = document.getElementById('chatSendBtn');
   const attachBtn = document.getElementById('chatAttachBtn');
+  const micBtn = document.getElementById('chatMicBtn');
   if (conv.needs_human) {
     chatInput.disabled = false;
     chatInput.placeholder = 'Type reply as human agent...';
     sendBtn.disabled = false;
     attachBtn.disabled = false;
+    if (micBtn) micBtn.disabled = false;
     inputArea.classList.remove('disabled');
   } else {
     chatInput.disabled = true;
     chatInput.placeholder = 'Bot handling this chat...';
     sendBtn.disabled = true;
     attachBtn.disabled = true;
+    if (micBtn) micBtn.disabled = true;
     inputArea.classList.add('disabled');
   }
 
@@ -939,6 +942,124 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ---- VOICE RECORDING (admin sends voice note to customer) ----
+let _mediaRecorder = null;
+let _audioChunks = [];
+let _isRecording = false;
+let _recordingTimer = null;
+let _recordingStartTime = null;
+
+async function toggleVoiceRecording() {
+  if (_isRecording) {
+    stopVoiceRecording();
+  } else {
+    startVoiceRecording();
+  }
+}
+
+async function startVoiceRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    _audioChunks = [];
+    _mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+
+    _mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) _audioChunks.push(e.data);
+    };
+
+    _mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(_audioChunks, { type: 'audio/webm' });
+      if (blob.size > 500) { // ignore very short accidental recordings
+        await sendVoiceNote(blob);
+      }
+      resetMicUI();
+    };
+
+    _mediaRecorder.start();
+    _isRecording = true;
+    _recordingStartTime = Date.now();
+
+    // Update UI
+    const micBtn = document.getElementById('chatMicBtn');
+    if (micBtn) {
+      micBtn.style.color = '#e53e3e';
+      micBtn.title = 'Recording... Click to stop & send';
+      micBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="#e53e3e" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+    }
+
+    // Show timer
+    const inputEl = document.getElementById('chatInput');
+    if (inputEl) {
+      inputEl._origPlaceholder = inputEl.placeholder;
+      inputEl.placeholder = '🔴 Recording... 0:00';
+      _recordingTimer = setInterval(() => {
+        const secs = Math.floor((Date.now() - _recordingStartTime) / 1000);
+        const m = Math.floor(secs / 60);
+        const s = String(secs % 60).padStart(2, '0');
+        inputEl.placeholder = `🔴 Recording... ${m}:${s}`;
+      }, 1000);
+    }
+
+    // Auto-stop after 2 minutes
+    setTimeout(() => { if (_isRecording) stopVoiceRecording(); }, 120000);
+
+  } catch (err) {
+    alert('Microphone access denied. Browser mein mic permission allow karein.');
+    console.error('[MIC] Error:', err);
+  }
+}
+
+function stopVoiceRecording() {
+  if (_mediaRecorder && _mediaRecorder.state === 'recording') {
+    _mediaRecorder.stop();
+    _isRecording = false;
+    if (_recordingTimer) clearInterval(_recordingTimer);
+  }
+}
+
+function resetMicUI() {
+  const micBtn = document.getElementById('chatMicBtn');
+  if (micBtn) {
+    micBtn.style.color = '#666';
+    micBtn.title = 'Record voice note';
+    micBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+  }
+  const inputEl = document.getElementById('chatInput');
+  if (inputEl && inputEl._origPlaceholder) {
+    inputEl.placeholder = inputEl._origPlaceholder;
+  }
+}
+
+async function sendVoiceNote(blob) {
+  if (!currentChatId) return;
+  const micBtn = document.getElementById('chatMicBtn');
+  if (micBtn) { micBtn.disabled = true; micBtn.innerHTML = '⏳'; }
+
+  try {
+    const formData = new FormData();
+    formData.append('media', blob, 'voice-note.webm');
+    formData.append('type', 'audio');
+    const res = await fetch(`/api/conversations/${currentChatId}/send-media`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    });
+    const result = await res.json();
+    if (result?.success) {
+      loadChats();
+      openChat(currentChatId);
+    } else {
+      alert('Voice note send failed: ' + (result?.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    resetMicUI();
+    if (micBtn) micBtn.disabled = false;
+  }
+}
+
 // ---- LOAD SETTINGS (for bot status) ----
 async function loadSettings() {
   const settings = await api('/api/settings');
@@ -962,6 +1083,21 @@ function connectWebSocket() {
       if (data.type === 'new_message') {
         _smartRefreshChatList();
         if (currentChatId) _smartAppendMessages(currentChatId);
+      }
+      if (data.type === 'voice_reply_needed') {
+        // Customer asked for voice message — flash mic button + notification
+        if (currentChatId === data.conversationId) {
+          const micBtn = document.getElementById('chatMicBtn');
+          if (micBtn) {
+            micBtn.style.color = '#e53e3e';
+            micBtn.style.animation = 'pulse-mic 1s infinite';
+            micBtn.title = '⚠️ Customer ne voice note manga hai — record karein!';
+          }
+        }
+        // Show browser notification
+        if (Notification.permission === 'granted') {
+          new Notification('🎤 Voice Note Mangaya!', { body: 'Customer voice message chahta hai. Admin panel mein mic button press karein.', tag: 'voice-' + data.conversationId });
+        }
       }
       if (data.type === 'msg_status') {
         const bubble = document.querySelector(`.msg-bubble[data-wa-id="${data.wa_message_id}"]`);

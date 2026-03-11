@@ -853,7 +853,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       /\b(awaaz|awaz|aawaz)\s*(mein|me|mai|m)\s*(bata[od]?o?|bhej[od]?o?|bol[od]?o?)\b/i.test(cl) ||
       /\b(voice\s*(msg|message|note)|voice)\s*(chahiye|chahie|chaiye|mangta|mangti)\b/i.test(cl);
     if (isVoiceMsgReq) {
-      const reply = 'Okay thora sabr karein please, me ap ko message karti hu 🙏';
+      const reply = 'Okay thora sabr karein please, me ap ko voice message karti hu 🎤';
       state.messages.push({ role: 'user', content: message });
       state.messages.push({ role: 'assistant', content: reply });
       if (state.messages.length > 10) state.messages = state.messages.slice(-10);
@@ -872,6 +872,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         collected: { ...state.collected },
         source: 'template',
         intent: 'voice_msg_request',
+        _needs_voice_reply: true, // Flag for admin panel — show voice recording prompt
         tokens_in: 0, tokens_out: 0,
         response_ms: Date.now() - startTime,
         db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
