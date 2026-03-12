@@ -184,7 +184,9 @@ function preCheck(message, currentState, collected, state) {
     /\b(bol\s*ke|bol\s*kr|bolke|bolkr)\s*(bata[od]?o?|smjha[od]?o?|samjha[od]?o?)\b/i.test(l) ||
     /\b(awaaz|awaz|aawaz)\s*(mein|me|mai|m)\s*(bata[od]?o?|bhej[od]?o?|bol[od]?o?)\b/i.test(l) ||
     /\b(voice\s*(msg|message|note)|voice)\s*(chahiye|chahie|chaiye|mangta|mangti)\b/i.test(l);
-  if (isVoiceMsgReq) {
+  // Guard: "rider ko call kar lena" in COLLECT_ADDRESS = accept address, not voice request
+  const isRiderCall = /\b(rider|courier|delivery\s*boy|delivery\s*man)\s*(ko|k)\b/i.test(l) && /\b(call|kall|col)\b/i.test(l);
+  if (isVoiceMsgReq && !(isRiderCall && currentState === 'COLLECT_ADDRESS')) {
     return { intent: 'voice_msg_request' };
   }
 
@@ -342,7 +344,7 @@ function preCheck(message, currentState, collected, state) {
     const hasYesWord = /\b(ha+n|ji|yes|yup|ik|ok[zgky]?|haan|hn+|g|k|shi|sahi|sa[ih]i?|theek|thik|thk|tik|bilkul|done)\b/i.test(l);
     // Exclude "no" when it's part of "no." / "no " + digit (number abbreviation like "chak no 32")
     const noWordCleaned = l.replace(/\bno\.?\s*\d/gi, '___');
-    const hasNoWord = /\b(nahi|nhi|no|nope|na+h|mat|cancel)\b/i.test(noWordCleaned);
+    const hasNoWord = /\b(nahi|nhi|nhe|no|nope|na+h|mat|cancel)\b/i.test(noWordCleaned);
     // "krlungi/karlunga/karlungi/krlnga" = "I'll do it" = YES (receive kar lungi/lunga)
     const hasWillDo = /\b(kr\s*lun?g[ia]|kar\s*lun?g[ia]|receive\s*kr|receive\s*kar)\b/i.test(l);
     // "Nahi yahi number hai" / "nahi isi pe" / "no this only" / "only this no" = SAME phone, NOT rejection
@@ -903,7 +905,9 @@ function preCheck(message, currentState, collected, state) {
     const isEnglishNonName = words.length >= 2 && ENGLISH_NON_NAME_WORDS.test(l);
     // Single common English words that are NOT names (but could pass looksLikeName)
     const isSingleEnglishWord = words.length === 1 && /^(yes|no|ok|hi|hey|hello|bye|please|thanks|sorry|sure|fine|good|nice|great|love|like|want|need|help|send|done|wait|stop|start|open|close|free|new|old|big|small|fast|slow|easy|hard|real|true|best|last|next|same|other|much|more|less|just|only|even|still|also|back|down|here|there|away|home|long|full|high|low|off|sir|madam|bro|dear|boss|dude|miss|mam|available|required)$/i.test(l);
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isGreeting && !isProductPhrase && !isGibberish && !isComboPhrase && !isUrduPhrase && !isEnglishNonName && !isSingleEnglishWord) {
+    // Urdu connector words — "rani ke bachon", "ap ka order" = phrases, NOT names
+    const hasUrduConnector = words.length >= 2 && /\b(ke|ki|ka|ko|ne|se|mein|par|pe|wala|wali|wale|bhi|toh?|hai|he|aur|ya)\b/i.test(l);
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isGreeting && !isProductPhrase && !isGibberish && !isComboPhrase && !isUrduPhrase && !isEnglishNonName && !isSingleEnglishWord && !hasUrduConnector) {
       // Strip "Name"/"Naam" prefix — "Name Arshad Luck" → "Arshad Luck"
       let nameWords = words;
       if (nameWords.length >= 2 && /^(name|naam|naam)$/i.test(nameWords[0])) {
@@ -928,7 +932,7 @@ function preCheck(message, currentState, collected, state) {
     const currentCity = (collected.city || '').toLowerCase();
     const allCities = extractAllCities(msg);
     // Method 1: Negation + new city — "nahi X hai", "X nahi Y hai", "galat city"
-    const hasNegation = /\b(nhi|nahi|na|ni|nai|galat|ghalat|wrong|change|correct)\b/i.test(l);
+    const hasNegation = /\b(nhi|nahi|nhe|na|ni|nai|galat|ghalat|wrong|change|correct)\b/i.test(l);
     if (hasNegation && allCities.length > 0) {
       const newCity = allCities.find(c => c.toLowerCase() !== currentCity);
       if (newCity) {
@@ -978,7 +982,9 @@ function preCheck(message, currentState, collected, state) {
       /\b(rider\s*(call|puch|samajh)|aa\s*k[ae]r?\s*(puch|dekh|mil))\b/i.test(l) ||
       /\b(just\s*likh|sirf\s*likh|likh\s*d[eoy]|likh\s*dy)\b/i.test(l) ||
       /\b(aj[ay]+[ae]?g[ay]?|pohanch|pohch|aa?\s*ja[ey]+g[ay]?|mil\s*ja[ey]+g[ay]?)\b/i.test(l);
-    if (isAlreadyTold) {
+    // Guard: "kab tak aayega" / "kitne din" = delivery time question, NOT address_enough
+    const isDeliveryTimeQ = /\b(kab\s*tak|kitne?\s*din|kitna\s*time|kab\s*aa|kab\s*mil|kitne?\s*days?)\b/i.test(l);
+    if (isAlreadyTold && !isDeliveryTimeQ) {
       return { intent: 'address_enough' };
     }
   }
@@ -1219,7 +1225,7 @@ function preCheck(message, currentState, collected, state) {
       if (isCancelReq) return { intent: 'cancel_order' };
     }
     const hasYesWord = /\b(ha+n|ji|yes|yup|shi|sahi|sa[ih]i?|bilkul|confir\w*|ik|ok|done|theek|thik|thk|tik|zaroor|kr\s*do|kardo|krdo|kar\s*do|bhej\s*d[oae]|bhejd[oae]|bhij\s*d[oae]|bhijd[oae]|bhaj\s*d[oae]|bhajd[oae]|bhwj\s*d[oae]|bhwjd[oae]|bhjdo|bhjd[oae])\b/i.test(l);
-    const hasNoWord = /\b(nahi|nhi|no|galat|nope|na+h|mat|cancel|rehne\s*do)\b/i.test(l);
+    const hasNoWord = /\b(nahi|nhi|nhe|no|galat|nope|na+h|mat|cancel|rehne\s*do)\b/i.test(l);
     if (hasYesWord && !hasNoWord) return { intent: 'yes' };
     if (hasNoWord && !hasYesWord) return { intent: 'no' };
     if (isYes(l)) return { intent: 'yes' };
@@ -1724,9 +1730,10 @@ function preCheck(message, currentState, collected, state) {
       if (extracted.address_text) {
         // Strip greetings at start
         extracted.address_text = extracted.address_text
-          // Strip greetings
-          .replace(/^(assalam[uo]?\s*al[ae]ikum|aoa|salam|w[ao]l[ae]ikum\s*assalam|hello|hi)\s*[,.\s]*/gi, '')
-          .replace(/^(syed|sir|madam|bhai|yaar|sahab|sahib|janab)\s*[,.\s]*/gi, '')
+          // Strip greetings (may be chained: "Hello assalamu alaikum" — strip iteratively)
+          .replace(/^(hello|hi|hey)\s*[,.\s]*/gi, '')
+          .replace(/^(assalam[uo]?\s*al[ae]ikum|aoa|salam|w[ao]l[ae]ikum\s*assalam)\s*[,.\s]*/gi, '')
+          .replace(/^(syed|sir|madam|bhai|yaar|sahab|sahib|janab|bhai\s*jaan)\s*[,.\s]*/gi, '')
           // Strip voice filler — "mujhe aik X chahiye", "aik A1 machine cheez address hai"
           .replace(/^(mujhe|muje|mjhe|mje)\s+.{0,40}?(hai|he|h|chahiye|chahea)\b[.,\s]*/gi, '')
           .replace(/^(aik|ek|1)\s+.{0,30}?(hai|he|h|chahiye|chahea)\b[.,\s]*/gi, '')
@@ -1807,7 +1814,7 @@ function preCheck(message, currentState, collected, state) {
       const isCodQuestion = /\b(payment|paisa|paise|paisy|pese|cod|cash\s*on)\b/i.test(l);
       if (isYes(l) && !isCodQuestion) return { intent: 'show_products' };
       const hasYesWord = /\b(ha+n|ji|yes|ok|haan|hn|hm+|g|dikhao|dikhado|batao|dekhna|dekhne|order|mangta|manga|chahiye|chahie|krna|karna|lena)\b/i.test(l);
-      const hasNoWord = /\b(nahi|nhi|no|nope|na+h|mat|cancel)\b/i.test(l);
+      const hasNoWord = /\b(nahi|nhi|nhe|no|nope|na+h|mat|cancel)\b/i.test(l);
       if (hasYesWord && !hasNoWord && !isCodQuestion) return { intent: 'show_products' };
       if (hasNoWord && !hasYesWord) return { intent: 'greeting_no' };
     }

@@ -104,7 +104,7 @@ const CITY_AREAS = {
       'baldia sector 5','baldia sector 6','baldia sector 7',
       'saeedabad','ittehad town','islam nagar','rasheedabad',
       'kemari','manora','shershah','machar colony','jackson','west wharf','maripur','hawks bay',
-      'mominabad','moosa colony','haroonabad','ghousia colony',
+      'mominabad','moosa colony','ghousia colony',
       // === Malir ===
       'malir','malir city','malir cantt','malir kala board','saudabad','ghazi town','malir extension',
       'malir halt','quaidabad','sherpao colony','jinnah garden','jinnah square','dar us salam','naval colony malir',
@@ -2734,9 +2734,11 @@ function matchArea(input, city) {
   }
 
   // Partial match — input contains area name (word-boundary to avoid "chorangi" → "orangi")
+  // Generic infrastructure words should NOT match area names when standalone
+  const GENERIC_MATCH_WORDS = new Set(['street','road','colony','block','sector','phase','town','nagar','gali','mohalla','garden','park','gate','market','bazar','bazaar','chowk','scheme','plot','house','flat','floor','near','pass','paas']);
   for (const area of data.areas) {
     const areaRe = new RegExp('\\b' + area.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');
-    if (areaRe.test(l) || (l.length <= area.length + 3 && area.includes(l))) {
+    if (areaRe.test(l) || (l.length <= area.length + 3 && area.includes(l) && !GENERIC_MATCH_WORDS.has(l) && l.length >= area.length * 0.6)) {
       return area.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     }
   }
@@ -2770,7 +2772,7 @@ function matchArea(input, city) {
   // Keyword match: key word of multi-word area found as standalone word in input
   // E.g., "johar" in input → matches "johar town", "gulberg" → "gulberg"
   // Skip generic words (town, colony, etc.) and city name to avoid false matches
-  const GENERIC_AREA_WORDS = new Set(['town','city','nagar','abad','pura','ganj','gunj','road','scheme','phase','sector','block','colony','society','housing','extension','ext','north','south','east','west','new','old','chak','village','gaon','goth','killi','dhoke','mauza','main','gate','market','bazar','bazaar','chowk','mohalla','mohallah','naya','purana','pakistan','india','afghanistan','iran','china','bangladesh','shah','haji','mian','peer','pir','khan','malik','syed','model','garden','park','view','hills','heights','point','lane','plaza','center','centre']);
+  const GENERIC_AREA_WORDS = new Set(['town','city','nagar','abad','pura','ganj','gunj','road','street','scheme','phase','sector','block','colony','society','housing','extension','ext','north','south','east','west','new','old','chak','village','gaon','goth','killi','dhoke','mauza','main','gate','market','bazar','bazaar','chowk','mohalla','mohallah','naya','purana','pakistan','india','afghanistan','iran','china','bangladesh','shah','haji','mian','peer','pir','khan','malik','syed','model','garden','park','view','hills','heights','point','lane','plaza','center','centre','ghulam','muhammad','ahmed','mohammad']);
   const cityWord = city.toLowerCase().replace(/[-\s]/g, '');
   const inputWords = l.split(/\s+/);
   for (const area of data.areas) {

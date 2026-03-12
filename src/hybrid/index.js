@@ -1704,7 +1704,9 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const isProductName = /\b(machine|mashin|trimmer|cutter|remover|nebulizer|duster|massager|masajar|cotton|vegetable|facial|hair|knee|board|cutting|mehngi|sasti|itni|kitne|muje|mjhe|gunjaish)\b/i.test(nameL);
       // Guard: reject gibberish (repeated chars)
       const isGibberishName = /(.)\1{2,}/i.test(name) || name.split(/\s+/).some(w => w.length > 1 && new Set(w.toLowerCase()).size === 1);
-      if (name.length >= 2 && name.length <= 50 && !isQuestionFragment && !hasEnglishNonName && !isUrduConversational && !isGreetingName && !isProductName && !isGibberishName) {
+      // Guard: reject Urdu phrases with connector words (ke/ki/ka/ko/ne/se) — "rani ke bachon" is a phrase, not a name
+      const hasUrduConnector = nameWords.length >= 2 && /\b(ke|ki|ka|ko|ne|se|mein|par|pe|wala|wali|wale|bhi|toh?|hai|he|aur|ya)\b/i.test(nameL);
+      if (name.length >= 2 && name.length <= 50 && !isQuestionFragment && !hasEnglishNonName && !isUrduConversational && !isGreetingName && !isProductName && !isGibberishName && !hasUrduConnector) {
         state.collected.name = name;
       }
     }
