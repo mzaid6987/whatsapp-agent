@@ -1696,10 +1696,10 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const nameWords = name.split(/\s+/);
       const ENGLISH_NON_NAME = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|much|also|too|only|went|want|wanted|go|going|gone|come|came|coming|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|does|make|made|take|took|tell|told|know|knew|see|saw|look|let|try|put|run|set|keep|show|find|call|feel|think|said|please|plz|fine|good|bad|nice|great|here|there|from|into|will|can|may|should|would|could|must|shall|required|available|sir|madam|brother|ok|okay)\b/i;
       const hasEnglishNonName = nameWords.length >= 2 && ENGLISH_NON_NAME.test(nameL);
-      // Guard: reject Urdu conversational phrases
-      const isUrduConversational = /\b(chahiy[ae]|milj[aie]|miljiengy|milengy|ayenge|jayenge|hojaye|krwao|mangwao|bhejdo|deliver|delivery|easily|easyli|dono\s+sath)\b/i.test(nameL);
-      // Guard: reject greetings
-      const isGreetingName = /^(assalam|wa\s*alaikum|salam|aoa|hello|hi|hey)\b/i.test(nameL);
+      // Guard: reject Urdu conversational phrases / order intent phrases
+      const isUrduConversational = /\b(chahiy[ae]|milj[aie]|miljiengy|milengy|ayenge|jayenge|hojaye|krwao|mangwao|bhejdo|deliver|delivery|easily|easyli|dono\s+sath|bhej\s*d[eao]i?n?|bhejo|laga\s*d[oae]|kr\s*d[oae]|kardo|krdo|book\s*kr|order\s*kr|mangwa\s*d[oae])\b/i.test(nameL);
+      // Guard: reject greetings (including full phrases like "Assalamu Alaikum")
+      const isGreetingName = /^(assalam|assalamu?\s*alaikum|wa\s*alaikum|salam|aoa|hello|hi|hey|g\s+bhej|ji\s+bhej)\b/i.test(nameL);
       // Guard: reject product-related words
       const isProductName = /\b(machine|mashin|trimmer|cutter|remover|nebulizer|duster|massager|masajar|cotton|vegetable|facial|hair|knee|board|cutting|mehngi|sasti|itni|kitne|muje|mjhe|gunjaish)\b/i.test(nameL);
       // Guard: reject gibberish (repeated chars)
