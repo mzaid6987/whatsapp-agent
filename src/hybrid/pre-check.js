@@ -1246,7 +1246,11 @@ function preCheck(message, currentState, collected, state) {
     /\bdelivery\s*(kitne?|kitni)\s*(pais[ey]|rupee?|rs)?\s*[?؟]?\s*$/i.test(l) ||
     /\bdelivery\s*\?\s*$/i.test(l) ||
     /\bdelivery\s+chag/i.test(l);
-  if (isDeliveryChargeQ) {
+  // Skip delivery charge detection if this looks like a bulk info message
+  // e.g. "Sheikh Shahzad\nHouse R-165\nkarachi\nCell phone 03113225358\nIncluding delivery charges"
+  // "Including delivery charges" is a STATEMENT, not a question — don't let it hijack bulk extraction
+  const isBulkMsg = msg.split(/\n/).filter(ln => ln.trim()).length >= 3 && extractPhone(msg) !== null && extractCity(msg) !== null;
+  if (isDeliveryChargeQ && !isBulkMsg) {
     return { intent: 'delivery_charge_question' };
   }
 
