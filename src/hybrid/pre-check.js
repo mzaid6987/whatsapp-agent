@@ -1009,6 +1009,12 @@ function preCheck(message, currentState, collected, state) {
     if (isQuestionMsg) {
       return null; // Let AI handle the question
     }
+    // Guard: Skip order intent phrases — "order krna hai", "confirm kardo", "haan bhejo" etc.
+    const isOrderIntent = /\b(order\s*kr|confirm\s*kr|confirm\s*kar|bhej\s*do|bhejo|mangwa\s*do|laga\s*do|place\s*order)\b/i.test(l) ||
+      /^(haan|han|ji|g|yes|ok|done|theek|confirm)\s*[.!]?\s*$/i.test(l);
+    if (isOrderIntent && msg.trim().split(/\s+/).length <= 5) {
+      return null; // Let AI handle as order intent, not address
+    }
 
     const ap = collected.address_parts || {};
     const city = collected.city || null;

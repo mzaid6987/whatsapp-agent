@@ -139,6 +139,7 @@ function confirmOrder(state, storeName, prefix = '') {
       }
       console.log('[Order] Saved:', oid);
     } catch (e) { console.error('[Order] DB save error:', e.message); }
+    state._saved_order_id = oid; // Prevent duplicate orders on re-confirmation
   }
 
   const vars = buildVars(state, storeName);
@@ -228,6 +229,22 @@ function handleTemplateState(message, state, storeName, preIntent) {
         const { buildAddressString: _buildAddr } = require('./extractors');
         const addrStr = _buildAddr(state.collected.address_parts, state.collected.city);
         state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
+      }
+      // Check for house number addition — "House nmbr M67", "ghar no 5", "flat 12"
+      // Detect when customer sends house number that wasn't captured or needs updating
+      const hasHouseKeyword = /\b(house|ghar|makan|flat|plot|unit|floor|room)\s*(no|nmbr|number|nomber|num|#)?\s*/i.test(l);
+      if (hasHouseKeyword && state.collected.address_parts) {
+        const { extractHouse: _exHouseOS } = require('./extractors');
+        const detHouseOS = _exHouseOS(message);
+        if (detHouseOS) {
+          state.collected.address_parts.house = detHouseOS;
+          const { buildAddressString: _buildAddrH } = require('./extractors');
+          const addrStrH = _buildAddrH(state.collected.address_parts, state.collected.city);
+          state.collected.address = state.collected.city ? addrStrH + ', ' + state.collected.city : addrStrH;
+          // Show updated summary
+          const smResultH = buildOrderSummary(state, storeName);
+          return { reply: smResultH.reply || smResultH + '\n\nSahi hai? ✅', state: 'ORDER_SUMMARY' };
+        }
       }
       // Check for city correction in ORDER_SUMMARY — "City Wah Cantt hai. Yes"
       // Customer may correct city while also confirming. Apply correction before confirming.
