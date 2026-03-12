@@ -136,7 +136,7 @@ function getHonorific(name, genderOverride) {
 
   // 4. Male pattern exceptions — check BEFORE female patterns
   // Names ending in "ullah" or "allah" are ALWAYS male (Fazalullah, Abdullah, Ataullah, Saifullah, etc.)
-  if (/(?:ullah|allah|uddin|ulhaq|ulmulk|ulislam|urrasheed|urrehman|urrahim)$/i.test(firstName)) return 'sir';
+  if (/(?:ullah?|allah?|uddin|ulhaq|ulmulk|ulislam|urrasheed|urrehman|urrahim)$/i.test(firstName)) return 'sir';
 
   // 4b. Secondary name check — check remaining parts for gender clues
   // e.g. "Lala Riaz Khan" — "Lala" unknown but "Riaz"/"Khan" = male

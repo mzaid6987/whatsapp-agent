@@ -9,7 +9,7 @@
  */
 
 const { fillTemplate } = require('./templates');
-const { validatePhone, extractCity, detectProduct, buildAddressString } = require('./extractors');
+const { validatePhone, extractCity, detectProduct, extractHouse, buildAddressString } = require('./extractors');
 const { PRODUCTS, UPSELL_MAP, getHonorific, deliveryTime, fmtPrice, productList } = require('./data');
 const { isYes, isNo } = require('./pre-check');
 const { getAreaSuggestions } = require('./city-areas');
@@ -291,6 +291,18 @@ function handleTemplateState(message, state, storeName, preIntent) {
         state.collected.phone = null;
         state.current = 'COLLECT_PHONE';
         return { reply: fillTemplate('CHANGE_PHONE', vars), state: 'COLLECT_PHONE' };
+      }
+      // House number correction in ORDER_SUMMARY — "house 19 hai", "1170d nahi 1190d hai"
+      // Update just the house part without wiping entire address
+      const houseCorrection = extractHouse(message);
+      if (houseCorrection && state.collected.address_parts) {
+        state.collected.address_parts.house = houseCorrection;
+        const addrStr = buildAddressString(state.collected.address_parts, state.collected.city);
+        state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
+        // Re-show order summary with corrected address
+        const smResult = buildOrderSummary(state, storeName);
+        state.current = smResult.state;
+        return { reply: `House number ${houseCorrection} update ho gaya ✅\n\n` + smResult.reply, state: smResult.state };
       }
       if (l.includes('address') || l.includes('pata')) {
         state.collected.address = null;
@@ -675,6 +687,12 @@ function handleTemplateState(message, state, storeName, preIntent) {
         state.current = 'PRODUCT_INQUIRY';
         const nextVars = buildVars(state, storeName);
         return { reply: fillTemplate('PRODUCT_INQUIRY', nextVars), state: 'PRODUCT_INQUIRY' };
+      }
+      // Generic product question without specific product — "yeh kitne ka hai?", "price batao"
+      const isProductQuestion = /\b(price|rate|qeemat|qimat|kitne?\s*ka|kitny?\s*ka|kitni\s*ki|kitna|kitne|features?|details?|batao|btao|chahiye|chahea|mangta|lena|order\s*krna|order\s*karna)\b/i.test(l);
+      if (isProductQuestion) {
+        state._thanked = false;
+        return { reply: `${getHonorific(state.collected.name)}, konsa product chahiye? Yeh available hain:\n\n${productList()}\n\nNumber ya naam bata dein 😊`, state: 'ORDER_CONFIRMED' };
       }
       return { reply: fillTemplate('AFTER_ORDER', vars), state: 'ORDER_CONFIRMED' };
     }

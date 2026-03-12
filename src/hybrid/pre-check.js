@@ -5,7 +5,7 @@
  * Handles: phone numbers, cities, regions, complaints, yes/no, product numbers
  */
 
-const { extractPhone, validatePhone, extractCity, extractAllCities, isRegion, detectProduct, detectAllProducts, detectRuralAddress, extractArea, extractHouse, extractStreet, extractLandmark } = require('./extractors');
+const { extractPhone, extractAllPhones, validatePhone, extractCity, extractAllCities, isRegion, detectProduct, detectAllProducts, detectRuralAddress, extractArea, extractHouse, extractStreet, extractLandmark } = require('./extractors');
 const { matchArea } = require('./city-areas');
 const { PRODUCTS } = require('./data');
 
@@ -72,7 +72,7 @@ function isComplaint(l) {
 
 // ============= YES / NO DETECTION =============
 function isYes(l) {
-  return /^(ha+n?|hm+|ji+|jee|g|yes+|yess+|yup|ik|o?k+a*y+|o?ki+|ok\s*ok|o?ok(ay|k|y)?|done|th[ie]*k|tik|sai|sahi|sa[ih]i?|bilkul|c[oa]n?f[iou]r?m(ed)?|comf[io]rm(ed)?|conf?rim(ed)?|zaroor|hn+|kr\s*do|kardo|krdo|kar\s*do|bhejwa?\s*d[oae]|bhijwa?\s*d[oae]|mangwa?\s*d[oae]|laga?\s*d[oae])\s*[.!]?\s*$/i.test(l);
+  return /^(ha+n?|hm+|ji+|jee|g|ge|yes+|yess+|yup|ik|o?k+a*y+|o?ki+|ok\s*ok|o?ok(ay|k|y)?|done|th[ie]*k|tik|sai|sahi|sa[ih]i?|bilkul|c[oa]n?f[iou]r?m(ed)?|comf[io]rm(ed)?|conf?rim(ed)?|zaroor|hn+|kr\s*do|kardo|krdo|kar\s*do|bhejwa?\s*d[oae]|bhijwa?\s*d[oae]|mangwa?\s*d[oae]|laga?\s*d[oae])\s*[.!]?\s*$/i.test(l);
 }
 
 function isNo(l) {
@@ -119,7 +119,9 @@ function preCheck(message, currentState, collected, state) {
   const OWN_DOMAINS = /\b(the)?(nureva|alvora|elvora|ruvenza|zenora|nuvenza|alvorashop|elvorastore|novenzashop)\.(shop|store)\b/i;
   const hasUrl = /https?:\/\/|www\.|\.com\b|\.online\b|\.site\b|\.pk\b|\.buzz\b|\.top\b|\.live\b|\.html\b|\.org\b|\.net\b|clkbitz|lnkbits/i.test(l);
   const isOwnDomain = OWN_DOMAINS.test(l);
-  if (hasUrl && !isOwnDomain && ['IDLE', 'GREETING'].includes(currentState)) {
+  // Don't flag as spam if message contains product-related words (customer sharing a link asking about product)
+  const hasProductContext = /\b(order|chahiye|chahie|mangta|bhej|lena|price|rate|kitna|kitne|kitni|product|milega|available|stock|trimmer|cutter|remover|nebulizer|duster|spray|yeh|ye|yahi|yehi|wala|wali)\b/i.test(l);
+  if (hasUrl && !isOwnDomain && ['IDLE', 'GREETING'].includes(currentState) && !hasProductContext) {
     return { intent: 'spam' };
   }
 
@@ -351,11 +353,20 @@ function preCheck(message, currentState, collected, state) {
   const complaint = isComplaint(l);
   const trust = TRUST_WORDS.test(l);
   const isQualityQuestion = /\b(to\s*nahi|toh?\s*nahi|nahi\s*ho|nhi\s*ho|nahi\s*na|hogi|hoga|jayega|jayegi|sakti|sakta)\b/i.test(l) && complaint;
+  // Question tone: "kya fake hai?", "ye kharab to nahi?", ends with ? — asking, not reporting
+  const isQuestionTone = complaint && !strongComplaint && (
+    /[?؟]\s*$/.test(l) ||
+    /^(kya|ye|yeh|ya|to)\b/i.test(l) ||
+    /\b(haina|hai\s*na|he\s*na|na\s*ho|hog[aie]|milega|chalega|chalegi|lag[ae]\s*ga|sakta|sakti|to\s*nahi|toh?\s*nahi)\b/i.test(l)
+  );
   // Strong complaint = clearly reporting an issue (past tense, active problem)
   // "sending damage", "not work", "broken hai", "kharab mila", "charger issue" etc.
   // "receive" alone is NOT a complaint — "call receive kar lunga" is normal. Only "receive nhi/nahi" is complaint.
   const strongComplaint = complaint && (/\b(sending|sent|mila|receive[d]?\s*(nahi|nhi|ni|nai)|not work|not fit|broken|damage[d]?\s*product|issue|problem|stopped|charger|band ho|chal nahi|chal nhi|chalt[ai]\s*(hi\s*)?(nahi|nhi|ni)|work\s*nahi|work\s*nhi|working\s*nahi|working\s*nhi|sahi\s*work|sahi\s*kam|sahi\s*nahi|hilta|missing|toota|tuta|kaam\s*ka\s*nahi|kaam\s*ka\s*nhi|kaat\s*nahi|kaat\s*nhi|kaat\s*saka|nuqsan|paise?\s*wapas|paisay?\s*wapas|ek\s*bhi\s*kaam|kisi\s*bhi?\s*kaam)\b/i.test(l) || isPastOrder);
   if (isQualityQuestion && !strongComplaint) {
+    return { intent: 'trust_question' };
+  }
+  if (isQuestionTone) {
     return { intent: 'trust_question' };
   }
   if (complaint && (!trust || strongComplaint)) {
@@ -461,7 +472,27 @@ function preCheck(message, currentState, collected, state) {
     // Check raw digit count first — catch too-long numbers BEFORE extractPhone truncates them
     const rawDigits = msg.replace(/[^\d]/g, '');
     if (/^0?3/.test(rawDigits) && rawDigits.length > 11) {
+      // Two numbers mashed together? Try extracting both
+      const allPhones = extractAllPhones(msg);
+      if (allPhones.length >= 2 && currentState === 'COLLECT_PHONE') {
+        const v1 = validatePhone(allPhones[0]);
+        const v2 = validatePhone(allPhones[1]);
+        if (v1.valid && v2.valid) {
+          return { intent: 'two_phones_given', extracted: { phone: v1.phone, delivery_phone: v2.phone } };
+        }
+      }
       return { intent: 'phone_invalid', extracted: { error: 'too_long', digits: rawDigits.length } };
+    }
+    // Check for two phone numbers in one message (e.g. "0321-1234567 ya 0300-9876543")
+    if (currentState === 'COLLECT_PHONE') {
+      const allPhones = extractAllPhones(msg);
+      if (allPhones.length >= 2) {
+        const v1 = validatePhone(allPhones[0]);
+        const v2 = validatePhone(allPhones[1]);
+        if (v1.valid && v2.valid) {
+          return { intent: 'two_phones_given', extracted: { phone: v1.phone, delivery_phone: v2.phone } };
+        }
+      }
     }
     const phone = extractPhone(msg);
     if (phone) {
@@ -898,7 +929,10 @@ function preCheck(message, currentState, collected, state) {
     // Short message (1-3 words) with no extraction and no refusal = likely area name or landmark
     // If we're waiting for area and message is short text → try as area name directly
     const wordCount = l.trim().split(/\s+/).length;
-    if (!foundAny && !isRefusal && wordCount <= 4 && /^[a-z\s]+$/i.test(l.trim())) {
+    // Garbage filter — common filler/question phrases that are NOT area names or landmarks
+    const isGarbageText = /\b(kya|batao|btao|batadu|btadu|samjh|rider|call|phone|aap|ap|tum|mujhe|mjhe|bus|bas|bilkul|theek|thik|ok|done|achaaa*|sir|madam|bhai|behen|yaar|haan|han|ji|jee|nahi|nhi|kaise|kaisy|kesy|bataye|btaye|krna|karna|krdo|kardo|suno|sunno|agay|peechy|idhar|udhar|wahan|yahan|kuch|koi|pta|pata|maloom|samajh|aya|aaya|gaya|raha|rahi|araha|arahe)\b/i.test(l) ||
+      /\b(order|delivery|deliver|product|price|payment|cod)\b/i.test(l);
+    if (!foundAny && !isRefusal && wordCount <= 4 && /^[a-z\s]+$/i.test(l.trim()) && !isGarbageText) {
       if (!ap.area) {
         // Short text during area step → assume it's area name
         parts.area = msg.trim();
@@ -1118,24 +1152,11 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'delivery_process_question', extracted: dpCity ? { city: dpCity } : {} };
   }
 
-  // 7b. DELIVERY CHARGE/COST question — "delivery ke paise?", "delivery free hai?", "shipping charges?"
-  const isDeliveryChargeQ = /\b(delivery|shipping|courier)\s*(ke|ki|ka|k|ky)?\s*(pais[ey]|charg[ei]s?|chages?|cost|rate|kitne?|free|muft|patsy|kharcha|kharchain|kharche|kharchay)\b/i.test(l) ||
-    /\b(pais[ey]|charg[ei]s?|chages?|cost|patsy|kharcha|kharchain|kharche)\s*(delivery|shipping)\b/i.test(l) ||
-    /\b(delivery|shipping)\s*(free|muft)\s*(hai|he|h)?\b/i.test(l) ||
-    /\bfree\s*(delivery|shipping)\b/i.test(l) ||
-    /\bdelivery\b.*\b(patsy|paise|paisy|free|muft|charg|chage|kharcha|kharchain)\b/i.test(l) ||
-    /\b(delivery|shipping)\s*(kia|kya|kaise|kaisy|kitni|kitny|kab)\s*(hai|ha|he|h|hoti|hogi)?\b/i.test(l) ||
-    /\bdelivery\s*\?\s*$/i.test(l) ||
-    /\bdelivery\s+chag/i.test(l);
-  if (isDeliveryChargeQ) {
-    return { intent: 'delivery_charge_question' };
-  }
-
-  // 7b2. DELIVERY TIME question — "kb tk ayga?", "kitne din lagenge", "kab milega"
+  // 7b. DELIVERY TIME question — check BEFORE charge to avoid "delivery kitne din" matching charge pattern
   const isDeliveryTimeQ = /\b(k[aeu]?b\s*(t[aeu]?k|aaye?|milega|ayga|ayega|ajayga|ajaye?ga|aye?\s*ga|pohch|pohnch))\b/i.test(l) ||
     /\b(kitn[ewy]?|katni|katny|katne)\s*(din|dino[nm]?|deno|days?|waqt|time)\b/i.test(l) ||
     /\b(k[aeu]b\s*(aaye|milega|ayega|ayga|ajayga|ajaye?ga|pohchega|deliver))\b/i.test(l) ||
-    /\b(delivery\s*(time|din|days?|kitne?|kab|kb|kub))\b/i.test(l) ||
+    /\b(delivery\s*(time|din|days?|kitne?\s*din|kab|kb|kub))\b/i.test(l) ||
     /\b(kb\s*t[aeu]?k\s*(ayga|aayga|ajayga|ajaye?ga|milega|pohchega)?)\b/i.test(l) ||
     /\b(parcel|order)\s*(kab|kb|kub)\s*(aaye?ga|ajaye?ga|milega|pohche?ga)?\b/i.test(l) ||
     /\b(aa\s*jaye?\s*ga|mil\s*jaye?\s*ga|pohch\s*jaye?\s*ga)\b/i.test(l) ||
@@ -1159,6 +1180,20 @@ function preCheck(message, currentState, collected, state) {
     // Try to extract city from delivery question — "Sukkur mein kab delivery hogi"
     const dtCity = extractCity(msg);
     return { intent: 'delivery_time_question', extracted: dtCity ? { city: dtCity } : {} };
+  }
+
+  // 7b2. DELIVERY CHARGE/COST question — "delivery ke paise?", "delivery free hai?", "shipping charges?"
+  const isDeliveryChargeQ = /\b(delivery|shipping|courier)\s*(ke|ki|ka|k|ky)?\s*(pais[ey]|charg[ei]s?|chages?|cost|rate|free|muft|patsy|kharcha|kharchain|kharche|kharchay)\b/i.test(l) ||
+    /\b(pais[ey]|charg[ei]s?|chages?|cost|patsy|kharcha|kharchain|kharche)\s*(delivery|shipping)\b/i.test(l) ||
+    /\b(delivery|shipping)\s*(free|muft)\s*(hai|he|h)?\b/i.test(l) ||
+    /\bfree\s*(delivery|shipping)\b/i.test(l) ||
+    /\bdelivery\b.*\b(patsy|paise|paisy|free|muft|charg|chage|kharcha|kharchain)\b/i.test(l) ||
+    /\b(delivery|shipping)\s*(kia|kya|kaise|kaisy|kitni|kitny)\s*(hai|ha|he|h|hoti|hogi)?\b/i.test(l) ||
+    /\bdelivery\s*(kitne?|kitni)\s*(pais[ey]|rupee?|rs)?\s*[?؟]?\s*$/i.test(l) ||
+    /\bdelivery\s*\?\s*$/i.test(l) ||
+    /\bdelivery\s+chag/i.test(l);
+  if (isDeliveryChargeQ) {
+    return { intent: 'delivery_charge_question' };
   }
 
   // 7c. CITY DELIVERY QUESTION — in COLLECT_ADDRESS, customer mentions a DIFFERENT city

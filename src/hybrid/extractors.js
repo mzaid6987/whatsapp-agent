@@ -118,6 +118,12 @@ function extractPhone(msg) {
   return m ? m[0].replace(/[\s\-]/g, '') : null;
 }
 
+function extractAllPhones(msg) {
+  const matches = msg.match(/(?:\+?92|0)3\d{2}[\s\-]?\d{7}/g);
+  if (!matches) return [];
+  return matches.map(m => m.replace(/[\s\-]/g, ''));
+}
+
 function validatePhone(phone) {
   if (!phone) return { valid: false, error: 'Phone number nahi mila' };
   const clean = phone.replace(/[\s\-]/g, '');
@@ -373,6 +379,8 @@ function extractStreet(msg) {
     /(?:sector|sec)\s*([a-z]?[-]?\d+[a-z]?)/i,
     /(?:phase)\s*(\d+[a-z]?)/i,
     /(?:lane)\s*(?:no\.?|number|nmbr|#)?\s*(\d+)/i,
+    // "ranje road", "GT road", "Mall road", "Pindi road" — named roads
+    /\b([a-z]{2,20}\s+road)\b/i,
   ];
   for (const re of patterns) {
     const m = msg.match(re);
@@ -736,7 +744,7 @@ function smartFill(msg, collected) {
 }
 
 module.exports = {
-  detectProduct, detectAllProducts, extractPhone, validatePhone, extractCity, extractAllCities, isRegion,
+  detectProduct, detectAllProducts, extractPhone, extractAllPhones, validatePhone, extractCity, extractAllCities, isRegion,
   extractNameFromFullMsg, isLikelyName, hasAddressKeywords, smartFill,
   extractAddressParts, extractArea, extractHouse, extractStreet, extractLandmark, classifyLandmark, isHouseUnknown, buildAddressString,
   detectRuralAddress,

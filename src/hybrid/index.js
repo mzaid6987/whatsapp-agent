@@ -1088,12 +1088,21 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     }
     if (flexNo) {
       state.address_confirming = false;
-      state.collected.address_parts = { area: null, street: null, house: null, landmark: null };
-      state.address_step = 'area';
-      const reaskReply = fillTemplate('ASK_ADDRESS_AREA', {
-        city: state.collected.city || '', honorific: getHonorific(state.collected.name, state.gender), name: state.collected.name || '',
-        area_suggestions: getAreaSuggestions(state.collected.city) || ''
-      });
+      // Don't wipe all address parts — ask what to change, keep existing data
+      const ap = state.collected.address_parts;
+      const currentAddr = [
+        ap.area && ap.area !== 'nahi_pata' ? `Area: ${ap.area}` : null,
+        ap.street && ap.street !== 'nahi_pata' ? `Street: ${ap.street}` : null,
+        ap.house && ap.house !== 'nahi_pata' ? `House: ${ap.house}` : null,
+        ap.landmark && ap.landmark !== 'nahi_pata' ? `Landmark: ${ap.landmark}` : null
+      ].filter(Boolean).join(', ');
+      const honorific = getHonorific(state.collected.name, state.gender);
+      const reaskReply = currentAddr
+        ? `${honorific}, address mein kya galat hai? Sahi address bata dein — area, gali, house number ya landmark jo bhi change karna ho 📝`
+        : fillTemplate('ASK_ADDRESS_AREA', {
+            city: state.collected.city || '', honorific, name: state.collected.name || '',
+            area_suggestions: getAreaSuggestions(state.collected.city) || ''
+          });
 
       state.messages.push({ role: 'user', content: message });
       state.messages.push({ role: 'assistant', content: reaskReply });
@@ -3032,6 +3041,16 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       const nextField = askNextField(state, storeName);
       if (sidePrefix && nextField) nextField.reply = sidePrefix + nextField.reply;
       return nextField;
+    }
+
+    case 'two_phones_given': {
+      // Customer gave two phone numbers in one message — save both and skip delivery phone ask
+      state.collected.phone = pre.extracted.phone;
+      state.collected.delivery_phone = pre.extracted.delivery_phone;
+      const sidePrefix2p = sideQuestionPrefix(message, state, storeName);
+      const nextField2p = askNextField(state, storeName);
+      if (sidePrefix2p && nextField2p) nextField2p.reply = sidePrefix2p + nextField2p.reply;
+      return nextField2p;
     }
 
     case 'use_wa_number': {

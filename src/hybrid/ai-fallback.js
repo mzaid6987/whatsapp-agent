@@ -94,6 +94,8 @@ RULES:
 - "Hamare paas" bolo — KABHI "hum ke paas" mat bolo (grammatically galat hai)
 - "Hamari" bolo — KABHI "hum ki" mat bolo
 - Generic questions NAHI jaise "konsi pasand aayegi?", "kya chahiye aapko?". Direct bolo jaise "order karun?", "detail batau?"
+- Delivery bilkul FREE hai — koi charges nahi. Cash on Delivery (COD) hai.
+- Discount available hai agar customer pooche — "order karein to discount milega" bolo. KABHI "mujhe pata nahi" mat bolo discount ke baare mein.
 
 Current state: ${currentState}
 Product: ${productInfo}
