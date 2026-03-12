@@ -1793,10 +1793,12 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const smartDetails = extractDetailsFromMsg(message, state.product?.short);
       _smartFillDebug.raw_result = smartDetails;
       // Update name if: not set, OR message explicitly says "name X" / "naam X" (customer correcting/giving name)
+      // GUARD: Never overwrite name from image captions or after name collection is done
       const explicitNameGiven = /\b(name|naam|my\s*name|mera\s*naam)\s+/i.test(message);
+      const nameAlreadyCollected = state.collected.name && ['COLLECT_PHONE','COLLECT_DELIVERY_PHONE','COLLECT_CITY','COLLECT_ADDRESS','ORDER_SUMMARY','UPSELL_HOOK','UPSELL_SHOW','ORDER_CONFIRMED','CANCEL_AFTER_CONFIRM'].includes(state.current);
       // Don't overwrite a longer existing name with a shorter extracted one (likely false positive)
       const existingName = state.collected.name;
-      if (smartDetails.name && (!existingName || (explicitNameGiven && smartDetails.name.length >= 3))) state.collected.name = smartDetails.name;
+      if (smartDetails.name && (!existingName || (explicitNameGiven && smartDetails.name.length >= 3)) && !nameAlreadyCollected) state.collected.name = smartDetails.name;
       if (smartDetails.phone && !state.collected.phone) state.collected.phone = smartDetails.phone;
       if (smartDetails.city && !state.collected.city) state.collected.city = smartDetails.city;
       // Labeled format: directly populate address_parts (area, street, house, landmark)
@@ -3478,6 +3480,15 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       // Move to next field (should go to address confirmation now)
       const nextField = askNextField(state, storeName);
       return nextField || { reply: fillTemplate('FALLBACK', vars), state: state.current };
+    }
+
+    case 'wait_pause': {
+      // Customer says "wait" / "ruko" / "abhi nahi" — acknowledge and stay in current state
+      const honorific = getHonorific(state.collected.name, state.gender);
+      return {
+        reply: `Ji bilkul ${honorific}, jab tayar hon bata dein — hum yahan hain! 😊`,
+        state: state.current
+      };
     }
 
     case 'address_during_phone': {

@@ -2576,6 +2576,7 @@ const CITY_ALIASES = {
   'bahwalpur': 'bahawalpur', 'bhawalpur': 'bahawalpur', 'bahawapur': 'bahawalpur',
   'rawlakot': 'rawalakot', 'rawalkot': 'rawalakot',
   'mandibahuddin': 'mandi bahauddin', 'mandibahaudin': 'mandi bahauddin',
+  'mandi bhauddin': 'mandi bahauddin', 'mandibhauddin': 'mandi bahauddin', 'mandi bha uddin': 'mandi bahauddin', 'mandi bhaudin': 'mandi bahauddin',
   'sarghoda': 'sargodha', 'sargodah': 'sargodha', 'srgoodha': 'sargodha',
   'muzaffrabad': 'muzaffarabad', 'mazafarabd': 'muzaffarabad', 'muzafrabad': 'muzaffarabad',
   'narrowal': 'narowal', 'naronwal': 'narowal',

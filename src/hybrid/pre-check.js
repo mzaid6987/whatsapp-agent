@@ -754,7 +754,7 @@ function preCheck(message, currentState, collected, state) {
 
   // 4a-WANT. "Yah chahiya mujhe" / "mujhe chahiye" / "ye chahiye" = ORDER INTENT, NOT name
   // Must come BEFORE name_in_product_inquiry check to prevent false name detection
-  if (currentState === 'PRODUCT_INQUIRY' && state.product) {
+  if ((currentState === 'PRODUCT_INQUIRY' || currentState === 'HAGGLING') && state.product) {
     if (/\b(chahiy[ae]|chaiy[ae]|chay[ae]|chahea|chahye|chaea|chahe)\b/i.test(l) &&
         /\b(mujhe|mujhy|mjhe|mjhy|ye|yeh|yah|ya|muje|wo|woh|humein|hame|hamein)\b/i.test(l)) {
       return { intent: 'order_intent', extracted: {} };
@@ -811,10 +811,12 @@ function preCheck(message, currentState, collected, state) {
     // "ya nahi" / "ke nahi" / "ya na" at end = question ("X kar sakain ge ya nahi?"), NOT cancel
     const isQuestionSuffix = /\b(ya|k[ey]|ki)\s+(nahi|nhi|ni|nai|na|mat)\s*[?؟.!]?\s*$/i.test(l);
     const isCancelInCollection = /\b(cancel|cancl|cansel)\b/i.test(l) ||
-      (!isQuestionSuffix && /\b(order|ordr)?\s*(nai|nahi|nhi|ni|na|mat)\s*(kr|kar|karn[aie]|krn[aie]|chahiy[ae]|chaiy[ae])?\b/i.test(l) && /\b(nai|nahi|nhi|ni|na|mat)\b/i.test(l)) ||
-      /\b(nai|nahi|nhi|ni|na|mat)\s*(chahiy[ae]|chaiy[ae]|mangta|manga|lena|order|krna|karna)\b/i.test(l) ||
-      /\b(rehne\s*do|choro|chhoro|bas|nai\s*krwana|abhi\s*nahi|filhal\s*nahi|felhal\s*nahi|abi\s*nahi)\b/i.test(l) ||
-      /\b(not\s*interested|no\s*thanks?|no\s*thnks?|don'?t\s*want|i'?m?\s*not\s*interested)\b/i.test(l);
+      (!isQuestionSuffix && /\b(order|ordr)?\s*(nai|nahi|nhi|ni|na|nah|mat)\s*(kr|kar|karn[aie]|krn[aie]|chahiy[ae]|chaiy[ae])?\b/i.test(l) && /\b(nai|nahi|nhi|ni|na|nah|mat)\b/i.test(l)) ||
+      /\b(nai|nahi|nhi|ni|na|nah|mat)\s*(chahiy[ae]|chaiy[ae]|mangta|manga|lena|laina|order|krna|karna)\b/i.test(l) ||
+      /\b(nah?\s*laina|nah?\s*lena|nahi?\s*laina|nahi?\s*lena)\b/i.test(l) ||
+      /\b(rehne?\s*do|choro|chhoro|chor\s*ni|bas|nai\s*krwana|abhi\s*nahi|filhal\s*nahi|felhal\s*nahi|abi\s*nahi)\b/i.test(l) ||
+      /\b(not\s*interested|no\s*thanks?|no\s*thnks?|don'?t\s*want|i'?m?\s*not\s*interested)\b/i.test(l) ||
+      /\b(allah\s*haf[ie]z|khuda\s*haf[ie]z|bye+|good\s*bye)\b/i.test(l) && /\b(nah?i?|nhi|ni|nai|na|nah|mat|cancel|rehne|chor)\b/i.test(l);
     if (isCancelInCollection) return { intent: 'no_order_now' };
   }
 
@@ -877,13 +879,13 @@ function preCheck(message, currentState, collected, state) {
     // Single common English words that are NOT names (but could pass looksLikeName)
     const isSingleEnglishWord = words.length === 1 && /^(yes|no|ok|hi|hey|hello|bye|please|thanks|sorry|sure|fine|good|nice|great|love|like|want|need|help|send|done|wait|stop|start|open|close|free|new|old|big|small|fast|slow|easy|hard|real|true|best|last|next|same|other|much|more|less|just|only|even|still|also|back|down|here|there|away|home|long|full|high|low|off|sir|madam|bro|dear|boss|dude|miss|mam|available|required)$/i.test(l);
     if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isGreeting && !isProductPhrase && !isGibberish && !isComboPhrase && !isUrduPhrase && !isEnglishNonName && !isSingleEnglishWord) {
-      // Strip "Name" prefix — "Name Arshad Luck" → "Arshad Luck"
+      // Strip "Name"/"Naam" prefix — "Name Arshad Luck" → "Arshad Luck"
       let nameWords = words;
-      if (nameWords.length >= 2 && /^name$/i.test(nameWords[0])) {
+      if (nameWords.length >= 2 && /^(name|naam|naam)$/i.test(nameWords[0])) {
         nameWords = nameWords.slice(1);
       }
-      // Strip "Luck" suffix (common WhatsApp username artifact)
-      if (nameWords.length >= 2 && /^luck$/i.test(nameWords[nameWords.length - 1])) {
+      // Strip "Naam"/"Name"/"Luck" suffix — "Hashim Naam" → "Hashim"
+      if (nameWords.length >= 2 && /^(luck|naam|naam|name)$/i.test(nameWords[nameWords.length - 1])) {
         nameWords = nameWords.slice(0, -1);
       }
       const name = nameWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
@@ -980,10 +982,27 @@ function preCheck(message, currentState, collected, state) {
     if (isInfoRefusal) return { intent: 'no_order_now' };
   }
 
+  // 4b-WAIT: "Wait" / "ruko" / "abhi nahi" in COLLECT_ADDRESS = customer needs time, don't extract as area
+  if (currentState === 'COLLECT_ADDRESS') {
+    const isWait = /^(wait|ruk[oa]?|ruk\s*jao|hold\s*on|ek\s*min|one\s*min|abhi\s*nahi|bad\s*me|baad\s*me|later)\s*[.!]?\s*$/i.test(l) ||
+      /^(ok\s+)?wait\s*$/i.test(l);
+    if (isWait) {
+      return { intent: 'wait_pause' };
+    }
+  }
+
   // 4b-CODE: CODE-FIRST ADDRESS EXTRACTION — extract address parts in code, skip AI
   // Runs all extractors on customer's message. If ANY part found, return it.
   // This handles 70-80% of address responses without AI cost.
   if (currentState === 'COLLECT_ADDRESS' && state && !state.address_confirming) {
+
+    // Guard: Skip messages that are questions/confusion, not address info
+    // "update mtlb", "mtlb kya", "kya matlab", "samajh nahi aya" etc.
+    const isQuestionMsg = /\b(mtlb|matlab|meaning|kya\s*matlab|samajh\s*n[ai]h?i?|smjh\s*n[ai]h?i?|kya\s*mtlb|update\s*mtlb)\b/i.test(l) ||
+      /^(kya|kia|what|why|how|kaisy?|kesy?)\s/i.test(l) && msg.trim().split(/\s+/).length <= 4;
+    if (isQuestionMsg) {
+      return null; // Let AI handle the question
+    }
 
     const ap = collected.address_parts || {};
     const city = collected.city || null;
