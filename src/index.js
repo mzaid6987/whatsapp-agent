@@ -1787,6 +1787,17 @@ app.get('/api/complaints/:id/remarks', requireAuth, (req, res) => {
   }
 });
 
+// Get complaint by conversation ID
+app.get('/api/complaints/by-conversation/:convId', requireAuth, (req, res) => {
+  try {
+    const convId = parseInt(req.params.convId);
+    const complaint = complaintModel.findByConversation(convId);
+    res.json({ complaint: complaint || null });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Backfill complaints from existing conversations with complaint_flag=1
 app.post('/api/complaints/backfill', requireAuth, (req, res) => {
   try {

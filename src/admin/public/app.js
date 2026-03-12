@@ -369,6 +369,16 @@ async function openChat(chatId) {
     btnTakeOver.classList.remove('hidden');
     btnResumeBot.classList.add('hidden');
   }
+  // Show/hide complaint remarks panel
+  const remarksPanel = document.getElementById('complaintRemarksPanel');
+  if (remarksPanel) {
+    if (isComplaint) {
+      showComplaintRemarks(chatId);
+    } else {
+      remarksPanel.style.display = 'none';
+      _currentComplaintId = null;
+    }
+  }
 
   // Enable/disable input
   const inputArea = document.getElementById('chatInputArea');
@@ -896,6 +906,82 @@ async function markComplaint() {
         alert('Failed: ' + JSON.stringify(res));
       }
     } catch (e) { alert('Error: ' + e.message); }
+  }
+}
+
+// ============= COMPLAINT REMARKS (inline in chat view) =============
+let _currentComplaintId = null;
+
+async function showComplaintRemarks(convId) {
+  const panel = document.getElementById('complaintRemarksPanel');
+  if (!panel) return;
+  // Find complaint for this conversation
+  try {
+    const data = await api('/api/complaints/by-conversation/' + convId);
+    const complaint = data.complaint;
+    if (!complaint) {
+      panel.style.display = 'none';
+      _currentComplaintId = null;
+      return;
+    }
+    _currentComplaintId = complaint.id;
+    panel.style.display = 'block';
+    // Set status dropdown
+    const sel = document.getElementById('complaintStatusSelect');
+    if (sel) sel.value = complaint.status || 'active';
+    // Load remarks
+    loadComplaintRemarks(complaint.id);
+  } catch (e) {
+    console.error('showComplaintRemarks error:', e);
+    panel.style.display = 'none';
+  }
+}
+
+async function loadComplaintRemarks(complaintId) {
+  const container = document.getElementById('complaintRemarksList');
+  if (!container) return;
+  try {
+    const data = await api('/api/complaints/' + complaintId + '/remarks');
+    const remarks = data.remarks || [];
+    if (remarks.length === 0) {
+      container.innerHTML = '<span style="color:#999; font-size:11px;">No remarks yet</span>';
+      return;
+    }
+    container.innerHTML = remarks.map(r =>
+      `<div style="margin-bottom:3px;"><span style="color:#999; font-size:10px;">${formatTime(r.created_at)}</span> <span>${escHtml(r.remark)}</span></div>`
+    ).join('');
+    container.scrollTop = container.scrollHeight;
+  } catch (e) {
+    container.innerHTML = '<span style="color:#e53e3e;">Load failed</span>';
+  }
+}
+
+async function addComplaintRemark() {
+  if (!_currentComplaintId) return;
+  const input = document.getElementById('complaintRemarkInput');
+  const text = (input.value || '').trim();
+  if (!text) return;
+  try {
+    await api('/api/complaints/' + _currentComplaintId + '/remarks', {
+      method: 'POST',
+      body: JSON.stringify({ remark: text })
+    });
+    input.value = '';
+    loadComplaintRemarks(_currentComplaintId);
+  } catch (e) {
+    alert('Remark add failed: ' + e.message);
+  }
+}
+
+async function updateComplaintStatus(status) {
+  if (!_currentComplaintId) return;
+  try {
+    await api('/api/complaints/' + _currentComplaintId + '/status', {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+  } catch (e) {
+    alert('Status update failed: ' + e.message);
   }
 }
 
