@@ -1932,6 +1932,15 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
           console.log(`[Address] AI area "${newParts.area}" is a city (${areaAsCity[0]}) — skipping as area`);
         } else {
           ap.area = newParts.area;
+          // Preserve "New/Old/Naya/Purana" prefix if AI stripped it — e.g. "New Anarkali" → AI extracts "Anarkali"
+          const areaLower = newParts.area.toLowerCase().trim();
+          const msgLower = message.toLowerCase();
+          const prefixMatch = msgLower.match(new RegExp(`\\b(new|old|naya|nayi|nai|purana|purani|north|south|east|west)\\s+${areaLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'));
+          if (prefixMatch) {
+            const prefix = prefixMatch[1].charAt(0).toUpperCase() + prefixMatch[1].slice(1).toLowerCase();
+            ap.area = `${prefix} ${newParts.area}`;
+            console.log(`[Address] Restored prefix: "${newParts.area}" → "${ap.area}"`);
+          }
         }
       }
       if (valid(newParts.street)) {

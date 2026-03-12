@@ -339,9 +339,33 @@ function handleTemplateState(message, state, storeName, preIntent) {
         return { reply: 'Ji sir, delivery bilkul FREE hai — koi extra charge nahi ✅\n\nOrder place kar dun? Haan bolen ya kuch change karna ho to bata dein.', state: 'ORDER_SUMMARY' };
       }
       // Delivery time question — answer it, then re-ask confirm
-      if (/\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|aye?\s*ga)|kitne?\s*din|delivery|tracking|kb\s*tk|kb\s*ayga)\b/i.test(l)) {
+      if (/\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|aye?\s*ga)|kitne?\s*din|delivery|tracking|kb\s*tk|kb\s*ayga)\b/i.test(l) ||
+        /\b(how\s*(much|long)\s*(time|days?)?)\b/i.test(l) && /\b(deliver|take|come|arrive|receive|get|ship)\b/i.test(l) ||
+        /\b(when\s*will)\b/i.test(l) && /\b(deliver|receive|get|arrive|come|ship|reach)\b/i.test(l)) {
         const delReply = fillTemplate('DELIVERY_POST_ORDER', vars);
         return { reply: delReply + '\n\nOrder place kar dun? Haan bolen ya kuch change karna ho to bata dein.', state: 'ORDER_SUMMARY' };
+      }
+      // Area clarification — "this is new anarkali", "new anarkali hai", "naya anarkali"
+      // Customer adding prefix (new/old/north/south) to existing area
+      if (state.collected.address_parts && state.collected.address_parts.area) {
+        const existingArea = state.collected.address_parts.area.toLowerCase();
+        const prefixPattern = /\b(new|old|naya|nayi|nai|purana|purani|north|south|east|west)\s+([a-z\s]{3,})/i;
+        const prefixM = message.match(prefixPattern);
+        if (prefixM) {
+          const prefix = prefixM[1];
+          const areaName = prefixM[2].trim().toLowerCase();
+          // Check if the mentioned area overlaps with existing area
+          if (existingArea.includes(areaName) || areaName.includes(existingArea)) {
+            const newArea = prefix.charAt(0).toUpperCase() + prefix.slice(1).toLowerCase() + ' ' + state.collected.address_parts.area;
+            state.collected.address_parts.area = newArea;
+            const addrStr = buildAddressString(state.collected.address_parts, state.collected.city);
+            state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
+            console.log(`[ORDER_SUMMARY] Area updated: "${existingArea}" → "${newArea}"`);
+            const smResult = buildOrderSummary(state, storeName);
+            state.current = smResult.state;
+            return { reply: `${newArea} update ho gaya ✅\n\n` + smResult.reply, state: smResult.state };
+          }
+        }
       }
       return { reply: fillTemplate('CONFIRM_PROMPT', vars), state: 'ORDER_SUMMARY' };
     }

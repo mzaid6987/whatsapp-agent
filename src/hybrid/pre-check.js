@@ -1252,7 +1252,11 @@ function preCheck(message, currentState, collected, state) {
     // Event-based delivery questions: "Eid se pehle delivery ho jayegi?", "kal tak mil jayega?"
     /\b(eid|kal|parso|parsoo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|somo?war|mangal|budh|jumerat|juma|hafta|itwar|chand\s*raat)\s*(se|say|sy|s)?\s*(pehl[aey]|pahla?y?|pehla?y?)\s*(delivery|deliver|mil|pohch|aa|parcel)?\s*(ho|hoja|hojaye?|hojayeg[aie]?|mil|mileg[aie]?|milj[aie]?|pohch|aaj[aie]?|ajaye?g[aie]?|jayeg[aie]?|jay\s*g+[aie]?|ga|gi|ge)?\b/i.test(l) ||
     // "delivery ho jayegi/jaye gi/ho jaye ga" — general delivery completion question
-    /\b(delivery|deliver|parcel|order)\s*(ho\s*jaye?\s*g[aie]+|hojaye?\s*g[aie]+|ho\s*jay\s*g+[aie]+|hojay\s*g+[aie]+)\b/i.test(l);
+    /\b(delivery|deliver|parcel|order)\s*(ho\s*jaye?\s*g[aie]+|hojaye?\s*g[aie]+|ho\s*jay\s*g+[aie]+|hojay\s*g+[aie]+)\b/i.test(l) ||
+    // English delivery time patterns: "how much time", "how long will it take", "when will it be delivered"
+    /\b(how\s*(much|long)\s*(time|days?)?)\b/i.test(l) && /\b(deliver|take|come|arrive|receive|get|ship)\b/i.test(l) ||
+    /\b(when\s*will)\b/i.test(l) && /\b(deliver|receive|get|arrive|come|ship|reach)\b/i.test(l) ||
+    /\b(time\s*to\s*deliver|delivery\s*period|shipping\s*time|estimated\s*delivery)\b/i.test(l);
   if (isDeliveryTimeQ) {
     // Check if message ALSO has order intent — "order karna hai ... kab tak ayega"
     const hasOrderWords = /\b(order|mangwa|chahiye|chahea|krna|karna|krdo|kardo|kar\s*do|book)\b/i.test(l);
