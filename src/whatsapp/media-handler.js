@@ -77,11 +77,32 @@ async function transcribeVoice(mediaId, accessToken, openaiApiKey, context = {})
   try {
     const startTime = Date.now();
     console.log(`[Media] Voice: calling Whisper API with ${tempFile}...`);
+    // Build dynamic Whisper prompt based on conversation context
+    let whisperPrompt = 'Roman Urdu transcript in English letters. Pakistani customer ordering products on WhatsApp. haan ji nahi order krna chahiye delivery kab address name phone number makan number house number ghar mohalla gali street block colony area landmark near nazdeek qareeb tehsil zilla district mera naam hai mobile number hai address mera hai COD cash on delivery kitne ka hai price sasta mehenga theek hai bhej do confirm solah satrah atharah bees tees chalis pachas Lahore Karachi Islamabad Rawalpindi Faisalabad Peshawar Sialkot Gujranwala Multan Hyderabad Quetta Bahawalpur Sargodha Sahiwal Mardan Abbottabad Wah Cantt Taxila Attock Gujar Khan Turbat Thatta Sukkur Gujrat trimmer remover nebulizer cutter massager duster spray';
+    // Add city-specific areas if we know the city
+    if (context.city) {
+      whisperPrompt += ` ${context.city}`;
+      const cityAreas = {
+        'Karachi': 'North Karachi Korangi Orangi Gulshan Clifton Nazimabad Malir FB Area',
+        'Lahore': 'Gulberg Johar Town Model Town Iqbal Town DHA Cantt Shahdara Ichra',
+        'Rawalpindi': 'Saddar Adyala Road Cantt Satellite Town Bahria Town Chaklala',
+        'Islamabad': 'Bahria Town DHA F-sectors G-sectors I-sectors',
+        'Faisalabad': 'Madina Town Peoples Colony Ghulam Muhammad Abad',
+        'Multan': 'Cantt Shah Rukn-e-Alam Bosan Road',
+        'Peshawar': 'Hayatabad University Town Saddar Warsak Road',
+      };
+      if (cityAreas[context.city]) whisperPrompt += ' ' + cityAreas[context.city];
+    }
+    // Add state-specific hints
+    if (context.state === 'COLLECT_NAME') whisperPrompt += ' mera naam hai, naam batao';
+    if (context.state === 'COLLECT_PHONE') whisperPrompt += ' number hai, mobile number, phone number';
+    if (context.state?.includes('ADDRESS') || context.state?.includes('COLLECT_CITY')) whisperPrompt += ' gali number, street number, house number, makan number, colony, sector, phase, block, masjid, school, hospital, chowk, bazaar, road';
+
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(tempFile),
       model: 'whisper-1',
       language: 'ur',
-      prompt: 'Roman Urdu transcript in English letters. Pakistani customer ordering products on WhatsApp. haan ji nahi order krna chahiye delivery kab address name phone number makan number house number ghar mohalla gali street block colony area landmark near nazdeek qareeb tehsil zilla district mera naam hai mobile number hai address mera hai COD cash on delivery kitne ka hai price sasta mehenga theek hai bhej do confirm solah satrah atharah bees tees chalis pachas Lahore Karachi Islamabad Rawalpindi Faisalabad Peshawar Sialkot Gujranwala Multan Hyderabad Quetta Bahawalpur Sargodha Sahiwal Mardan Abbottabad trimmer remover nebulizer cutter massager duster spray',
+      prompt: whisperPrompt,
     });
     let whisperMs = Date.now() - startTime;
     console.log(`[Media] Voice: Whisper returned in ${whisperMs}ms`);
@@ -92,6 +113,30 @@ async function transcribeVoice(mediaId, accessToken, openaiApiKey, context = {})
 
     let text = transcription.text;
     console.log(`[Media] Whisper raw: "${text}"`);
+
+    // Pre-cleanup: Aggressive dedup of Whisper repetition hallucinations BEFORE sending to GPT-4o mini
+    if (text && text.length > 20) {
+      // Split into sentences and remove exact/near duplicates
+      const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 3);
+      if (sentences.length > 2) {
+        const seen = new Set();
+        const unique = [];
+        for (const s of sentences) {
+          const norm = s.toLowerCase().replace(/\s+/g, ' ');
+          if (!seen.has(norm)) {
+            seen.add(norm);
+            unique.push(s);
+          }
+        }
+        if (unique.length < sentences.length) {
+          const dedupedText = unique.join('. ');
+          console.log(`[Media] Whisper dedup: ${sentences.length} → ${unique.length} sentences`);
+          text = dedupedText;
+        }
+      }
+      // Also catch word-level repetition: "X X X" patterns
+      text = text.replace(/\b(\w{3,}(?:\s+\w{3,}){0,3})\s+(?:\1\s*){1,}/gi, '$1');
+    }
 
     // Post-process: Clean up Whisper output with GPT-4o mini
     // Whisper often garbles Roman Urdu (e.g. "telemetry" instead of "trimmer")
@@ -152,7 +197,21 @@ Products sold: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Ear Wax 
 - "butterfly" Whisper may hear as "butter fly" or "beautiful" — correct to "butterfly" if near massager/EMS/pain context
 
 Cities: Lahore, Karachi, Islamabad, Rawalpindi, Faisalabad, Peshawar, Sukkur, Multan, Hyderabad, Quetta, Sialkot, Gujranwala
-${context.currentProduct ? `\nIMPORTANT CONTEXT: Customer is currently asking about "${context.currentProduct}". If Whisper transcription mentions a different product but it sounds similar or makes no sense in context, the customer is likely still talking about ${context.currentProduct}. Correct accordingly.` : ''}
+${context.currentProduct ? `\nPRODUCT CONTEXT: Customer is talking about "${context.currentProduct}". If Whisper mentions a different product that sounds similar, correct to ${context.currentProduct}.` : ''}
+${context.state ? `\nCONVERSATION STATE: Bot is currently collecting "${context.state}". Customer is likely providing this info.` : ''}
+${context.city ? `\nCITY CONTEXT: Customer is from ${context.city}. If Whisper transcribes a different city name that sounds similar, the customer likely said "${context.city}". Address parts (area, mohalla, street) should be local to ${context.city}.` : ''}
+${context.customerName ? `\nCUSTOMER NAME: "${context.customerName}" — if name appears garbled in transcription, correct it.` : ''}
+
+CRITICAL RULES:
+- Pakistani customers speak Roman Urdu with regional accents (Punjabi, Sindhi, Balochi, Pashto mix)
+- NEVER drop house/makan numbers, gali/street numbers, or phone numbers — these are critical for delivery
+- If customer says a name like "mera naam X hai" or "X bol raha hoon" — extract the name exactly
+- "Wah Cantt" is a city — do NOT convert to "Rawalpindi"
+- Common masjid names: Ghousia Masjid (NOT "Hoshiya"), Noorani Masjid, Faizane Madina, Rehmat Mosque
+- "bata/by" between numbers = "/" (fraction/house number format, e.g. "solah bata teen sau saath" = "16/360")
+- DO NOT add words the customer didn't say. DO NOT hallucinate extra information.
+- If Whisper output has obvious repetition (same phrase 2+ times), keep only ONE instance.
+
 Output ONLY the corrected Roman Urdu text. Nothing else. If the text is already correct, return it as-is.` },
           { role: 'user', content: text }
         ],
