@@ -180,6 +180,7 @@ function renderChatList(convos) {
     if (c.voice_msg_flag) labels.push('<span class="label-badge label-voice-msg">VOICE MSG</span>');
     if (c.needs_human && !c.spam_flag && !isComplaint) labels.push('<span class="label-badge label-human">HUMAN</span>');
     if (isOrderState) labels.push('<span class="label-badge label-order">ORDER</span>');
+    if (c.address_incomplete) labels.push('<span class="label-badge label-addr-incomplete">ADDR INCOMPLETE</span>');
     if (c.state === 'CANCEL_AFTER_CONFIRM') labels.push('<span class="label-badge label-cancel">CANCEL</span>');
     if (c.unreplied && !labels.length) labels.push(`<span class="label-badge label-unreplied">UNREPLIED ${Math.floor((c.unreplied_since || 0) / 60)}m</span>`);
     // Silent customer timer — live calculated from last_msg_time
@@ -521,6 +522,16 @@ async function loadOrderPanel(chatId) {
     }
     document.getElementById('orderEditForm').style.display = 'none';
     document.getElementById('orderView').style.display = 'block';
+    // Address incomplete toggle
+    const addrBtn = document.getElementById('addrIncompleteBtn');
+    if (addrBtn && conv) {
+      addrBtn.style.display = '';
+      const isIncomplete = !!conv.address_incomplete;
+      addrBtn.textContent = isIncomplete ? 'ADDR INCOMPLETE' : 'Mark Addr Incomplete';
+      addrBtn.style.background = isIncomplete ? '#FEE2E2' : '#F3F4F6';
+      addrBtn.style.color = isIncomplete ? '#DC2626' : '#666';
+      addrBtn.style.borderColor = isIncomplete ? '#FECACA' : '#D1D5DB';
+    }
   } catch (e) {
     panel.style.display = 'none';
     _currentOrder = null;
@@ -577,6 +588,27 @@ function getSelectedItems() {
     items.push({ id: parseInt(opt.value), name: opt.dataset.name, price: parseInt(opt.dataset.price) || 0, qty });
   });
   return items;
+}
+
+async function toggleAddrIncomplete(e) {
+  if (e) e.stopPropagation();
+  if (!currentChatId) return;
+  try {
+    const res = await api(`/api/conversations/${currentChatId}/address-incomplete`, { method: 'POST' });
+    if (res.ok) {
+      // Update button
+      const btn = document.getElementById('addrIncompleteBtn');
+      const isInc = !!res.address_incomplete;
+      btn.textContent = isInc ? 'ADDR INCOMPLETE' : 'Mark Addr Incomplete';
+      btn.style.background = isInc ? '#FEE2E2' : '#F3F4F6';
+      btn.style.color = isInc ? '#DC2626' : '#666';
+      btn.style.borderColor = isInc ? '#FECACA' : '#D1D5DB';
+      // Update conversation list badge
+      const conv = conversations.find(c => c.id === currentChatId);
+      if (conv) conv.address_incomplete = res.address_incomplete;
+      renderChatList();
+    }
+  } catch (err) { console.error(err); }
 }
 
 async function toggleOrderEdit(e) {

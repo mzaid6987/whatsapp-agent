@@ -867,6 +867,21 @@ app.patch('/api/conversations/:id/collected', requireAuth, (req, res) => {
   }
 });
 
+// Toggle address_incomplete flag on a conversation
+app.post('/api/conversations/:id/address-incomplete', requireAuth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const db = require('./db').getDb();
+    const conv = db.prepare('SELECT address_incomplete FROM conversations WHERE id = ?').get(id);
+    if (!conv) return res.status(404).json({ error: 'Not found' });
+    const newVal = conv.address_incomplete ? 0 : 1;
+    db.prepare('UPDATE conversations SET address_incomplete = ? WHERE id = ?').run(newVal, id);
+    res.json({ ok: true, address_incomplete: newVal });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Save admin feedback on a message
 app.put('/api/messages/:id/feedback', requireAuth, (req, res) => {
   try {
