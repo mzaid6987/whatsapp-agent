@@ -80,7 +80,8 @@ async function transcribeVoice(mediaId, accessToken, openaiApiKey, context = {})
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(tempFile),
       model: 'whisper-1',
-      prompt: 'Roman Urdu transcript in English letters. Pakistani customer ordering products. haan ji nahi order krna chahiye delivery kab address name phone number ghar mohalla gali COD cash on delivery kitne ka hai price sasta mehenga theek hai bhej do confirm Lahore Karachi Islamabad Rawalpindi Faisalabad Peshawar trimmer remover nebulizer',
+      language: 'ur',
+      prompt: 'Roman Urdu transcript in English letters. Pakistani customer ordering products on WhatsApp. haan ji nahi order krna chahiye delivery kab address name phone number makan number house number ghar mohalla gali street block colony area landmark near nazdeek qareeb tehsil zilla district mera naam hai mobile number hai address mera hai COD cash on delivery kitne ka hai price sasta mehenga theek hai bhej do confirm solah satrah atharah bees tees chalis pachas Lahore Karachi Islamabad Rawalpindi Faisalabad Peshawar Sialkot Gujranwala Multan Hyderabad Quetta Bahawalpur Sargodha Sahiwal Mardan Abbottabad trimmer remover nebulizer cutter massager duster spray',
     });
     let whisperMs = Date.now() - startTime;
     console.log(`[Media] Voice: Whisper returned in ${whisperMs}ms`);
@@ -135,6 +136,16 @@ Common Whisper mistakes for this store's context:
 - Any English-sounding word that doesn't make sense in Pakistani shopping context → find the closest Roman Urdu/product match
 - IMPORTANT: If customer mentions a color + random English word near "order" → likely a product name. Match to closest product.
 - IMPORTANT: "A1" or "number 1" means excellent quality in Pakistani slang. Keep as-is.
+- PHONE NUMBERS: Pakistani mobile numbers are 11 digits starting with 03XX. If Whisper outputs 10 or 12 digits, try to fix:
+  - 12 digits (extra zero): "033646700043" → likely "03364670043" (remove duplicate zero)
+  - 10 digits (missing zero): "3364670043" → "03364670043" (add leading 0)
+  - Urdu number words in phone: "zero three teen char" → "0334"
+- HOUSE/MAKAN NUMBERS: VERY IMPORTANT — customers often say house/makan numbers in Urdu.
+  - "makan number solah by teen sau saath" → "makan number 16/360"
+  - "house number pandrah" → "house number 15"
+  - "ghar number bees" → "ghar number 20"
+  - Fractions with "by/bata/slash": "solah by teen sau saath" → "16/360", "aath by do sau" → "8/200"
+  - NEVER drop house/makan numbers — they are critical for delivery.
 
 Products sold: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Ear Wax Kit, Vegetable Cutter, Facial Hair Remover, Nebulizer, Knee Sleeve, Duster Kit, EMS Butterfly Massager
 - "massager" Whisper often hears as "trimmer" or "master" or "manager" — if customer was discussing massager/EMS product, correct it
