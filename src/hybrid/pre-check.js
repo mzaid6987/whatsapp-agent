@@ -546,12 +546,13 @@ function preCheck(message, currentState, collected, state) {
         return { intent: 'phone_invalid', extracted: { error: 'format' } };
       }
     }
-    // "Yehi ha WhatsApp wala" / "isi number pe" / "same number hai" → use WhatsApp number
-    const useWaNumber = /\b(yehi|yahi|yhi|isi|issi|same)\s*(number|no|nmbr|nomber)\b/i.test(l) ||
-      /\bnumber\s*(yehi|yahi|yhi)\s*(wala|vala)?\s*(hai|he|h)?\b/i.test(l) ||
-      /\b(yehi|yahi|yhi|ye|yeh)\s*(he|hai|ha|h)\s*(whatsapp|watsapp|whats\s*app)\s*(wala|vala|number|no)?\b/i.test(l) ||
-      /\b(whatsapp|watsapp)\s*(wala|vala|number|no)?\s*(yehi|yahi|yhi|ye|yeh)?\s*(he|hai|ha|h)\b/i.test(l) ||
+    // "Yehi ha WhatsApp wala" / "isi number pe" / "same number hai" / "ye hi mera number hai" → use WhatsApp number
+    const useWaNumber = /\b(yehi|yahi|yhi|ye\s+hi|ya\s+hi|isi|issi|same)\s*(number|no|nmbr|nomber)\b/i.test(l) ||
+      /\bnumber\s*(yehi|yahi|yhi|ye\s*hi)\s*(wala|vala)?\s*(hai|he|h)?\b/i.test(l) ||
+      /\b(yehi|yahi|yhi|ye\s*hi|ye|yeh)\s*(he|hai|ha|h)\s*(whatsapp|watsapp|whats\s*app)\s*(wala|vala|number|no)?\b/i.test(l) ||
+      /\b(whatsapp|watsapp)\s*(wala|vala|number|no)?\s*(yehi|yahi|yhi|ye\s*hi|ye|yeh)?\s*(he|hai|ha|h)\b/i.test(l) ||
       /\b(mobile|phone)\s*(nomber|number|nmbr)?\s*(ye|yeh|yehi|yahi)?\s*(he|hai|h)\b/i.test(l) ||
+      /\b(ye\s+hi|ya\s+hi)\s*(mera|hmara|hamara)?\s*(number|no|nmbr|nomber)\s*(h[ae]i?|he)?\b/i.test(l) ||
       /\bjis\s*(se|sy|s|tarah?|tarha?)\s+.*\b(ba+t|msg|message|chat|call)\b/i.test(l) ||
       /\bjisse?\s+.*\b(ba+t|msg|message|chat|call)\b/i.test(l) ||
       /\b(de?\s*diy?a|dy\s*dya|bhej\s*diy?a|bhej\s*dia|send\s*kr\s*d[iy]a?|send\s*kia)\s*(h[ae]?i?|tha)?\b/i.test(l) ||
@@ -1365,6 +1366,7 @@ function preCheck(message, currentState, collected, state) {
   }
 
   // 7b2. DELIVERY CHARGE/COST question — "delivery ke paise?", "delivery free hai?", "shipping charges?"
+  // Also: "Dc" / "DC" alone = delivery charges shorthand (common WhatsApp abbreviation)
   const isDeliveryChargeQ = /\b(delivery|shipping|courier)\s*(ke|ki|ka|k|ky)?\s*(pais[ey]|charg[ei]s?|chages?|cost|rate|free|muft|patsy|kharcha|kharchain|kharche|kharchay)\b/i.test(l) ||
     /\b(pais[ey]|charg[ei]s?|chages?|cost|patsy|kharcha|kharchain|kharche)\s*(delivery|shipping)\b/i.test(l) ||
     /\b(delivery|shipping)\s*(free|muft)\s*(hai|he|h)?\b/i.test(l) ||
@@ -1373,7 +1375,8 @@ function preCheck(message, currentState, collected, state) {
     /\b(delivery|shipping)\s*(kia|kya|kaise|kaisy|kitni|kitny)\s*(hai|ha|he|h|hoti|hogi)?\b/i.test(l) ||
     /\bdelivery\s*(kitne?|kitni)\s*(pais[ey]|rupee?|rs)?\s*[?؟]?\s*$/i.test(l) ||
     /\bdelivery\s*\?\s*$/i.test(l) ||
-    /\bdelivery\s+chag/i.test(l);
+    /\bdelivery\s+chag/i.test(l) ||
+    /^d\.?c\.?\s*[?؟.!]?\s*$/i.test(l.trim());
   // Skip delivery charge detection if this looks like a bulk info message
   // e.g. "Sheikh Shahzad\nHouse R-165\nkarachi\nCell phone 03113225358\nIncluding delivery charges"
   // "Including delivery charges" is a STATEMENT, not a question — don't let it hijack bulk extraction

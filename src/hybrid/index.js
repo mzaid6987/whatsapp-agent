@@ -1826,12 +1826,12 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       }
       // "yehi number hai" / "isi number se" / "mobile nomber ye he hai" / "yehi ha whatsapp wala" → use WhatsApp number
       if (!state.collected.phone) {
-        const useThisNumber = /\b(yehi|yahi|yhi|isi|issi|same)\s*(number|no|nmbr|nomber)\b/i.test(message) ||
-          /\b(number|nomber|nmbr|mobile)\s*(yehi|yahi|yhi|ye|yeh)\s*(he|hai|h)\b/i.test(message) ||
+        const useThisNumber = /\b(yehi|yahi|yhi|ye\s+hi|ya\s+hi|isi|issi|same)\s*(mera\s*)?(number|no|nmbr|nomber)\b/i.test(message) ||
+          /\b(number|nomber|nmbr|mobile)\s*(yehi|yahi|yhi|ye\s*hi)\s*(he|hai|h)?\b/i.test(message) ||
           /\bjis\s*(se|number|no)\s*(baat|msg|message|chat)\b/i.test(message) ||
           /\b(mobile|phone)\s*(nomber|number|nmbr)?\s*(ye|yeh|yehi|yahi)?\s*(he|hai|h)\s*(he|hai|h)?\b/i.test(message) ||
-          /\b(yehi|yahi|yhi|ye|yeh)\s*(he|hai|ha|h)\s*(whatsapp|watsapp|whats\s*app)\s*(wala|vala|number|no)?\b/i.test(message) ||
-          /\b(whatsapp|watsapp)\s*(wala|vala|number|no)?\s*(yehi|yahi|yhi|ye|yeh)?\s*(he|hai|ha|h)\b/i.test(message);
+          /\b(yehi|yahi|yhi|ye\s*hi|ye|yeh)\s*(he|hai|ha|h)\s*(whatsapp|watsapp|whats\s*app)\s*(wala|vala|number|no)?\b/i.test(message) ||
+          /\b(whatsapp|watsapp)\s*(wala|vala|number|no)?\s*(yehi|yahi|yhi|ye\s*hi|ye|yeh)?\s*(he|hai|ha|h)\b/i.test(message);
         if (useThisNumber && phone) {
           // phone param = customer's WhatsApp number (e.g. "923001234567")
           let waPhone = phone;
