@@ -1228,6 +1228,25 @@ function preCheck(message, currentState, collected, state) {
         const colonName = msg.match(/\b(?:na+me?|naam)\s*[:\.\-="']\s*"?\s*([A-Za-z\s]{2,30})/i);
         if (colonName) extracted.name = colonName[1].trim().replace(/["']+$/, '').split(/\n/)[0].trim();
       }
+      // Conversational name (voice transcriptions) — "Abdul Manan mera naam hai" / "mera naam hai Abdul Manan"
+      if (!extracted.name) {
+        // Forward: "X mera naam hai"
+        const nameForward = msg.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+(?:mera|meri)\s+(?:naam|name)\s+(?:hai|he|h)\b/i);
+        if (nameForward) {
+          const candidate = nameForward[1].trim();
+          const isNotName = /^(Assalam|Salam|Hello|Address|Office|House|Phone|Mobile|Mere|Mera)$/i.test(candidate.split(/\s+/)[0]);
+          if (!isNotName && candidate.length >= 3) extracted.name = candidate;
+        }
+        // Reverse: "mera naam X hai" / "mera naam hai X"
+        if (!extracted.name) {
+          const nameReverse = msg.match(/\b(?:mera|meri)\s+(?:naam|name)\s+(?:hai\s+|he\s+|h\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})(?:\s+(?:hai|he|h))?\b/i);
+          if (nameReverse) {
+            const candidate = nameReverse[1].trim();
+            const isNotName = /^(Hai|He|Address|Phone|Mobile|Number|Ye|Yeh)$/i.test(candidate.split(/\s+/)[0]);
+            if (!isNotName && candidate.length >= 3) extracted.name = candidate;
+          }
+        }
+      }
       // Name before phone number — "Sardar Shaukat 03001234567 address here..."
       // Match 1-3 capitalized words right before phone number
       // Parcel-label format: "[Name] Number/No : [phone] Addrees/Address : [address] City : [city]"
@@ -1300,7 +1319,9 @@ function preCheck(message, currentState, collected, state) {
       if (bulkCity) extracted.city = bulkCity;
 
       // Address text — "address:", "addrees:", "adres:", "mohallah:", "gali:", etc. (separator REQUIRED to avoid matching "address pe bhi call")
-      const addrMatch = msg.match(/\b(?:addre(?:ss|es|s|e)|adre(?:ss|es|s|e)?|adrees)\s*[:\.\-=]\s*(.+)/i);
+      // Also match voice transcription format: "address mera hai [text]" / "address ye hai [text]"
+      const addrMatch = msg.match(/\b(?:addre(?:ss|es|s|e)|adre(?:ss|es|s|e)?|adrees)\s*[:\.\-=]\s*(.+)/i) ||
+        msg.match(/\b(?:addre(?:ss|es|s|e)|adre(?:ss|es|s|e)?|adrees)\s+(?:mera|meri|hamara|hamari|ye|yeh|hai|he|h)\s+(?:hai\s+|he\s+|h\s+)?(.+)/i);
       if (addrMatch) {
         let addrText = addrMatch[1].trim().split(/\n/)[0].trim();
         // Strip everything from "City :" / "Phone :" / "Number :" onwards (label + value)
@@ -1394,7 +1415,10 @@ function preCheck(message, currentState, collected, state) {
 
       if (extracted.city && !extracted.address_text) {
         const cityLower = extracted.city.toLowerCase();
-        const cityIdx = l.indexOf(cityLower);
+        // Use LAST occurrence of city — voice transcriptions often mention city twice:
+        // "mein Sialkot se bol raha hoon... address mera hai Sialkot City Mola Baeli"
+        // First "Sialkot" is in greeting, last one is in address context
+        const cityIdx = l.lastIndexOf(cityLower);
         if (cityIdx >= 0) {
           // Try BEFORE city first — "Sardar Builders, Office No. 1, ..., Rawalpindi, Punjab"
           let beforeCity = msg.substring(0, cityIdx).trim();
