@@ -153,7 +153,7 @@ function handleTemplateState(message, state, storeName, preIntent) {
   const vars = buildVars(state, storeName);
   // Use pre-detected intent if available, otherwise use strict detection
   const flexYes = /\b(ha+n|hm+|ji+|jee|g|yes+|yess+|shi|sai|sahi|bilkul|confir\w*|ik|o?k+a*y+|o?ki+|ok\s*ok|ok[zgky]?|done|theek|thik|thk|tik|zaroor|kr\s*do|kardo|krdo|kar\s*do|bhej\s*d[oae]|bhejd[oae]|bhij\s*d[oae]|bhijd[oae]|bhaj\s*d[oae]|bhajd[oae]|bhwj\s*d[oae]|bhwjd[oae]|bhjdo|bhjd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|bhijwad[oae]|bhejwad[oae]|mangwa\s*d[oae]|mangwad[oae]|mngwa\s*d[oae]|mngwad[oae]|laga\s*d[oae]|lagad[oae]|lgad[oae]|lga\s*d[oae])\b/i.test(l);
-  const flexNo = /\b(nahi|nhi|no|galat|nope|na+h|mat|cancel|rehne\s*do|bas|choro|chor\s*do|chod\s*do|chhoro|chhod\s*do|rhn\s*do|jane\s*do)\b/i.test(l);
+  const flexNo = /\b(nahi|nhi|nhe|ni|no|galat|nope|na+h|mat|cancel|rehne?\s*d[oae]|rehny?\s*d[oaeiy]|bas|choro|chor\s*d[oae]|chod\s*d[oae]|chhoro|chhod\s*d[oae]|rhn\s*d[oae]|jane\s*d[oae]|koi\s*bhi\s*n[ah]i?)\b/i.test(l);
   // Handle "kuch nahi sab sahi hai" = yes (nahi negates "change", not order)
   const negatedNo = /\b(kuch\s*nahi|koi\s*nahi|nahi\s*kuch|change\s*nahi|nahi\s*change)\b/i.test(l) && /\b(sahi|theek|thik|done|ok|confirm|bilkul)\b/i.test(l);
   const yes = preIntent === 'yes' || negatedNo || (flexYes && !flexNo) || isYes(l);
@@ -595,10 +595,12 @@ function handleTemplateState(message, state, storeName, preIntent) {
         return { reply: 'Kis product ki ' + (mediaType === 'video' ? 'video' : 'picture') + ' chahiye? Product ka naam ya number bata dein 😊', state: 'ORDER_CONFIRMED' };
       }
       // Cancel request after confirmation — parcel dispatch ho chuka
+      // Broadened: "nahi chahiy", "hamay nahi chahiy", "nahi krna", "rehne do", "abhi nahi"
       const isCancel = /\b(cancel|cancl|cance?l|cansel)\b/i.test(l) ||
-        /\b(order\s*)?(cancel|band|khatam|wapis|wapas|vapas|vapsi|return)\s*(kr|kar|karo|krdo|kardo|krna|karna)?\b/i.test(l) ||
-        /\b(nahi|nhi|ni)\s*(chahiye|chaiye|mangta|manga)\b/i.test(l) ||
-        /\bmat\s*(bhej|send|ship)\b/i.test(l);
+        /\b(order\s*)?(cancel|band|khatam|wapis|wapas|vapas|vapsi|return)\s*(kr|kar|karo|krdo|kardo|krna|karna|krdein|kardein)?\b/i.test(l) ||
+        /\b(nahi|nhi|ni|nai|na|mat)\s*(chahiy[ae]?|chaiy[ae]?|mangta|manga|lena|bhej|ship|krna|karna)\b/i.test(l) ||
+        /\bmat\s*(bhej|send|ship)\b/i.test(l) ||
+        /\b(rehne?\s*do|chor\s*do|chhoro|chhod\s*do|nahi\s*chahiy|hamay?\s*nahi|hame\s*nahi|mujhe?\s*nahi|abhi\s*nahi)\b/i.test(l);
       if (isCancel) {
         state.current = 'CANCEL_AFTER_CONFIRM';
         state._cancelTag = true;

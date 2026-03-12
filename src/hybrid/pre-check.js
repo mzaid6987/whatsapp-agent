@@ -730,6 +730,10 @@ function preCheck(message, currentState, collected, state) {
         /\b(mujhe|mujhy|mjhe|mjhy|ye|yeh|yah|ya|muje|wo|woh|humein|hame|hamein)\b/i.test(l)) {
       return { intent: 'order_intent', extracted: {} };
     }
+    // "2 chahiye" / "3 mangta" / "do chahiye" — quantity + want word = order intent
+    if (/\b(\d{1,2}|do|teen|char|panch|chhay?|saat|aath|nau|das)\s*(chahiy[ae]|chaiy[ae]|chay[ae]|chahea|chahye|chaea|chahe|mangta|mangti|mangwao|bhej\s*do|bhejdo)\b/i.test(l)) {
+      return { intent: 'order_intent', extracted: {} };
+    }
   }
 
   // 4a-PI. NAME IN PRODUCT_INQUIRY — customer skipped "haan" and directly gave name after "Order karna hai?"
@@ -750,7 +754,20 @@ function preCheck(message, currentState, collected, state) {
     // Urdu phrases that look like 2-3 English words but are NOT names
     const isUrduPhrase = /^(g\s+brother|ji\s+sir|ji\s+madam|g\s+sir|easily|easyli|dono\s+sath|sath\s+milj|sath\s+mil|required\s+me|final\s+price|last\s+price|ok\s+sir|ok\s+madam|ok\s+done|aik\s+piece|ek\s+piece|one\s+piece)\s*$/i.test(l) ||
       /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|krwana|mangwao|mangwana|bhejdo|bhejdein|bhejna|deliver|delivery|receive|receive)\b/i.test(l);
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isProductKeyword && !endsWithBhi && !isUrduPhrase && words.length >= 2) {
+    // English non-name words — "I Went This", "Yes Ok", "Not Now" etc.
+    const ENGLISH_NON_NAME_PI = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|also|too|only|went|want|wanted|go|going|gone|come|came|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|make|take|took|tell|told|know|said|please|plz|fine|good|bad|here|there|from|will|can|may|should|would|must|required|available)\b/i;
+    const isEnglishNonNamePI = ENGLISH_NON_NAME_PI.test(l);
+    // Greeting check — "Assalamu Alaikum", "AoA", etc.
+    const isGreetingPI = /^(assalam|wa?\s*[ao]?l[ae]i?ku?m|aoa|salam|slam|slaam|hello|hi|hey)\b/i.test(l);
+    // Combo phrases — "Don G Bhai", "Is Ki", "Ok Bhai", "Tobha H", "Bata Diya"
+    const isComboPI = /^(ok|g|ji|don|so|is|ye|yeh|tobha|toba|diya|bata)\s+(bhai|sir|madam|ki|ka|g|h|diya|dia)\b/i.test(l) ||
+      /\b(bhai|sir|madam)\s*$/i.test(l);
+    // Urdu meaning phrases mistaken as names — "Kuch Gunjaish", "Kitne ka hai", "Bata Diya"
+    const isUrduMeaningPI = /^(kuch|kitne?|kitni|bata|btao|tobha|toba|yes\s*ok)\b/i.test(l) ||
+      /\b(gunjaish|gunjais|kahi|diya|dia|hai|he|h|nahi|nhi)\s*$/i.test(l);
+    // Product phrases — "machine", "massager", etc.
+    const isProductPhrasePI = /\b(machine|mashin|trimmer|cutter|remover|nebulizer|duster|spray|massager|masajar|cotton|vegetable|facial|hair|knee|board|cutting|mehn?g[aie]|sast[aie]|gunjaish|gunjais)\b/i.test(l);
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isProductKeyword && !endsWithBhi && !isUrduPhrase && !isEnglishNonNamePI && !isGreetingPI && !isComboPI && !isUrduMeaningPI && !isProductPhrasePI && words.length >= 2) {
       // 2+ word name in PRODUCT_INQUIRY = implicit yes + name (e.g. "Shazia Jamshed")
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_in_product_inquiry', extracted: { name } };
@@ -811,11 +828,11 @@ function preCheck(message, currentState, collected, state) {
     // Gibberish/repeated characters — "A Jjj Jjjjj", "Fffff", "Hhhh"
     const isGibberish = /(.)\1{2,}/i.test(trimmed) || // same char repeated 3+ times
       trimmed.split(/\s+/).some(w => w.length > 1 && new Set(w.toLowerCase()).size === 1); // word with all same letters
-    // "Ok/G + word" combos and other non-name combos — "Ok Bhai", "G Bhej Dein", "Don G Bhai", "So Sorry"
-    const isComboPhrase = /^(ok|g|ji|don|so|is|ye|yeh|tobha|diya)\s+(bhai|sir|madam|bhej|wait|sorry|sorryg|ki|gaya|bhi)\b/i.test(l) ||
+    // "Ok/G + word" combos and other non-name combos — "Ok Bhai", "G Bhej Dein", "Don G Bhai", "So Sorry", "Yes Ok"
+    const isComboPhrase = /^(ok|g|ji|don|so|is|ye|yeh|tobha|toba|diya|bata|yes)\s+(bhai|sir|madam|bhej|wait|sorry|sorryg|ki|ka|gaya|bhi|ok|g|h|diya|dia)\b/i.test(l) ||
       /\b(bhai|bhej\s*dein|gaya\s*hai|sorry)\s*$/i.test(l);
     // Urdu phrases that look like English names but are NOT names
-    const isUrduPhrase = /^(g\s+brother|ji\s+sir|ji\s+madam|g\s+sir|easily|easyli|dono\s+sath|required\s+me|final\s+price|last\s+price|ok\s+sir|ok\s+done)\s*$/i.test(l) ||
+    const isUrduPhrase = /^(g\s+brother|ji\s+sir|ji\s+madam|g\s+sir|easily|easyli|dono\s+sath|required\s+me|final\s+price|last\s+price|ok\s+sir|ok\s+done|yes\s+ok|tobha\s+h|bata\s+diya?|kuch\s+gunjaish?)\s*$/i.test(l) ||
       /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|mangwao|bhejdo|deliver|delivery|receive)\b/i.test(l);
     // English non-name words — pronouns, verbs, adjectives that are NEVER Pakistani names
     // Catches: "I Went This", "Required Me", "Ok Not Required", "Send Me", "Just Fine" etc.
@@ -824,8 +841,16 @@ function preCheck(message, currentState, collected, state) {
     // Single common English words that are NOT names (but could pass looksLikeName)
     const isSingleEnglishWord = words.length === 1 && /^(yes|no|ok|hi|hey|hello|bye|please|thanks|sorry|sure|fine|good|nice|great|love|like|want|need|help|send|done|wait|stop|start|open|close|free|new|old|big|small|fast|slow|easy|hard|real|true|best|last|next|same|other|much|more|less|just|only|even|still|also|back|down|here|there|away|home|long|full|high|low|off|sir|madam|bro|dear|boss|dude|miss|mam|available|required)$/i.test(l);
     if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isGreeting && !isProductPhrase && !isGibberish && !isComboPhrase && !isUrduPhrase && !isEnglishNonName && !isSingleEnglishWord) {
-      // Capitalize properly
-      const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      // Strip "Name" prefix — "Name Arshad Luck" → "Arshad Luck"
+      let nameWords = words;
+      if (nameWords.length >= 2 && /^name$/i.test(nameWords[0])) {
+        nameWords = nameWords.slice(1);
+      }
+      // Strip "Luck" suffix (common WhatsApp username artifact)
+      if (nameWords.length >= 2 && /^luck$/i.test(nameWords[nameWords.length - 1])) {
+        nameWords = nameWords.slice(0, -1);
+      }
+      const name = nameWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_given', extracted: { name } };
     }
     // Suspicious WhatsApp username detected — re-ask for real name

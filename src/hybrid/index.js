@@ -286,8 +286,8 @@ function extractDetailsFromMsg(msg, productShort) {
       details.addressParts.street = null;
     }
 
-    // Build address string from parts using buildAddressString (handles tehsil/zilla)
-    const addrVals = Object.values(details.addressParts).filter(v => v);
+    // Build address string from parts using buildAddressString (handles tehsil/zilla, filters nahi_pata)
+    const addrVals = Object.values(details.addressParts).filter(v => v && v !== 'nahi_pata');
     if (addrVals.length > 0) {
       details.address = addrVals.join(', ');
     }
@@ -1756,7 +1756,15 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     // City (AI might extract, code validates)
     // GUARD: If city already set, don't let AI change it (prevents hallucination like "Jhang" when customer said "Chiniot")
     if (extracted.city && !state.collected.city) {
-      state.collected.city = extracted.city;
+      // Validate AI-extracted city — AI sometimes returns full sentence ("Hasilpur hai yeh please c") instead of just city name
+      let cleanCity = extractCity(extracted.city) || extracted.city;
+      // If still a long sentence (5+ words), try extracting city from the original message instead
+      if (cleanCity.split(/\s+/).length >= 5) {
+        const msgCity = extractCity(message);
+        if (msgCity) cleanCity = msgCity;
+        else cleanCity = cleanCity.split(/\s+/).slice(0, 2).join(' '); // fallback: first 2 words
+      }
+      state.collected.city = cleanCity;
       // If rural part was stored from previous rural_no_city, mark as rural now
       if (state._rural_part) {
         state.collected.address_parts = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };

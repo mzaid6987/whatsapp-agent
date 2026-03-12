@@ -98,7 +98,8 @@ const ALL_CITIES = [
   'zhob','loralai','pishin','chaman','sibi','kalat','mastung','nushki',
   'skardu','hunza','ghizer','astore','diamer',
   'murree','nathia gali','bhurban','haripur','hassan abdal',
-  'fatehpur','mian channu','kamalia','jaranwala','samundri','tandlianwala','fateh jang','pattoki','arifwala','chishtian','duniya pur','alipur','jatoi','kot addu','kabirwala'
+  'fatehpur','mian channu','kamalia','jaranwala','samundri','tandlianwala','fateh jang','pattoki','arifwala','chishtian','duniya pur','alipur','jatoi','kot addu','kabirwala',
+  'hasilpur','ahmedpur east','yazman','khairpur tamewali','liaquatpur','jalalpur pirwala','mailsi','shujaabad','bhalwal','kot momin','sanghar','badin','thatta','dadu','ghotki','matiari','tando allahyar','umerkot','naushahro feroze','jamshoro','qambar shahdadkot','kashmore','sujawal','tharparkar'
 ];
 
 const REGIONS = ['kashmir','ajk','punjab','sindh','kpk','balochistan','fata','gilgit baltistan','khyber pakhtunkhwa'];
