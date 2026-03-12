@@ -2674,12 +2674,19 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       // Save parcel data in state for "usi pe bhejo" follow-up reference
       state._parcel_data = parcelData;
       const parts = [];
-      if (parcelData.name) { state.collected.name = parcelData.name; parts.push(`Naam: ${parcelData.name}`); }
-      if (parcelData.phone) { state.collected.phone = parcelData.phone; state.collected.delivery_phone = 'same'; parts.push(`Phone: ${parcelData.phone}`); }
+      if (parcelData.name) {
+        if (!state.collected.name) { state.collected.name = parcelData.name; parts.push(`Naam: ${parcelData.name}`); }
+        else parts.push(`Naam (parcel): ${parcelData.name}`);
+      }
+      if (parcelData.phone) {
+        if (!state.collected.phone) { state.collected.phone = parcelData.phone; state.collected.delivery_phone = 'same'; parts.push(`Phone: ${parcelData.phone}`); }
+        else parts.push(`Phone (parcel): ${parcelData.phone}`);
+      }
       if (parcelData.city) {
         const cityMatch = extractCity(parcelData.city);
-        if (cityMatch) { state.collected.city = cityMatch; parts.push(`City: ${cityMatch}`); }
-        else { state.collected.city = parcelData.city; parts.push(`City: ${parcelData.city}`); }
+        const resolvedCity = cityMatch || parcelData.city;
+        if (!state.collected.city) { state.collected.city = resolvedCity; parts.push(`City: ${resolvedCity}`); }
+        else parts.push(`City (parcel): ${resolvedCity}`);
       }
       if (parcelData.address) {
         state.collected.address_parts = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };
