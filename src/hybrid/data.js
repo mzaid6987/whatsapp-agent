@@ -124,7 +124,12 @@ function getHonorific(name, genderOverride) {
   // Gender override from feminine verb detection (e.g., "krlungi", "deti hon")
   if (genderOverride === 'female') return 'madam';
   if (!name) return 'sir';
-  const firstName = name.trim().split(/\s+/)[0].toLowerCase();
+  // Title prefix check — "Ms Naz" → madam, "Mr Ahmed" → sir
+  const words = name.trim().split(/\s+/);
+  const firstWord = words[0].toLowerCase();
+  if (/^(ms|miss|mrs|bibi|baji|apa|aapi)$/i.test(firstWord)) return 'madam';
+  if (/^(mr|mian|ch|chaudhry|chaudhary)$/i.test(firstWord) && words.length >= 2) return 'sir';
+  const firstName = firstWord;
 
   // 1. Check male exceptions FIRST (names ending in 'a' but male — Hamza, Mustafa, Krishna etc.)
   if (MALE_NAMES_ENDING_A.has(firstName)) return 'sir';

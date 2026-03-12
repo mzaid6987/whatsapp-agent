@@ -100,7 +100,7 @@ function preCheck(message, currentState, collected, state) {
   // 0a. GIBBERISH / JUNK — single dot, random chars, emojis only, etc.
   // Treat as greeting so template responds (no AI cost)
   // BUT: "G", "K", "J", "Y", "N" etc are valid short responses (G=ji, K=ok, Y=yes, N=no)
-  const isAffirmativeShort = /^[gkyjhn]$/i.test(l);
+  const isAffirmativeShort = /^[gkyjhn]$/i.test(l) || /^(ok|no|hi)$/i.test(l);
   const isJunk = /^[.\-_,;:!?\s*#+@^~`'"(){}[\]<>\/\\|]+$/.test(msg) || (msg.length <= 2 && !isAffirmativeShort);
   if (isJunk && ['IDLE', 'GREETING'].includes(currentState)) {
     return { intent: 'greeting' };
@@ -184,9 +184,10 @@ function preCheck(message, currentState, collected, state) {
     /\b(bol\s*ke|bol\s*kr|bolke|bolkr)\s*(bata[od]?o?|smjha[od]?o?|samjha[od]?o?)\b/i.test(l) ||
     /\b(awaaz|awaz|aawaz)\s*(mein|me|mai|m)\s*(bata[od]?o?|bhej[od]?o?|bol[od]?o?)\b/i.test(l) ||
     /\b(voice\s*(msg|message|note)|voice)\s*(chahiye|chahie|chaiye|mangta|mangti)\b/i.test(l);
-  // Guard: "rider ko call kar lena" in COLLECT_ADDRESS = accept address, not voice request
+  // Guard: "rider ko call kar lena" / "pohanch kar call karna" in COLLECT_ADDRESS = delivery instruction, not voice request
   const isRiderCall = /\b(rider|courier|delivery\s*boy|delivery\s*man)\s*(ko|k)\b/i.test(l) && /\b(call|kall|col)\b/i.test(l);
-  if (isVoiceMsgReq && !(isRiderCall && currentState === 'COLLECT_ADDRESS')) {
+  const isArriveCall = /\b(pohanch|pohch|pahunch|pahoch|aa\s*k[ae]r?|aakar|a+\s*ja[ey]|ajao)\s*.{0,15}(call|kall|col)\b/i.test(l);
+  if (isVoiceMsgReq && !((isRiderCall || isArriveCall) && currentState === 'COLLECT_ADDRESS')) {
     return { intent: 'voice_msg_request' };
   }
 
@@ -1114,7 +1115,9 @@ function preCheck(message, currentState, collected, state) {
       /\b(konsa|konsi|konsy|kahan|kidhar|kab|kitna|kitne|kitni|kaisy|kesy|kaise|where|when|how|what|which|why)\b/i.test(l) ||
       /\b(hog[aie]|milega|ayega|lagega|chahiye|chaiye|aye\s*ga|mile\s*ga|lage\s*ga)\b/i.test(l) ||
       /[?؟]/.test(msg);
-    if (!foundAny && !isRefusal && wordCount <= 4 && /^[a-z\s]+$/i.test(l.trim()) && !isGarbageText) {
+    // Guard: reject gibberish short text — all 1-char words like "ya e a", or common Urdu filler
+    const isShortGibberish = l.trim().split(/\s+/).every(w => w.length <= 2) || /^(ya|ye|yeh|ha|ok|g|ji|na|ni)\s/i.test(l.trim());
+    if (!foundAny && !isRefusal && wordCount <= 4 && /^[a-z\s]+$/i.test(l.trim()) && !isGarbageText && !isShortGibberish) {
       if (!ap.area) {
         // Short text during area step → assume it's area name
         parts.area = msg.trim();
