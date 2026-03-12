@@ -222,26 +222,51 @@ function renderChatList(convos) {
       </div>
     `;
   }).join('');
+
+  // Re-apply active filters after re-render
+  if (_activeFilter !== 'all' || _activeSearch || _activeDate) {
+    applyAllFilters();
+  }
 }
 
-// Chat filters
+// Chat filters — track active filter + search + date so they persist across refreshes
+let _activeFilter = 'all';
+let _activeSearch = '';
+let _activeDate = '';
+
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('filter-chip')) {
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
     e.target.classList.add('active');
-    const filter = e.target.dataset.filter;
-    filterChats(filter);
+    _activeFilter = e.target.dataset.filter;
+    applyAllFilters();
   }
 });
 
 function filterChats(filter) {
+  _activeFilter = filter;
+  applyAllFilters();
+}
+
+function applyAllFilters() {
   const items = document.querySelectorAll('.chat-item');
   items.forEach(item => {
-    if (filter === 'all') {
-      item.style.display = '';
-    } else {
-      item.style.display = item.dataset[`filter${filter.charAt(0).toUpperCase() + filter.slice(1)}`] === 'true' ? '' : 'none';
+    let show = true;
+    // Category filter
+    if (_activeFilter !== 'all') {
+      show = item.dataset[`filter${_activeFilter.charAt(0).toUpperCase() + _activeFilter.slice(1)}`] === 'true';
     }
+    // Search filter
+    if (show && _activeSearch) {
+      const name = item.dataset.name || '';
+      const phone = item.dataset.phone || '';
+      show = name.includes(_activeSearch) || phone.includes(_activeSearch);
+    }
+    // Date filter
+    if (show && _activeDate) {
+      show = item.dataset.date === _activeDate;
+    }
+    item.style.display = show ? '' : 'none';
   });
 }
 
@@ -249,12 +274,8 @@ function filterChats(filter) {
 const chatSearchEl = document.getElementById('chatSearch');
 if (chatSearchEl) {
   chatSearchEl.addEventListener('input', (e) => {
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll('.chat-item').forEach(item => {
-      const name = item.dataset.name || '';
-      const phone = item.dataset.phone || '';
-      item.style.display = (name.includes(q) || phone.includes(q)) ? '' : 'none';
-    });
+    _activeSearch = e.target.value.toLowerCase();
+    applyAllFilters();
   });
 }
 
@@ -263,19 +284,17 @@ const chatDateEl = document.getElementById('chatDateFilter');
 const chatDateClearEl = document.getElementById('chatDateClear');
 if (chatDateEl) {
   chatDateEl.addEventListener('change', () => {
-    const d = chatDateEl.value; // YYYY-MM-DD
-    if (chatDateClearEl) chatDateClearEl.style.display = d ? '' : 'none';
-    document.querySelectorAll('.chat-item').forEach(item => {
-      if (!d) { item.style.display = ''; return; }
-      item.style.display = (item.dataset.date === d) ? '' : 'none';
-    });
+    _activeDate = chatDateEl.value; // YYYY-MM-DD or ''
+    if (chatDateClearEl) chatDateClearEl.style.display = _activeDate ? '' : 'none';
+    applyAllFilters();
   });
 }
 if (chatDateClearEl) {
   chatDateClearEl.addEventListener('click', () => {
     chatDateEl.value = '';
+    _activeDate = '';
     chatDateClearEl.style.display = 'none';
-    document.querySelectorAll('.chat-item').forEach(item => { item.style.display = ''; });
+    applyAllFilters();
   });
 }
 
