@@ -212,7 +212,7 @@ function renderChatList(convos) {
         <div class="chat-avatar">${initials}</div>
         <div class="chat-item-info">
           <div class="chat-item-top">
-            <span class="chat-item-name">${statusIcon} ${name}</span>
+            <span class="chat-item-name">${statusIcon} ${name}${c.exported ? ' <svg class="exported-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#38a169" stroke-width="2.5" title="Exported"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' : ''}</span>
             <span class="chat-item-time">${timeAgo(c.last_message_at)}</span>
           </div>
           ${labelHtml ? '<div class="chat-item-labels">' + labelHtml + '</div>' : ''}

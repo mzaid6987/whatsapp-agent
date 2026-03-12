@@ -1040,6 +1040,12 @@ app.get('/api/conversations/:id/debug-export', requireAuth, (req, res) => {
     report += `Total AI Cost: Rs.${totalAiCost.toFixed(2)}\n`;
     report += `Template Ratio: ${templateCount + aiCount > 0 ? Math.round(templateCount / (templateCount + aiCount) * 100) : 0}%\n`;
 
+    // Mark as exported in debug_exports (if not already)
+    const alreadyExported = db.prepare('SELECT 1 FROM debug_exports WHERE conv_id = ?').get(convId);
+    if (!alreadyExported) {
+      db.prepare('INSERT INTO debug_exports (conv_id, batch_id) VALUES (?, ?)').run(convId, 'single-' + Date.now());
+    }
+
     const filename = `chat-debug-${customer?.phone || convId}-${new Date().toISOString().slice(0, 10)}.txt`;
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

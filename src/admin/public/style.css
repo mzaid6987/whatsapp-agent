@@ -473,6 +473,12 @@ body:has(.chats-container) {
 .status-icon {
   font-size: 12px;
 }
+.exported-icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 3px;
+  opacity: 0.7;
+}
 
 .chat-item-labels {
   display: flex;
