@@ -1849,8 +1849,14 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       }
     }
     if (!state.collected.address_parts.area) {
-      const rawArea = extractArea(message, state.collected.city);
-      if (rawArea) state.collected.address_parts.area = rawArea;
+      // Only extract area from messages that look like address info, not questions/conversation
+      const msgLower = message.toLowerCase().trim();
+      const isQuestion = /\b(kahan|kidhar|kab|kitna|kitne|kitni|kaise|kya|kia|konsa|konsi|where|when|how|what|which)\b/i.test(msgLower) &&
+        /\b(se|hen|hai|he|h|hain|ho|hogi|hoga|from|is|are|will|can)\b/i.test(msgLower);
+      if (!isQuestion) {
+        const rawArea = extractArea(message, state.collected.city);
+        if (rawArea) state.collected.address_parts.area = rawArea;
+      }
     }
     // Full address extraction: when customer sends name + detailed address in one message
     // e.g. "Sardar Shaukat Sardar Builders, Office No. 1, Ground Floor, Plaza No. 99D, Spring North, Bahria Phase 7, Rawalpindi, Punjab"

@@ -673,10 +673,14 @@ function preCheck(message, currentState, collected, state) {
   // Must run BEFORE other COLLECT_NAME checks to not lose the name
   if (currentState === 'COLLECT_NAME' && msg.length > 20) {
     // Order matters: "X naam hai mera" pattern FIRST (more specific), then "naam hai X"
-    const nameInMsg = msg.match(/\b([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20})?)\s+(?:naam|name)\s+(?:hai|he|h)\s+(?:mera|mra)\b/i) ||
+    // English: "my name is X Y Z" — must come before Urdu patterns
+    const englishNameIs = msg.match(/\bmy\s+name\s+is\s+([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20}){0,2})\b/i) ||
+      msg.match(/\bi\s*(?:am|m)\s+([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20}){0,2})\b/i);
+    const nameInMsg = englishNameIs ||
+      msg.match(/\b([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20})?)\s+(?:naam|name)\s+(?:hai|he|h)\s+(?:mera|mra)\b/i) ||
       msg.match(/\b([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20})?)\s+(?:naam|name)\s+(?:hai|he|h)\s*(?:mera|mra)?\s*$/i) ||
       msg.match(/\b(?:mera|mra)\s+(?:naam|name)\s+(?:hai|he|h)?\s*([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20})?)\b/i) ||
-      msg.match(/\b(?:naam|name)\s+(?:hai|he|h|mera|mra)?\s*([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20})?)\b/i);
+      msg.match(/\b(?:naam|name)\s+(?:hai|he|h|is|mera|mra)\s+([A-Za-z]{2,20}(?:\s+[A-Za-z]{2,20}){0,2})\b/i);
     if (nameInMsg) {
       const rawName = nameInMsg[1].trim();
       // Make sure it's not a common word
@@ -785,11 +789,12 @@ function preCheck(message, currentState, collected, state) {
 
   // 4a0. CANCEL/REFUSAL in collection states — "cancel", "nahi chahiye", "order nahi karna"
   // Must catch BEFORE name detection so "nahi chahiye" is not processed as name
-  if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {
+  if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_DELIVERY_PHONE', 'COLLECT_ADDRESS'].includes(currentState)) {
     const isCancelInCollection = /\b(cancel|cancl|cansel)\b/i.test(l) ||
       /\b(order|ordr)?\s*(nai|nahi|nhi|ni|na|mat)\s*(kr|kar|karn[aie]|krn[aie]|chahiy[ae]|chaiy[ae])?\b/i.test(l) && /\b(nai|nahi|nhi|ni|na|mat)\b/i.test(l) ||
       /\b(nai|nahi|nhi|ni|na|mat)\s*(chahiy[ae]|chaiy[ae]|mangta|manga|lena|order|krna|karna)\b/i.test(l) ||
-      /\b(rehne\s*do|choro|chhoro|bas|nai\s*krwana|abhi\s*nahi|filhal\s*nahi|felhal\s*nahi|abi\s*nahi)\b/i.test(l);
+      /\b(rehne\s*do|choro|chhoro|bas|nai\s*krwana|abhi\s*nahi|filhal\s*nahi|felhal\s*nahi|abi\s*nahi)\b/i.test(l) ||
+      /\b(not\s*interested|no\s*thanks?|no\s*thnks?|don'?t\s*want|i'?m?\s*not\s*interested)\b/i.test(l);
     if (isCancelInCollection) return { intent: 'no_order_now' };
   }
 
