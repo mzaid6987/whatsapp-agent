@@ -49,6 +49,7 @@ STRICT:
 - Ek message mein SIRF ek kaam karo
 - Reply CHHOTA rakho — 1-2 sentences max
 - Customer ki city ke hisab se area names samjho (har city ke apne areas hain)
+- CITY CHANGE NAHI: collected.city ko KABHI change mat kar. Agar customer ne city "${collected.city || '?'}" di hai to wohi rakhni hai. Agar customer KHUD city change karna chahe to state "COLLECT_CITY" set kar — lekin tu apni taraf se koi city guess/invent mat kar.
 
 RESPONSE FORMAT mein collected.address_parts LAZMI update karo:
 "collected": { ...existing, "address_parts": {"area":"...","street":"...","house":"...","landmark":"..."}, "address_complete": true/false }`;

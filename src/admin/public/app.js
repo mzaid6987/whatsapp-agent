@@ -1328,6 +1328,17 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
       mediaPreviewHtml = `<div class="msg-media-preview"><video controls preload="none" class="msg-media-video"><source src="${mediaUrl}"></video></div>`;
     }
   }
+  // Fallback: if content has media label [📎 ...] but no media_type/media_url — show a media badge
+  if (!mediaPreviewHtml && m.content && m.content.includes('[📎')) {
+    const mediaMatch = m.content.match(/\[📎\s*(\d+)\s*(image|video|audio)s?\s*sent:\s*([^\]]+)\]/);
+    if (mediaMatch) {
+      const mCount = mediaMatch[1];
+      const mType = mediaMatch[2];
+      const mProduct = mediaMatch[3].trim();
+      const icon = mType === 'video' ? '🎬' : '🖼️';
+      mediaPreviewHtml = `<div class="msg-media-badge">${icon} ${mCount} ${mType}${mCount > 1 ? 's' : ''} sent: ${mProduct}</div>`;
+    }
+  }
   return `
     <div class="msg-bubble ${bubbleClass}" data-msg-id="${m.id}" data-wa-id="${m.wa_message_id || ''}">
       ${senderLabel ? `<div class="msg-sender ${senderClass}">${senderLabel}${srcBadge}</div>` : ''}

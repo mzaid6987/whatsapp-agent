@@ -1722,7 +1722,8 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     }
 
     // City (AI might extract, code validates)
-    if (extracted.city) {
+    // GUARD: If city already set, don't let AI change it (prevents hallucination like "Jhang" when customer said "Chiniot")
+    if (extracted.city && !state.collected.city) {
       state.collected.city = extracted.city;
       // If rural part was stored from previous rural_no_city, mark as rural now
       if (state._rural_part) {
@@ -3089,11 +3090,29 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       if (pre.extracted.area && !state.collected.address_parts.area) {
         state.collected.address_parts.area = pre.extracted.area;
       }
-      // If extra text was given with city (e.g. "Karachi, Allah wali per") — save as landmark hint
-      // This prevents losing address info that customer gives alongside city
-      if (pre.extracted.address_hint && !state.collected.address_parts.landmark) {
-        state._address_hint = pre.extracted.address_hint;
-        console.log(`[CITY+HINT] Saved address hint: "${pre.extracted.address_hint}"`);
+      // If extra text was given with city — try to parse address parts from it
+      // e.g., "Lahore, Gulberg, Main Boulevard, House 45" → parse area, street, house
+      if (pre.extracted.address_hint) {
+        const hint = pre.extracted.address_hint;
+        console.log(`[CITY+HINT] Parsing address hint: "${hint}"`);
+        const ap = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };
+        // Try extracting address components from hint
+        const hintArea = extractArea(hint);
+        const hintStreet = extractStreet(hint);
+        const hintHouse = extractHouse(hint);
+        const hintLandmark = extractLandmark(hint);
+        // Also try matchArea for known areas in this city
+        const hintAreaMatch = matchArea(hint, pre.extracted.city);
+        if (!ap.area && (hintArea || hintAreaMatch)) ap.area = hintAreaMatch || hintArea;
+        if (!ap.street && hintStreet) ap.street = hintStreet;
+        if (!ap.house && hintHouse) ap.house = hintHouse;
+        if (!ap.landmark && hintLandmark) ap.landmark = hintLandmark;
+        state.collected.address_parts = ap;
+        // If nothing was parsed, save as plain hint for AI to use
+        if (!hintArea && !hintAreaMatch && !hintStreet && !hintHouse && !hintLandmark) {
+          state._address_hint = hint;
+        }
+        console.log(`[CITY+HINT] Parsed → area:${ap.area} street:${ap.street} house:${ap.house} landmark:${ap.landmark}`);
       }
       // If rural part was stored from previous rural_no_city, move to address area
       if (state._rural_part) {
@@ -3371,6 +3390,7 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       // Customer says "btaya to" / "bas itna" / "yeh address hai" / "just likh do ajayega"
       // Accept what we have, fill missing with nahi_pata, and add reassurance about delivery call
       const ap = state.collected.address_parts;
+      if (!ap.area) ap.area = 'nahi_pata';
       if (!ap.house) ap.house = 'nahi_pata';
       if (!ap.landmark) ap.landmark = 'nahi_pata';
       if (!ap.street) ap.street = 'nahi_pata';

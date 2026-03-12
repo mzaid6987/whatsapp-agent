@@ -814,6 +814,16 @@ body:has(.chats-container) {
   display: block;
 }
 
+.msg-media-badge {
+  background: #e8f4fd;
+  color: #1976d2;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  margin-bottom: 4px;
+  display: inline-block;
+}
+
 .msg-media-video {
   max-width: 200px;
   max-height: 150px;

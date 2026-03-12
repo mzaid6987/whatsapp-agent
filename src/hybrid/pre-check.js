@@ -1144,9 +1144,14 @@ function preCheck(message, currentState, collected, state) {
 
   // 7a-x. DELIVERY PROCESS question — "kis trha deliver hoga", "delivery kaise hoti hai", "kaise bhejte ho"
   // Customer asking HOW delivery works (courier? TCS? process?) — not time or charges
+  // Also catches direct courier company questions: "TCS available hai?", "Leopard se bhejoge?", "konsi company?"
   const isDeliveryProcessQ = /\b(kis\s*tr[ha]+|kais[ey]?|kidher\s*se|konsi?\s*(company|courier))\s*.*(delive?r|bhej|parcel|ship|courier|send)\b/i.test(l) ||
     /\b(delive?r|parcel|bhej|ship)\s*.*(kis\s*tr[ha]+|kais[ey]?|hot[ia]|hog[ia]|kart[ey]|krte?)\b/i.test(l) ||
-    /\b(delive?r|parcel)\s*(ho\s*sakt[aie]|ho\s*jaye?g[aie]|ho\s*jayg[aie])\b/i.test(l);
+    /\b(delive?r|parcel)\s*(ho\s*sakt[aie]|ho\s*jaye?g[aie]|ho\s*jayg[aie])\b/i.test(l) ||
+    /\b(tcs|leopard|leopards|postex|call\s*courier|m\s*&?\s*p)\s*(se|say|sy|available|hai|he|h|hota|hoti|hoga|hogi|milta|milti|bhej|aata|aati|ata|ati|dete|krte|karte|through|use|wale|wali)\b/i.test(l) ||
+    /\b(tcs|leopard|leopards|postex|call\s*courier|m\s*&?\s*p)\s*[?؟]\s*$/i.test(l) ||
+    /\b(konsi?|kaun\s*si?|kis|which)\s*(courier|company|service)\b/i.test(l) ||
+    /\b(courier|company|service)\s*(konsi?|kaun\s*si?|kya|kia|kon)\b/i.test(l);
   if (isDeliveryProcessQ) {
     const dpCity = extractCity(msg);
     return { intent: 'delivery_process_question', extracted: dpCity ? { city: dpCity } : {} };
