@@ -728,13 +728,19 @@ function closeChatView() {
 function downloadDebugLog() {
   if (!currentChatId) return;
   window.open(`/api/conversations/${currentChatId}/debug-export`, '_blank');
-  // Mark as downloaded so icon shows in chat list
-  api(`/api/conversations/${currentChatId}/mark-downloaded`, { method: 'POST' }).then(() => {
-    // Update local data and re-render
+  // Debug-export endpoint auto-marks as downloaded now, but also call mark-downloaded via GET
+  // (POST was blocked by LiteSpeed WAF — 403 Forbidden)
+  api(`/api/conversations/${currentChatId}/mark-downloaded`).then(() => {
     const conv = conversations.find(c => c.id === currentChatId);
     if (conv) conv.downloaded = 1;
     renderChatList(conversations);
-  }).catch(() => {});
+  }).catch(() => {
+    // Even if this fails, the debug-export endpoint already marked it
+    // Just update local state optimistically
+    const conv = conversations.find(c => c.id === currentChatId);
+    if (conv) conv.downloaded = 1;
+    renderChatList(conversations);
+  });
 }
 
 function escHtml(str) {

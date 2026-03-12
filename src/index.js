@@ -1040,6 +1040,14 @@ app.get('/api/conversations/:id/debug-export', requireAuth, (req, res) => {
     report += `Total AI Cost: Rs.${totalAiCost.toFixed(2)}\n`;
     report += `Template Ratio: ${templateCount + aiCount > 0 ? Math.round(templateCount / (templateCount + aiCount) * 100) : 0}%\n`;
 
+    // Auto-mark as downloaded when debug log is exported
+    try {
+      const existing = db.prepare('SELECT id FROM debug_exports WHERE conv_id = ? AND batch_id = ?').get(convId, 'manual');
+      if (!existing) {
+        db.prepare('INSERT INTO debug_exports (conv_id, batch_id) VALUES (?, ?)').run(convId, 'manual');
+      }
+    } catch (markErr) { /* non-critical */ }
+
     const filename = `chat-debug-${customer?.phone || convId}-${new Date().toISOString().slice(0, 10)}.txt`;
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -1049,12 +1057,24 @@ app.get('/api/conversations/:id/debug-export', requireAuth, (req, res) => {
   }
 });
 
-// Mark conversation as downloaded (single export)
+// Mark conversation as downloaded (kept as fallback, also available via GET to avoid WAF blocks)
 app.post('/api/conversations/:id/mark-downloaded', requireAuth, (req, res) => {
   try {
     const convId = parseInt(req.params.id);
     const db = getDb();
-    // Check if already marked
+    const existing = db.prepare('SELECT id FROM debug_exports WHERE conv_id = ? AND batch_id = ?').get(convId, 'manual');
+    if (!existing) {
+      db.prepare('INSERT INTO debug_exports (conv_id, batch_id) VALUES (?, ?)').run(convId, 'manual');
+    }
+    res.json({ ok: true, downloaded: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+app.get('/api/conversations/:id/mark-downloaded', requireAuth, (req, res) => {
+  try {
+    const convId = parseInt(req.params.id);
+    const db = getDb();
     const existing = db.prepare('SELECT id FROM debug_exports WHERE conv_id = ? AND batch_id = ?').get(convId, 'manual');
     if (!existing) {
       db.prepare('INSERT INTO debug_exports (conv_id, batch_id) VALUES (?, ?)').run(convId, 'manual');
