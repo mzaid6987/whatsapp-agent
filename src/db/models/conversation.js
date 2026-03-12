@@ -72,7 +72,7 @@ function setAdminUnread(id, value) {
   getDb().prepare('UPDATE conversations SET admin_unread = ? WHERE id = ?').run(value ? 1 : 0, id);
 }
 
-function getAll(limit = 100) {
+function getAll(limit = 500) {
   return getDb().prepare(`
     SELECT c.*, cu.phone, cu.name as customer_name, cu.wa_profile_name,
       (SELECT direction FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_direction,
