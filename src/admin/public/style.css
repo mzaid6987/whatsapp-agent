@@ -559,6 +559,12 @@ body:has(.chats-container) {
   color: #DC2626;
   font-weight: 600;
 }
+.label-downloaded {
+  background: #DBEAFE;
+  color: #2563EB;
+  font-weight: 700;
+  font-size: 12px;
+}
 
 @keyframes pulse-silent {
   0%, 100% { opacity: 1; }

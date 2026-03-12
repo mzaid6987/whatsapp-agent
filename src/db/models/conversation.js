@@ -77,7 +77,8 @@ function getAll() {
     SELECT c.*, cu.phone, cu.name as customer_name, cu.wa_profile_name,
       (SELECT direction FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_direction,
       (SELECT sender FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_sender,
-      (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_time
+      (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg_time,
+      (SELECT COUNT(*) FROM debug_exports WHERE conv_id = c.id) as downloaded
     FROM conversations c
     JOIN customers cu ON cu.id = c.customer_id
     ORDER BY c.last_message_at DESC

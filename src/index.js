@@ -1049,6 +1049,22 @@ app.get('/api/conversations/:id/debug-export', requireAuth, (req, res) => {
   }
 });
 
+// Mark conversation as downloaded (single export)
+app.post('/api/conversations/:id/mark-downloaded', requireAuth, (req, res) => {
+  try {
+    const convId = parseInt(req.params.id);
+    const db = getDb();
+    // Check if already marked
+    const existing = db.prepare('SELECT id FROM debug_exports WHERE conv_id = ? AND batch_id = ?').get(convId, 'manual');
+    if (!existing) {
+      db.prepare('INSERT INTO debug_exports (conv_id, batch_id) VALUES (?, ?)').run(convId, 'manual');
+    }
+    res.json({ ok: true, downloaded: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Bulk debug export — preview (count new chats available)
 app.get('/api/bulk-debug-export/preview', requireAuth, (req, res) => {
   try {

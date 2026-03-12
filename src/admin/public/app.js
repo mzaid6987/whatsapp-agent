@@ -182,6 +182,7 @@ function renderChatList(convos) {
     if (isOrderState) labels.push('<span class="label-badge label-order">ORDER</span>');
     if (c.address_incomplete) labels.push('<span class="label-badge label-addr-incomplete">ADDR INCOMPLETE</span>');
     if (c.state === 'CANCEL_AFTER_CONFIRM') labels.push('<span class="label-badge label-cancel">CANCEL</span>');
+    if (c.downloaded) labels.push('<span class="label-badge label-downloaded" title="Downloaded">&#8681;</span>');
     if (c.unreplied && !labels.length) labels.push(`<span class="label-badge label-unreplied">UNREPLIED ${Math.floor((c.unreplied_since || 0) / 60)}m</span>`);
     // Silent customer timer — live calculated from last_msg_time
     const liveHours = (c.last_msg_direction === 'outgoing' && c.last_msg_time) ? calcSilentHoursLive(c.last_msg_time) : null;
@@ -717,6 +718,13 @@ function closeChatView() {
 function downloadDebugLog() {
   if (!currentChatId) return;
   window.open(`/api/conversations/${currentChatId}/debug-export`, '_blank');
+  // Mark as downloaded so icon shows in chat list
+  api(`/api/conversations/${currentChatId}/mark-downloaded`, { method: 'POST' }).then(() => {
+    // Update local data and re-render
+    const conv = conversations.find(c => c.id === currentChatId);
+    if (conv) conv.downloaded = 1;
+    renderChatList(conversations);
+  }).catch(() => {});
 }
 
 function escHtml(str) {
