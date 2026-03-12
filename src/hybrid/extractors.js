@@ -380,6 +380,22 @@ function extractHouse(msg) {
         const before = msg.substring(0, matchIdx).toLowerCase().trim();
         if (/\b(gali|galli|street|st|block|blk|sector|sec|phase|lane)\s*$/i.test(before)) continue;
       }
+      // Strip trailing Urdu verb suffixes: "9ha" → "9", "12hai" → "12", "5he" → "5"
+      // These happen when customer writes "house 9 hai" without space → "9hai" captured
+      // But preserve legitimate letter suffixes like "9A", "12B", "5C" (single letter, not Urdu word)
+      val = val.replace(/(ha[ie]?|he|hae|hay)$/i, '').trim() || val;
+      // Handle case where regex captured only first letter of Urdu word: "9h" from "9hai"
+      // Check if letter + next chars in original msg form an Urdu verb (ha/hai/he/hae)
+      if (/[a-z]$/i.test(val) && val.length >= 2) {
+        const matchEnd = msg.toLowerCase().indexOf(m[0].toLowerCase()) + m[0].length;
+        const afterChars = msg.substring(matchEnd, matchEnd + 3).toLowerCase();
+        const lastChar = val.slice(-1).toLowerCase();
+        const combined = lastChar + afterChars;
+        if (/^(hai|ha[ie]?|he[ie]?|hae|hay|h[ae]\b)/.test(combined)) {
+          val = val.slice(0, -1).trim();
+        }
+      }
+      if (!val || /^\s*$/.test(val) || /^\d{0}$/.test(val)) continue; // skip if stripping left nothing
       return val;
     }
   }
@@ -389,7 +405,7 @@ function extractHouse(msg) {
 // Street/block/sector patterns
 function extractStreet(msg) {
   const patterns = [
-    /(?:street|st|gali|galli)\s*(?:no\.?|number|nmbr|#)?\s*(\d+[a-z]?)/i,
+    /\b(?:street|st|gali|galli)\s*(?:no\.?|number|nmbr|#)?\s*(\d+[a-z]?)/i,
     /(?:block|blk)\s*([a-z0-9]{1,3})/i,
     /(?:sector|sec)\s*([a-z]?[-]?\d+[a-z]?)/i,
     /(?:phase)\s*(\d+[a-z]?)/i,

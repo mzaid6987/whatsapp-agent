@@ -123,9 +123,12 @@ function preCheck(message, currentState, collected, state) {
   const OWN_DOMAINS = /\b(the)?(nureva|alvora|elvora|ruvenza|zenora|nuvenza|alvorashop|elvorastore|novenzashop)\.(shop|store)\b/i;
   const hasUrl = /https?:\/\/|www\.|\.com\b|\.online\b|\.site\b|\.pk\b|\.buzz\b|\.top\b|\.live\b|\.html\b|\.org\b|\.net\b|clkbitz|lnkbits/i.test(l);
   const isOwnDomain = OWN_DOMAINS.test(l);
+  // Google Maps / location links — customer sharing address/location, NOT spam
+  const isGoogleMaps = /\b(maps\.google|google\.com\/maps|goo\.gl\/maps|maps\.app\.goo\.gl|g\.co\/maps)\b/i.test(l) ||
+    /\b(maps\.apple|waze\.com)\b/i.test(l);
   // Don't flag as spam if message contains product-related words (customer sharing a link asking about product)
   const hasProductContext = /\b(order|chahiye|chahie|mangta|bhej|lena|price|rate|kitna|kitne|kitni|product|milega|available|stock|trimmer|cutter|remover|nebulizer|duster|spray|yeh|ye|yahi|yehi|wala|wali)\b/i.test(l);
-  if (hasUrl && !isOwnDomain && ['IDLE', 'GREETING'].includes(currentState) && !hasProductContext) {
+  if (hasUrl && !isOwnDomain && !isGoogleMaps && ['IDLE', 'GREETING'].includes(currentState) && !hasProductContext) {
     return { intent: 'spam' };
   }
 
@@ -824,7 +827,7 @@ function preCheck(message, currentState, collected, state) {
       (!isQuestionSuffix && !isAddressNegation && /\b(nai|nahi|nhi|ni|na|nah|mat)\s*(kr|kar|karn[aie]|krn[aie])\s*(order|ordr)?\b/i.test(l)) ||
       /\b(nai|nahi|nhi|ni|na|nah|mat)\s*(chahiy[ae]|chaiy[ae]|mangta|manga|lena|laina|order|krna|karna)\b/i.test(l) ||
       /\b(nah?\s*laina|nah?\s*lena|nahi?\s*laina|nahi?\s*lena)\b/i.test(l) ||
-      /\b(rehne?\s*do|choro|chhoro|chor\s*ni|bas|nai\s*krwana|abhi\s*nahi|filhal\s*nahi|felhal\s*nahi|abi\s*nahi)\b/i.test(l) ||
+      /\b(rehne?\s*do|choro|chhoro|chor\s*ni|bas|nai\s*krwana|abhi?\s*nahi|filha?l\s*nahi|felha?l\s*nahi|abi?\s*nahi|abhi?\s*n[ai]h?i?|filha?l\s*n[ai]h?i?|felha?l\s*n[ai]h?i?|abi?\s*felha?l\s*n[ai]h?i?)\b/i.test(l) ||
       /\b(not\s*interested|no\s*thanks?|no\s*thnks?|don'?t\s*want|i'?m?\s*not\s*interested)\b/i.test(l) ||
       /\b(kuch\s*(bhi\s*)?n[ai]h?i?\s*(chahiy[ae]?|lena|mangta))\b/i.test(l) ||
       isGoodbye || isNoMoney;
@@ -985,7 +988,8 @@ function preCheck(message, currentState, collected, state) {
       /\b(nai|nahi|nhi|ni|na|mat)\s*(order|ordr)\s*(kr|kar|karn[aie]|krn[aie])?\b/i.test(l) ||
       /\b(mjh[ey]?|mujh[ey]?)\s*(order|kuch)?\s*(nai|nahi|nhi|ni|na)\s*(kr|kar|karn[aie]|krn[aie]|chahiye|chaiye)\b/i.test(l) ||
       /\b(cancel|cancl)\s*(kr|kar|karo|krdo|kardo|order)?\b/i.test(l) ||
-      /\b(nahi|nhi|ni|nai|mat)\s*(chahiye|chaiye|mangta|manga|lena)\b/i.test(l);
+      /\b(nahi|nhi|ni|nai|mat)\s*(chahiye|chaiye|mangta|manga|lena)\b/i.test(l) ||
+      /\b(abhi?\s*felha?l|felha?l|filha?l)\s*(n[ai]h?i?|nhi|ni|nai)\b/i.test(l);
     const isInfoRefusal = /\b(nai|nahi|nhi|ni|na|mat)\s*(bta|btaon?g[aie]|batao?n?g[aie]|bataon?g[aie])\b/i.test(l) ||
       /\b(mai|mein|me|main)\s*(nai|nahi|nhi|ni)\s*(bta|btaon?g[aie]|batao?n?g[aie]|bataon?g[aie])\b/i.test(l) ||
       /\b(nai|nahi|nhi)\s*(bta|bat[ao])\s*(rh?a|rh?i|raha|rahi)\b/i.test(l);
@@ -1088,7 +1092,11 @@ function preCheck(message, currentState, collected, state) {
     const wordCount = l.trim().split(/\s+/).length;
     // Garbage filter — common filler/question phrases that are NOT area names or landmarks
     const isGarbageText = /\b(kya|batao|btao|batadu|btadu|samjh|rider|call|phone|aap|ap|tum|mujhe|mjhe|bus|bas|bilkul|theek|thik|ok|done|achaaa*|sir|madam|bhai|behen|yaar|haan|han|ji|jee|nahi|nhi|kaise|kaisy|kesy|bataye|btaye|krna|karna|krdo|kardo|suno|sunno|agay|peechy|idhar|udhar|wahan|yahan|kuch|koi|pta|pata|maloom|samajh|aya|aaya|gaya|raha|rahi|araha|arahe)\b/i.test(l) ||
-      /\b(order|delivery|deliver|product|price|payment|cod)\b/i.test(l);
+      /\b(order|delivery|deliver|delivered|product|price|payment|cod)\b/i.test(l) ||
+      // Question words/patterns — "Konsy City Sy Delivered Hoga??" is a question, NOT landmark
+      /\b(konsa|konsi|konsy|kahan|kidhar|kab|kitna|kitne|kitni|kaisy|kesy|kaise|where|when|how|what|which|why)\b/i.test(l) ||
+      /\b(hog[aie]|milega|ayega|lagega|chahiye|chaiye|aye\s*ga|mile\s*ga|lage\s*ga)\b/i.test(l) ||
+      /[?؟]/.test(msg);
     if (!foundAny && !isRefusal && wordCount <= 4 && /^[a-z\s]+$/i.test(l.trim()) && !isGarbageText) {
       if (!ap.area) {
         // Short text during area step → assume it's area name
@@ -1110,7 +1118,7 @@ function preCheck(message, currentState, collected, state) {
   // 4b. ACKNOWLEDGMENT in collection states — "ok", "acha", "theek", "hmm" → re-ask current field
   // Also: "order krna he", "order karna hai" during collection = just acknowledging, re-ask field
   if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_ADDRESS', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {
-    const isAck = /^(ik|ok+|okay|acha+|ach+a|theek|thik|thk|tik|hmm+|hm+|g|k|jee?|ji|ha+n|haan|hn|yes+|yup|samajh\s*(aa?\s*ga[yi]?|aa?\s*gai)?)\s*[.!]?\s*$/i.test(l);
+    const isAck = /^(ik|ok+|okay|acha+|ach+a|theek|thik|thk|tik|hmm+|hm+|g|k|jee?|ji|ha+n|haan|hn|yes+|yup|samajh\s*(aa?\s*ga[yi]?|aa?\s*gai)?|thanks?|thank\s*you|thankyou|shukriya|shukria|meherbani)\s*[.!]?\s*$/i.test(l);
     // In COLLECT_ADDRESS: if address parts are substantially filled, "ok" = confirming address (not just acknowledging)
     // This handles case where address_confirming flag was lost (e.g. server restart)
     if (isAck && currentState === 'COLLECT_ADDRESS' && collected.address_parts) {

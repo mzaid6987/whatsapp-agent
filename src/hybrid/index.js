@@ -2964,6 +2964,12 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       }
 
       // Product set → move to next missing field
+      // Guard: if name is still missing and we were already in COLLECT_NAME, give explicit name ask
+      // to avoid loop where bulk_info keeps triggering but never extracts the name
+      if (!state.collected.name && state.current === 'COLLECT_NAME') {
+        const honorific = getHonorific(null, state.gender);
+        return { reply: `Details mil gayi 👍 Bas apna naam bata dein ${honorific}?`, state: 'COLLECT_NAME' };
+      }
       const bulkNext = askNextField(state, storeName);
       return bulkNext || { reply: fillTemplate('FALLBACK', vars), state: state.current };
     }
@@ -3464,6 +3470,12 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       if (extractedParts.street) ap.street = extractedParts.street;
       if (extractedParts.house) ap.house = extractedParts.house;
       if (extractedParts.landmark) ap.landmark = extractedParts.landmark;
+      // Rebuild full address string from parts so ORDER_SUMMARY has updated address
+      const filledParts = [ap.area, ap.street, ap.house, ap.landmark].filter(v => v && v !== 'nahi_pata');
+      if (filledParts.length > 0) {
+        const addrStrRebuild = buildAddressString(ap, state.collected.city);
+        state.collected.address = state.collected.city ? addrStrRebuild + ', ' + state.collected.city : addrStrRebuild;
+      }
       // Check completeness and move to next field or confirm
       const addrNext = askNextField(state, storeName);
       return addrNext || { reply: fillTemplate('FALLBACK', vars), state: state.current };

@@ -156,7 +156,7 @@ function handleTemplateState(message, state, storeName, preIntent) {
   const l = message.toLowerCase().trim();
   const vars = buildVars(state, storeName);
   // Use pre-detected intent if available, otherwise use strict detection
-  const flexYes = /\b(ha+n|hm+|ji+|jee|g|yes+|yess+|shi|sai|sahi|bilkul|confir\w*|ik|o?k+a*y+|o?ki+|ok\s*ok|ok[zgky]?|done|theek|thik|thk|tik|zaroor|kr\s*do|kardo|krdo|kar\s*do|bhej\s*d[oae]|bhejd[oae]|bhij\s*d[oae]|bhijd[oae]|bhaj\s*d[oae]|bhajd[oae]|bhwj\s*d[oae]|bhwjd[oae]|bhjdo|bhjd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|bhijwad[oae]|bhejwad[oae]|mangwa\s*d[oae]|mangwad[oae]|mngwa\s*d[oae]|mngwad[oae]|laga\s*d[oae]|lagad[oae]|lgad[oae]|lga\s*d[oae])\b/i.test(l);
+  const flexYes = /\b(ha+n|hm+|ji+|jee|g|yes+|yess+|shi|sai|sahi|bilkul|confir\w*|ik|o?k+a*y+|o?ki+|ok\s*ok|ok[zgky]?|done|theek|thik|thk|tik|zaroor|kr\s*do|kardo|krdo|kar\s*do|bhej\s*d[oaeiy]+|bhejd[oaeiy]+|bhij\s*d[oaeiy]+|bhijd[oaeiy]+|bhaj\s*d[oaeiy]+|bhajd[oaeiy]+|bhwj\s*d[oaeiy]+|bhwjd[oaeiy]+|bhjdo|bhjd[oaeiy]+|bhejwa\s*d[oaeiy]+|bhijwa\s*d[oaeiy]+|bhijwad[oaeiy]+|bhejwad[oaeiy]+|mangwa\s*d[oaeiy]+|mangwad[oaeiy]+|mngwa\s*d[oaeiy]+|mngwad[oaeiy]+|laga\s*d[oaeiy]+|lagad[oaeiy]+|lgad[oaeiy]+|lga\s*d[oaeiy]+|bhej\s*dein|bhejo|mangao|manga\s*lo|book\s*kr|place\s*order)\b/i.test(l);
   const flexNo = /\b(nahi|nhi|nhe|ni|no|galat|nope|na+h|mat|cancel|rehne?\s*d[oae]|rehny?\s*d[oaeiy]|bas|choro|chor\s*d[oae]|chod\s*d[oae]|chhoro|chhod\s*d[oae]|rhn\s*d[oae]|jane\s*d[oae]|koi\s*bhi\s*n[ah]i?)\b/i.test(l);
   // Handle "kuch nahi sab sahi hai" = yes (nahi negates "change", not order)
   const negatedNo = /\b(kuch\s*nahi|koi\s*nahi|nahi\s*kuch|change\s*nahi|nahi\s*change)\b/i.test(l) && /\b(sahi|theek|thik|done|ok|confirm|bilkul)\b/i.test(l);
@@ -167,6 +167,20 @@ function handleTemplateState(message, state, storeName, preIntent) {
 
     // ===== ORDER SUMMARY =====
     case 'ORDER_SUMMARY': {
+      // CANCEL detection — must be BEFORE yes/no checks (cancel contains "nahi" which triggers flexNo)
+      const isCancelInSummary = /\b(cancel|cancl|cansel)\s*(kr|kar|karo|kardo|krdo|order|krdein|kardein|kar\s*do)?\b/i.test(l) ||
+        /\b(order\s*cancel|cancel\s*order)\b/i.test(l) ||
+        /\b(nahi|nhi|ni|nai|na|mat)\s*(chahiy[ae]|chaiy[ae]|mangta|manga|lena|laina|order|krna|karna)\b/i.test(l) ||
+        /\b(rehne?\s*do|choro|chhoro|bas\s*nahi|nai\s*krwana)\b/i.test(l) ||
+        /\b(not\s*interested|no\s*thanks?|don'?t\s*want)\b/i.test(l);
+      // Guard: "cancel nahi" / "cancel mat" = DON'T cancel (customer wants to keep order)
+      const isCancelNegation = /\b(cancel\s*(nahi|nhi|mat|na)|nahi?\s*cancel)\b/i.test(l);
+      if (isCancelInSummary && !isCancelNegation) {
+        state.current = 'CANCEL_AFTER_CONFIRM';
+        state._cancelTag = true;
+        const honorific = getHonorific(state.collected.name, state.gender);
+        return { reply: `${state.collected.name || ''} ${honorific}, aapka order abhi confirm nahi hua — cancel ho gaya hai. Agar baad mein order karna ho to hum yahan hain! 😊`.trim(), state: 'CANCEL_AFTER_CONFIRM' };
+      }
       // Free delivery question — "delivery free hai na?", "feri haina", "feeri haona"
       const isFreeDelSummary = /\b(free|fre+i?|feri|fe+ri|muft)\s*(h[ae]i?n?a?|hona|hoga|hogi|hai\s*na|he\s*na|he\s*k[ey]?|na)\b/i.test(l) ||
         /\b(delivery|delivry|dlivry)\s*(to|toh?)?\s*(free|fre+i?|feri|fe+ri|muft)\s*(h[ae]i?n?a?|hona|hoga|hogi|hai\s*na|he\s*na|he\s*k[ey]?|na)?\b/i.test(l);
