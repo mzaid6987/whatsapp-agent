@@ -340,6 +340,15 @@ function preCheck(message, currentState, collected, state) {
     const hasWillDo = /\b(kr\s*lun?g[ia]|kar\s*lun?g[ia]|receive\s*kr|receive\s*kar)\b/i.test(l);
     // "Nahi yahi number hai" / "nahi isi pe" / "no this only" / "only this no" = SAME phone, NOT rejection
     const nahiButSame = hasNoWord && /\b(yahi|yehi|yhi|isi|issi|same|only\s*this|this\s*only|ya\s*hi|ye\s*hi|wohi|wahi)\b/i.test(l);
+    // "dosra number bhi dede 03112002688" / "ok ye bhi note kro 0311..." — has YES + phone = 2nd delivery number
+    const altPhoneInMsg = extractPhone(msg);
+    const hasAltPhoneWord = /\b(dosra|dusra|doosra|aur\s*ek|bhi|also|another|extra|alt|alternate)\b/i.test(l);
+    if (altPhoneInMsg && hasAltPhoneWord) {
+      const validation = validatePhone(altPhoneInMsg);
+      if (validation.valid) {
+        return { intent: 'diff_phone', extracted: { phone: validation.phone } };
+      }
+    }
     if (/\b(isi|same|yehi|yahi|yhi|wohi|wahi)\b/i.test(l) || nahiButSame || isYes(l) || /^k+$/i.test(l.trim()) || (hasYesWord && !hasNoWord) || (startsWithYes && hasNoWord) || hasWillDo) {
       return { intent: 'same_phone', extracted: { same_phone: true } };
     }
@@ -386,7 +395,9 @@ function preCheck(message, currentState, collected, state) {
 
   // Standalone trust question without complaint — "warranty kitny time ki", "COD hai?", "exchange hota hai?"
   // BUT: "quality?" alone = quality question (not trust) — route to quality_question
-  if (trust && !complaint) {
+  // SKIP in HAGGLING state if message also has price/discount/offer words — customer mixing quality praise with price negotiation
+  const hasPriceWords = /\b(price|rate|qeemat|qimat|discount|off|offer|percent|%|sasta|mehenga|km|kam|paisa|paisay?|rupay?|rs|1000|500|50%?|half|adha)\b/i.test(l);
+  if (trust && !complaint && !(currentState === 'HAGGLING' && hasPriceWords)) {
     if (QUALITY_ASK.test(l)) {
       return { intent: 'quality_question' };
     }
@@ -454,7 +465,8 @@ function preCheck(message, currentState, collected, state) {
   const achaAtStart = /^(acha+|accha+|ach+a+|ik|ok|okay)\s+/i.test(l);
   const isAddressState = currentState === 'COLLECT_ADDRESS';
   const qualityHasProduct = detectProduct(msg) && /\b(price|rate|qeemat|qimat|kitne\s*ka|kitny\s*ka)\b/i.test(l);
-  if (QUALITY_ASK.test(l) && !achaAtStart && !isAddressState && !qualityHasProduct) {
+  const isHagglingWithPrice = currentState === 'HAGGLING' && hasPriceWords;
+  if (QUALITY_ASK.test(l) && !achaAtStart && !isAddressState && !qualityHasProduct && !isHagglingWithPrice) {
     if (!IS_FUNCTIONALITY_Q.test(l)) {
       return { intent: 'quality_question' };
     }
@@ -1209,7 +1221,11 @@ function preCheck(message, currentState, collected, state) {
       /\d+\s*(krdo|kr\s*do|kardo|kar\s*do|de\s*do|dedo|ka\s*krdo|ka\s*kardo)\b/i.test(l) ||
       /\b(aur|or|thora|thoda|mazeed)\s*(km|kam|discount|off)\b/i.test(l) ||
       /\b(itna\s*(km|kam|hi)|bohot?\s*(km|kam)|zya+da\s*(km|kam))\b/i.test(l);
-    if (isPriceNegotiation && currentState === 'HAGGLING') {
+    // Broader haggling patterns for HAGGLING state — website offers, percentage demands, price claims
+    const isWebsiteOffer = /\b(web\s*site?|web\s*pe|site\s*pe|online|ad|advertisement|likha|mention|offer|ramz[ao]n|ramadan)\b/i.test(l) &&
+      /\b(\d+\s*%|percent|off|discount|half|adha)\b/i.test(l);
+    const isPriceClaim = /\b(\d{3,})\s*(banta|hota|hona|ka\s*ho|ka\s*banta)\b/i.test(l);
+    if ((isPriceNegotiation || isWebsiteOffer || isPriceClaim) && currentState === 'HAGGLING') {
       return { intent: 'haggle' };
     }
 

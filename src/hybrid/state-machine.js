@@ -212,6 +212,17 @@ function handleTemplateState(message, state, storeName, preIntent) {
           return { reply: fillTemplate('HAGGLE_FINAL', vars), state: 'HAGGLING' };
         }
       }
+      // Check for landmark correction — "near Rahmat e Shree", "theek hai near X"
+      // Customer may give corrected landmark while confirming order summary
+      const { extractLandmark: _exLmOS } = require('./extractors');
+      const lmCorrection = _exLmOS(message);
+      if (lmCorrection && state.collected.address_parts) {
+        state.collected.address_parts.landmark = lmCorrection;
+        // Rebuild address string
+        const { buildAddressString: _buildAddr } = require('./extractors');
+        const addrStr = _buildAddr(state.collected.address_parts, state.collected.city);
+        state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
+      }
       // Check for city correction in ORDER_SUMMARY — "City Wah Cantt hai. Yes"
       // Customer may correct city while also confirming. Apply correction before confirming.
       const cityCorrectionMatch = /\b(city|shehr|shehar)\s*[.:=]?\s*/i.test(message);
