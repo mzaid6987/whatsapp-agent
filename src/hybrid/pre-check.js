@@ -757,7 +757,17 @@ function preCheck(message, currentState, collected, state) {
     }
   }
 
-  // 4a0. DISCOUNT/HAGGLE in collection states — "discount to do", "offer do", "sasta kro"
+  // 4a0. CANCEL/REFUSAL in collection states — "cancel", "nahi chahiye", "order nahi karna"
+  // Must catch BEFORE name detection so "nahi chahiye" is not processed as name
+  if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {
+    const isCancelInCollection = /\b(cancel|cancl|cansel)\b/i.test(l) ||
+      /\b(order|ordr)?\s*(nai|nahi|nhi|ni|na|mat)\s*(kr|kar|karn[aie]|krn[aie]|chahiy[ae]|chaiy[ae])?\b/i.test(l) && /\b(nai|nahi|nhi|ni|na|mat)\b/i.test(l) ||
+      /\b(nai|nahi|nhi|ni|na|mat)\s*(chahiy[ae]|chaiy[ae]|mangta|manga|lena|order|krna|karna)\b/i.test(l) ||
+      /\b(rehne\s*do|choro|chhoro|bas|nai\s*krwana|abhi\s*nahi|filhal\s*nahi|felhal\s*nahi|abi\s*nahi)\b/i.test(l);
+    if (isCancelInCollection) return { intent: 'no_order_now' };
+  }
+
+  // 4a0b. DISCOUNT/HAGGLE in collection states — "discount to do", "offer do", "sasta kro"
   // Must catch BEFORE name detection so "discount to do" is not saved as name
   if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {
     const isDiscountInName = /\b(disc?o?u?n?t|discoutn|disocunt|discont|discoynt|off|offer|sast[aie]|kam\s*kr[oa]?|km\s*kr[oa]?|kam\s*kard?o?|km\s*kard?o?|kam\s*do|km\s*do|kuch\s*(to\s*)?km|mehn?g[aie]|price\s*kam|price\s*km|rate\s*kam|rate\s*km)\b/i.test(l);
@@ -792,6 +802,18 @@ function preCheck(message, currentState, collected, state) {
       /^(ok\s+wait|no\s+thanks?|not\s+now|let\s+me|hold\s+on|one\s+min|ek\s+min)\b/i.test(l);
     // Name refusal — "not required", "zaroorat nahi", "naam nahi bataunga", "ok not required"
     const isNameRefusal = /\b(not\s*required|no\s*need|zaroorat?\s*nahi|zarurat?\s*nahi|naam\s*(nahi|nhi|ni|nai)|nahi?\s*batao?n?g[aie]?|nai\s*btaon?g[aie]?|order\s*(nahi|nhi|ni|nai)|nahi?\s*kr[nw]a|cancel|nai\s*krna)\b/i.test(l);
+    // Islamic greetings that are NOT names — "Assalamu Alaikum", "Wa Alaikum Assalam", "AoA"
+    const isGreeting = /^(assalam[ou]?\s*[ao]?l[ae]i?ku?m|wa?\s*[ao]?l[ae]i?ku?m\s*(assalam|[ao]?ssalam)|aoa|salam|slam|slaam|asslam|asalam)\b/i.test(l) ||
+      /^(hello|hi|hey|helo|hlw|hellow|assalam)\s*(bhai|sir|madam|g|ji|dear|boss|bro)?\s*$/i.test(l);
+    // Product-related phrases that are NOT names — "Cotton Machine", "Muje Masajar", "Itni Mehngi"
+    const isProductPhrase = /\b(machine|mashin|trimmer|cutter|remover|nebulizer|duster|spray|massager|masajar|cotton|vegetable|facial|hair|knee|sleeve|board|cutting)\b/i.test(l) ||
+      /\b(mehn?g[aie]|sast[aie]|itni|kitne?|muje|mjhe|mujhe?|chahiy[ae]|chiy|gunjaish|gunjais)\b/i.test(l);
+    // Gibberish/repeated characters — "A Jjj Jjjjj", "Fffff", "Hhhh"
+    const isGibberish = /(.)\1{2,}/i.test(trimmed) || // same char repeated 3+ times
+      trimmed.split(/\s+/).some(w => w.length > 1 && new Set(w.toLowerCase()).size === 1); // word with all same letters
+    // "Ok/G + word" combos and other non-name combos — "Ok Bhai", "G Bhej Dein", "Don G Bhai", "So Sorry"
+    const isComboPhrase = /^(ok|g|ji|don|so|is|ye|yeh|tobha|diya)\s+(bhai|sir|madam|bhej|wait|sorry|sorryg|ki|gaya|bhi)\b/i.test(l) ||
+      /\b(bhai|bhej\s*dein|gaya\s*hai|sorry)\s*$/i.test(l);
     // Urdu phrases that look like English names but are NOT names
     const isUrduPhrase = /^(g\s+brother|ji\s+sir|ji\s+madam|g\s+sir|easily|easyli|dono\s+sath|required\s+me|final\s+price|last\s+price|ok\s+sir|ok\s+done)\s*$/i.test(l) ||
       /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|mangwao|bhejdo|deliver|delivery|receive)\b/i.test(l);
@@ -801,7 +823,7 @@ function preCheck(message, currentState, collected, state) {
     const isEnglishNonName = words.length >= 2 && ENGLISH_NON_NAME_WORDS.test(l);
     // Single common English words that are NOT names (but could pass looksLikeName)
     const isSingleEnglishWord = words.length === 1 && /^(yes|no|ok|hi|hey|hello|bye|please|thanks|sorry|sure|fine|good|nice|great|love|like|want|need|help|send|done|wait|stop|start|open|close|free|new|old|big|small|fast|slow|easy|hard|real|true|best|last|next|same|other|much|more|less|just|only|even|still|also|back|down|here|there|away|home|long|full|high|low|off|sir|madam|bro|dear|boss|dude|miss|mam|available|required)$/i.test(l);
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isUrduPhrase && !isEnglishNonName && !isSingleEnglishWord) {
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isGreeting && !isProductPhrase && !isGibberish && !isComboPhrase && !isUrduPhrase && !isEnglishNonName && !isSingleEnglishWord) {
       // Capitalize properly
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_given', extracted: { name } };

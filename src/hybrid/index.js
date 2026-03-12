@@ -783,7 +783,9 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     const isExchangeQuestion = hasTrustWord && /\b(kais[ey]|kesy|kaisy|how|karna|krna|hota|hoti|milti|milta|hog[aie])\b/i.test(cl);
     // "samajh nahi aaye to return" = hypothetical return question, not complaint
     const isConditionalReturn = /\b(agar|agr|to)\b/i.test(cl) && hasTrustWord;
-    const isTrustNotComplaint = (hasTrustWord && isComplaint(cl)) || isHypothetical || isExchangeQuestion || isConditionalReturn;
+    // "return policy kya hai?", "exchange ho sakta hai?" = policy question, not complaint
+    const isReturnPolicyQ = hasTrustWord && (/[?؟]\s*$/.test(cl) || /\b(policy|polisi|polci|kya|kia|hota|hoti|hoga|hogi|ho\s*sakt[aie]|ho\s*jayeg[aie]|milega|milegi|kar\s*sakt[aie])\b/i.test(cl));
+    const isTrustNotComplaint = (hasTrustWord && isComplaint(cl)) || isHypothetical || isExchangeQuestion || isConditionalReturn || isReturnPolicyQ;
     if ((isComplaint(cl) || hasAngryEmoji) && !isTrustNotComplaint && !(/\b(to\s*nahi|toh?\s*nahi|hogi|hoga|jayega|jayegi|jayenge)\b/i.test(cl))) {
       // Strong complaint (not a quality question like "kharab to nahi hogi?")
       const vars = buildVars(state, storeName);
@@ -1669,7 +1671,13 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const hasEnglishNonName = nameWords.length >= 2 && ENGLISH_NON_NAME.test(nameL);
       // Guard: reject Urdu conversational phrases
       const isUrduConversational = /\b(chahiy[ae]|milj[aie]|miljiengy|milengy|ayenge|jayenge|hojaye|krwao|mangwao|bhejdo|deliver|delivery|easily|easyli|dono\s+sath)\b/i.test(nameL);
-      if (name.length >= 2 && name.length <= 50 && !isQuestionFragment && !hasEnglishNonName && !isUrduConversational) {
+      // Guard: reject greetings
+      const isGreetingName = /^(assalam|wa\s*alaikum|salam|aoa|hello|hi|hey)\b/i.test(nameL);
+      // Guard: reject product-related words
+      const isProductName = /\b(machine|mashin|trimmer|cutter|remover|nebulizer|duster|massager|masajar|cotton|vegetable|facial|hair|knee|board|cutting|mehngi|sasti|itni|kitne|muje|mjhe|gunjaish)\b/i.test(nameL);
+      // Guard: reject gibberish (repeated chars)
+      const isGibberishName = /(.)\1{2,}/i.test(name) || name.split(/\s+/).some(w => w.length > 1 && new Set(w.toLowerCase()).size === 1);
+      if (name.length >= 2 && name.length <= 50 && !isQuestionFragment && !hasEnglishNonName && !isUrduConversational && !isGreetingName && !isProductName && !isGibberishName) {
         state.collected.name = name;
       }
     }
@@ -2281,7 +2289,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         };
       }
       // No product identified — ask which product
-      return returnAi({ reply: `Kis product ki ${mediaType === 'video' ? 'video' : 'picture'} chahiye? Product ka naam ya number bata dein 😊`, state: state.current });
+      return returnTemplate({ reply: `Kis product ki ${mediaType === 'video' ? 'video' : 'picture'} chahiye? Product ka naam ya number bata dein 😊`, state: state.current }, 'ai→media_ask');
     }
 
     // Handle haggle state updates — only from valid states (not during data collection)
@@ -2427,6 +2435,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     // Guard: empty/whitespace AI reply — use state-aware fallback
     if (!aiResult.reply || !aiResult.reply.trim()) {
       console.warn('[AI] Empty/whitespace reply detected, using fallback | State:', state.current, '| Tokens out:', aiResult.tokens_out);
+      const fbVars = buildVars(state, storeName);
       let fallbackReply;
       if (state.current === 'HAGGLING' && state.product) {
         // Haggle fallback — advance round and give discount
@@ -2435,15 +2444,15 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
           state.discount_percent = state.haggle_round >= 3 ? 10 : 5;
           const dp = state.discount_percent;
           const discPrice = Math.round(state.product.price * (1 - dp / 100));
-          fallbackReply = fillTemplate('HAGGLE_ROUND_2', { ...vars, discount_percent: dp, discounted_price: discPrice.toLocaleString(), discount_amount: (state.product.price - discPrice).toLocaleString() });
+          fallbackReply = fillTemplate('HAGGLE_ROUND_2', { ...fbVars, discount_percent: dp, discounted_price: discPrice.toLocaleString(), discount_amount: (state.product.price - discPrice).toLocaleString() });
         } else {
-          fallbackReply = fillTemplate('HAGGLE_ROUND_1', { ...vars, product_short: state.product.short, price: state.product.price.toLocaleString() });
+          fallbackReply = fillTemplate('HAGGLE_ROUND_1', { ...fbVars, product_short: state.product.short, price: state.product.price.toLocaleString() });
         }
       } else if (state.current.startsWith('COLLECT_')) {
         const reask = askNextField(state, storeName);
-        fallbackReply = reask ? reask.reply : fillTemplate('FALLBACK', vars);
+        fallbackReply = reask ? reask.reply : fillTemplate('FALLBACK', fbVars);
       } else {
-        fallbackReply = fillTemplate('FALLBACK', vars);
+        fallbackReply = fillTemplate('FALLBACK', fbVars);
       }
       state.messages.push({ role: 'user', content: message });
       state.messages.push({ role: 'assistant', content: fallbackReply });
@@ -2978,8 +2987,17 @@ function handlePreCheck(pre, message, state, storeName, phone) {
 
     case 'haggle_in_collection': {
       // Discount/haggle request during data collection — respond + re-ask current field
+      // IMPORTANT: Use discounted price if discount was given during haggling, not original price
       const product = state.product;
-      const hagglePrice = product ? `${product.short} Rs.${product.price.toLocaleString()} fixed price hai` : 'Yeh fixed price hai';
+      let displayPrice = product ? product.price : 0;
+      if (state.discount_percent && product) {
+        displayPrice = Math.round(product.price * (1 - state.discount_percent / 100));
+      }
+      const hagglePrice = product
+        ? (state.discount_percent
+            ? `${product.short} Rs.${displayPrice.toLocaleString()} pe already discount de diya hai`
+            : `${product.short} Rs.${displayPrice.toLocaleString()} fixed price hai`)
+        : 'Yeh fixed price hai';
       const reaskHaggle = askNextField(state, storeName);
       const haggleReply = `${vars.honorific}, ${hagglePrice} — COD hai, delivery pe check kar lein. ${reaskHaggle ? reaskHaggle.reply : ''}`;
       return { reply: haggleReply.trim(), state: state.current };
