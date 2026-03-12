@@ -57,7 +57,7 @@ const COMPLAINT_WORDS = [
   'on hi nhi','on hi nahi','on he nhi','on he nahi'
 ];
 
-const TRUST_WORDS = /\b(asli|original|cod|cash\s*on|return\s*policy|exchange\s*policy|warranty|guarantee|quality|bharosa|trust|reliable|kaisi?\s*quality|allow\s*to\s*open|open\s*(parcel|box|packet)|parcel\s*(open|khol)|khol\s*k[ae]?\s*(dekh|check)|pehle\s*check|check\s*kar\s*k[ae]?)\b/i;
+const TRUST_WORDS = /\b(asli|original|cod|cash\s*on|return\s*policy|exchange\s*policy|warranty|guarantee|quality|bharosa|trust|reliable|kaisi?\s*quality|allow\s*to\s*open|open\s*(parcel|box|packet)|parcel\s*(open|khol)|khol\s*k[ae]?\s*(dekh|check)|pehle\s*check|check\s*kar\s*k[ae]?|sulook|salook|slook|exchange|replace|wapas|wapis|vapas|vapsi)\b/i;
 // Note: "fake" removed from TRUST_WORDS — it's almost always a complaint, not a trust question
 // "achi he na", "theek hogi na ye", "chalegi na", "kaisi hai", "quality kesi he" — quality reassurance questions
 // BUT NOT "kam krta he" / "sahi kam krta he" / "works?" — those are product functionality questions (AI handles)
@@ -790,8 +790,10 @@ function preCheck(message, currentState, collected, state) {
   // 4a0. CANCEL/REFUSAL in collection states — "cancel", "nahi chahiye", "order nahi karna"
   // Must catch BEFORE name detection so "nahi chahiye" is not processed as name
   if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_DELIVERY_PHONE', 'COLLECT_ADDRESS'].includes(currentState)) {
+    // "ya nahi" / "ke nahi" / "ya na" at end = question ("X kar sakain ge ya nahi?"), NOT cancel
+    const isQuestionSuffix = /\b(ya|k[ey]|ki)\s+(nahi|nhi|ni|nai|na|mat)\s*[?؟.!]?\s*$/i.test(l);
     const isCancelInCollection = /\b(cancel|cancl|cansel)\b/i.test(l) ||
-      /\b(order|ordr)?\s*(nai|nahi|nhi|ni|na|mat)\s*(kr|kar|karn[aie]|krn[aie]|chahiy[ae]|chaiy[ae])?\b/i.test(l) && /\b(nai|nahi|nhi|ni|na|mat)\b/i.test(l) ||
+      (!isQuestionSuffix && /\b(order|ordr)?\s*(nai|nahi|nhi|ni|na|mat)\s*(kr|kar|karn[aie]|krn[aie]|chahiy[ae]|chaiy[ae])?\b/i.test(l) && /\b(nai|nahi|nhi|ni|na|mat)\b/i.test(l)) ||
       /\b(nai|nahi|nhi|ni|na|mat)\s*(chahiy[ae]|chaiy[ae]|mangta|manga|lena|order|krna|karna)\b/i.test(l) ||
       /\b(rehne\s*do|choro|chhoro|bas|nai\s*krwana|abhi\s*nahi|filhal\s*nahi|felhal\s*nahi|abi\s*nahi)\b/i.test(l) ||
       /\b(not\s*interested|no\s*thanks?|no\s*thnks?|don'?t\s*want|i'?m?\s*not\s*interested)\b/i.test(l);

@@ -25,6 +25,9 @@ function nextMissingState(collected) {
   if (collected.delivery_phone === null) return 'COLLECT_DELIVERY_PHONE';
   if (!collected.city) return 'COLLECT_CITY';
   if (!collected.address) return 'COLLECT_ADDRESS';
+  // Guard: address like ", Jampur" or "  , Lahore" is essentially empty — re-collect
+  const addrClean = (collected.address || '').replace(/[,\s]+/g, '').replace(new RegExp((collected.city || '___').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim();
+  if (addrClean.length < 3) return 'COLLECT_ADDRESS';
   return 'ORDER_SUMMARY';
 }
 
@@ -865,6 +868,28 @@ function askNextField(state, storeName) {
     case 'COLLECT_DELIVERY_PHONE': return { reply: fillTemplate('ASK_DELIVERY_PHONE', vars), state: next };
     case 'COLLECT_CITY': return { reply: fillTemplate('ASK_CITY', vars), state: next };
     case 'COLLECT_ADDRESS': {
+      // Pre-fill from addressHint (smart-fill) — saved when customer gave full info in one message
+      if (state.addressHint && !state.collected.address_parts.area) {
+        const sfHint = state.addressHint;
+        const sfCity = state.collected.city;
+        // Try extractors on the hint text
+        const { extractArea: _exArea, extractHouse: _exHouse, extractStreet: _exStreet, extractLandmark: _exLm } = require('./extractors');
+        const { matchArea: _matchArea } = require('./city-areas');
+        const sfArea = _exArea(sfHint, sfCity) || (sfCity ? _matchArea(sfHint, sfCity) : null);
+        const sfStreet = _exStreet(sfHint);
+        const sfHouse = _exHouse(sfHint);
+        const sfLandmark = _exLm(sfHint);
+        const ap0 = state.collected.address_parts;
+        if (sfArea && !ap0.area) ap0.area = sfArea;
+        if (sfStreet && !ap0.street) ap0.street = sfStreet;
+        if (sfHouse && !ap0.house) ap0.house = sfHouse;
+        if (sfLandmark && !ap0.landmark) ap0.landmark = sfLandmark;
+        // If still no area found, save as _address_hint for further processing below
+        if (!ap0.area && sfHint.length >= 5) {
+          state._address_hint = sfHint;
+        }
+        delete state.addressHint;
+      }
       // Pre-fill from address_hint saved during COLLECT_PHONE
       if (state._address_hint && !state.collected.address_parts.area) {
         const hint = state._address_hint;
