@@ -972,14 +972,18 @@ function preCheck(message, currentState, collected, state) {
     const detectedArea = extractArea(msg, city) || (city ? matchArea(l, city) : null);
     const detectedStreet = extractStreet(msg);
     const detectedHouse = extractHouse(msg);
-    const detectedLandmark = extractLandmark(msg);
+    // Negation filter — "colony ni h", "block nahi hai", "street ni h" = customer saying it doesn't exist
+    const isNegation = /\b(colony|block|sector|street|gali|galli|mohall[ae]h?|area|ilaq[ae])\s+(ni|nhi|nahi?|nai)\s*(h[ae]i?|he?|hota|hoti)?\s*$/i.test(l) ||
+      /\b(koi|kio)\s+(colony|block|sector|street|gali|galli|mohall[ae]h?)\s+(ni|nhi|nahi?|nai)\b/i.test(l);
+    const detectedLandmark = isNegation ? null : extractLandmark(msg);
 
     // "nahi pata" / "number nahi" / "pata nahi" for current step → set nahi_pata
     const isRefusal = /^(nahi?|nhi|no|ni|nope|na+h?|pata?\s*nahi?|nahi?\s*pata?|nahi?\s*he|number\s*nahi?|nahi?\s*number|ghar\s*(he|hai)\s*bas)\s*[.!]?\s*$/i.test(l);
-    // "Area nahi lagta koi" / "koi area nahi" / "nahi pata area" / "area maloom nahi" = DON'T KNOW area
-    const isDontKnowArea = /\b(area|ilaq[ae]|muhall[ae]|colony|sector)\s*(nh?|nahi?|nhi|maloom\s*nahi?|pata?\s*nahi?|lagta?\s*koi|nahi?\s*lagta?|nahi?\s*he|he\s*nahi?)\b/i.test(l) ||
-      /\b(nh?|nahi?|nhi)\s*(lagta|maloom|pata)\s*(koi|area|ilaq[ae])?\b/i.test(l) ||
-      /\b(koi|kio)\s*(area|ilaq[ae])\s*(nh?|nahi?|nhi)\b/i.test(l);
+    // "Area nahi lagta koi" / "koi area nahi" / "nahi pata area" / "area maloom nahi" / "colony ni h" = DON'T KNOW area
+    const isDontKnowArea = /\b(area|ilaq[ae]|muhall[ae]|colony|sector|block|street|gali|galli)\s*(nh?|nahi?|nhi|ni|nai|maloom\s*nahi?|pata?\s*nahi?|lagta?\s*koi|nahi?\s*lagta?|nahi?\s*h[ae]i?|h[ae]i?\s*nahi?|ni\s*h[ae]i?|nhi\s*h[ae]i?)\b/i.test(l) ||
+      /\b(nh?|nahi?|nhi|ni|nai)\s*(lagta|maloom|pata)\s*(koi|area|ilaq[ae])?\b/i.test(l) ||
+      /\b(koi|kio)\s*(area|ilaq[ae])\s*(nh?|nahi?|nhi|ni|nai)\b/i.test(l) ||
+      /\b(area|ilaq[ae]|muhall[ae]|colony|sector|block|street|gali|galli)\s+(ni|nhi|nahi?|nai)\s*(h[ae]i?|he?)?\s*$/i.test(l);
 
     // Fill only MISSING parts (don't overwrite existing)
     // Skip area detection if customer is saying "I don't know my area"
@@ -1007,6 +1011,13 @@ function preCheck(message, currentState, collected, state) {
     }
 
     // Handle refusal for current missing field
+    if (isNegation && !foundAny) {
+      // "colony ni h" / "block nahi hai" — mark current missing field as nahi_pata
+      if (!ap.area) { parts.area = 'nahi_pata'; foundAny = true; }
+      else if (ap.area && !ap.street) { parts.street = 'nahi_pata'; foundAny = true; }
+      else if (ap.area && ap.street && !ap.house) { parts.house = 'nahi_pata'; foundAny = true; }
+      else if (ap.area && (ap.house || ap.house === 'nahi_pata') && !ap.landmark) { parts.landmark = 'nahi_pata'; foundAny = true; }
+    }
     if (isRefusal || isDontKnowArea) {
       if (!ap.area && isDontKnowArea) { parts.area = 'nahi_pata'; foundAny = true; }
       else if (ap.area && !ap.street) { parts.street = 'nahi_pata'; foundAny = true; }

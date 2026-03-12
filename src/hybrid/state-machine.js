@@ -618,13 +618,24 @@ function handleTemplateState(message, state, storeName, preIntent) {
         }
         return { reply: 'Kis product ki ' + (mediaType === 'video' ? 'video' : 'picture') + ' chahiye? Product ka naam ya number bata dein 😊', state: 'ORDER_CONFIRMED' };
       }
+      // Address correction/complaint detection — check BEFORE cancel to avoid false cancels
+      // "galat address", "galt address", "address sahi nahi", "wrong address", "adress thek ni"
+      const hasAddrComplaint = /\b(galat|galt|glat|wrong|sahi\s*n[ai]h?i?|sai\s*n[ai]h?i?|thek\s*n[ai]h?i?|theek\s*n[ai]h?i?)\s*(address|pata|adrs|adress|likha|likhi)?\b/i.test(l) &&
+        /\b(address|pata|adrs|adress|likha|likhi|jagah|location)\b/i.test(l);
       // Cancel request after confirmation — parcel dispatch ho chuka
       // Broadened: "nahi chahiy", "hamay nahi chahiy", "nahi krna", "rehne do", "abhi nahi"
-      const isCancel = /\b(cancel|cancl|cance?l|cansel)\b/i.test(l) ||
-        /\b(order\s*)?(cancel|band|khatam|wapis|wapas|vapas|vapsi|return)\s*(kr|kar|karo|krdo|kardo|krna|karna|krdein|kardein)?\b/i.test(l) ||
-        /\b(nahi|nhi|ni|nai|na|mat)\s*(chahiy[ae]?|chaiy[ae]?|mangta|manga|lena|bhej|ship|krna|karna)\b/i.test(l) ||
+      const isExplicitCancel = /\b(cancel|cancl|cance?l|cansel)\b/i.test(l) ||
+        /\b(order\s*)?(cancel|band|khatam|wapis|wapas|vapas|vapsi|return)\s*(kr|kar|karo|krdo|kardo|krna|karna|krdein|kardein)?\b/i.test(l);
+      const isSoftCancel = /\b(nahi|nhi|ni|nai|na|mat)\s*(chahiy[ae]?|chaiy[ae]?|mangta|manga|lena|bhej|ship|krna|karna)\b/i.test(l) ||
         /\bmat\s*(bhej|send|ship)\b/i.test(l) ||
         /\b(rehne?\s*do|chor\s*do|chhoro|chhod\s*do|nahi\s*chahiy|hamay?\s*nahi|hame\s*nahi|mujhe?\s*nahi|abhi\s*nahi)\b/i.test(l);
+      const isCancel = isExplicitCancel || (isSoftCancel && !hasAddrComplaint);
+      // If soft cancel + address complaint → route to address correction, not cancel
+      if (isSoftCancel && hasAddrComplaint) {
+        state._thanked = false;
+        const honorific = getHonorific(state.collected.name);
+        return { reply: `${state.collected.name || ''} ${honorific}, address theek kar dete hain — sahi address bata dein please 📍`, state: 'ORDER_CONFIRMED' };
+      }
       if (isCancel) {
         state.current = 'CANCEL_AFTER_CONFIRM';
         state._cancelTag = true;
@@ -715,10 +726,12 @@ function handleTemplateState(message, state, storeName, preIntent) {
         return { reply: fillTemplate('PRODUCT_INQUIRY', nextVars), state: 'PRODUCT_INQUIRY' };
       }
       // Address correction/update after order confirmed — "address sahi krin", "yeh mera address hai", or customer sends full address
-      const isAddrCorrection = /\b(address|pata|adrs|adress)\s*(sahi|correct|change|update|fix|theek|thik|kr|kar|kro|karo|krdo|kardo|krdein|ye|yeh)\b/i.test(l) ||
-        /\b(sahi|correct|change|update|fix|theek|thik)\s*(address|pata|adrs|adress)\b/i.test(l) ||
-        /\b(galat|wrong)\s*(address|pata)\b/i.test(l) ||
-        /\b(ye|yeh|yahi|yehi)\s*(mera|hmara|hamara)?\s*(address|pata)\s*(hai|he|h)\b/i.test(l);
+      const isAddrCorrection = /\b(address|pata|adrs|adress)\s*(sahi|sai|correct|change|update|fix|theek|thik|thek|kr|kar|kro|karo|krdo|kardo|krdein|ye|yeh)\b/i.test(l) ||
+        /\b(sahi|sai|correct|change|update|fix|theek|thik|thek)\s*(address|pata|adrs|adress)\b/i.test(l) ||
+        /\b(galat|galt|glat|wrong|sahi\s*n[ai]h?i?|sai\s*n[ai]h?i?|thek\s*n[ai]h?i?|theek\s*n[ai]h?i?)\s*(address|pata|adrs|adress|likha|likhi)?\b/i.test(l) && /\b(address|pata|adrs|adress|likha|likhi)\b/i.test(l) ||
+        /\b(ye|yeh|yahi|yehi)\s*(mera|hmara|hamara)?\s*(address|pata)\s*(hai|he|h)\b/i.test(l) ||
+        /\b(address|pata|adrs|adress)\s*(galt|galat|glat|wrong)\s*(likha|likhi|h[ae]i?|he?)?\b/i.test(l) ||
+        /\b(pehle?y?|pahle?y?)\s*(address|pata)\s*(sahi|theek|thek|thik|correct|fix)\s*(kr|kar|kro|karo|krdo|kardo)?\b/i.test(l);
       // Also detect if customer is sending what looks like an address (has area/street/house keywords)
       const looksLikeAddress = /\b(house|ghar|flat|makan|plot|street|gali|galli|block|sector|phase|road|colony|town|nagar|mohall[ae]h?|near|nazd[ei]k|ke\s*paas|chowk|bazaar|market|masjid|school)\b/i.test(l) && l.length > 15;
       if (isAddrCorrection || (looksLikeAddress && !isMediaReqConf && !isCancel && !isPriceReq && !isShowProductsReq && !newProduct)) {
