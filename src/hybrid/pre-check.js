@@ -815,13 +815,18 @@ function preCheck(message, currentState, collected, state) {
     // "paise nahi" / "afford nahi" / "budget nahi" = soft financial cancel
     const isNoMoney = /\b(pais[ey]?\s*n[ai]h?i?|afford\s*n[ai]h?i?|budget\s*n[ai]h?i?|mehn?g[aie]?\s*(h[ae]i?|he)|mahang|zyada\s*(h[ae]i?|he)|abhi\s*pais[ey]?\s*n[ai]h?i?|pas\s*pais[ey]?\s*n[ai]h?i?)\b/i.test(l) ||
       /\b(n[ai]h?i?\s*pais[ey]?|paise?\s*nahi?\s*h[ae]i?n?)\b/i.test(l);
+    // Guard: "block nahi hai", "colony nahi" etc. in COLLECT_ADDRESS = address info, NOT cancel
+    const isAddressNegation = currentState === 'COLLECT_ADDRESS' &&
+      /\b(block|colony|sector|street|gali|galli|mohall[ae]h?|area|road|bazaar|market|chowk)\b/i.test(l) &&
+      /\b(n[ai]h?i?|nhi|ni|nai)\b/i.test(l);
     const isCancelInCollection = /\b(cancel|cancl|cansel)\b/i.test(l) ||
-      (!isQuestionSuffix && /\b(order|ordr)?\s*(nai|nahi|nhi|ni|na|nah|mat)\s*(kr|kar|karn[aie]|krn[aie]|chahiy[ae]|chaiy[ae])?\b/i.test(l) && /\b(nai|nahi|nhi|ni|na|nah|mat)\b/i.test(l)) ||
+      (!isQuestionSuffix && !isAddressNegation && /\b(order|ordr)\s*(nai|nahi|nhi|ni|na|nah|mat)\s*(kr|kar|karn[aie]|krn[aie]|chahiy[ae]|chaiy[ae])?\b/i.test(l)) ||
+      (!isQuestionSuffix && !isAddressNegation && /\b(nai|nahi|nhi|ni|na|nah|mat)\s*(kr|kar|karn[aie]|krn[aie])\s*(order|ordr)?\b/i.test(l)) ||
       /\b(nai|nahi|nhi|ni|na|nah|mat)\s*(chahiy[ae]|chaiy[ae]|mangta|manga|lena|laina|order|krna|karna)\b/i.test(l) ||
       /\b(nah?\s*laina|nah?\s*lena|nahi?\s*laina|nahi?\s*lena)\b/i.test(l) ||
       /\b(rehne?\s*do|choro|chhoro|chor\s*ni|bas|nai\s*krwana|abhi\s*nahi|filhal\s*nahi|felhal\s*nahi|abi\s*nahi)\b/i.test(l) ||
       /\b(not\s*interested|no\s*thanks?|no\s*thnks?|don'?t\s*want|i'?m?\s*not\s*interested)\b/i.test(l) ||
-      /\b(kuch\s*(bhi\s*)?n[ai]h?i?\s*(chahiy[ae]?|lena|mangta)?)\b/i.test(l) && isGoodbye ||
+      /\b(kuch\s*(bhi\s*)?n[ai]h?i?\s*(chahiy[ae]?|lena|mangta))\b/i.test(l) ||
       isGoodbye || isNoMoney;
     if (isCancelInCollection) return { intent: 'no_order_now' };
   }

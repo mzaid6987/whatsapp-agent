@@ -463,6 +463,15 @@ function handleTemplateState(message, state, storeName, preIntent) {
         const _upsellVideos = state.upsell_candidates.map(p => ({ product_id: p.id, type: 'video', product_name: p.short }));
         return { reply: fillTemplate('UPSELL_SHOW', uVars), state: 'UPSELL_SHOW', _media_batch: _upsellVideos };
       }
+      // Cancel request — "cancel kr do", "order cancel" — do NOT confirm
+      const isCancelInHook = /\b(cancel|cancl|cansel)\s*(kr|kar|karo|kardo|krdo|order|krdein|kardein|kar\s*do)?\b/i.test(l) ||
+        /\b(order\s*cancel|cancel\s*order)\b/i.test(l);
+      if (isCancelInHook) {
+        state.current = 'CANCEL_AFTER_CONFIRM';
+        state._cancelTag = true;
+        const honorific = getHonorific(state.collected.name);
+        return { reply: `${state.collected.name || ''} ${honorific}, aapka parcel dispatch ho chuka hai — ab cancel nahi ho sakta. Delivery ke waqt rider se mil jayega. Shukriya!`.trim(), state: 'CANCEL_AFTER_CONFIRM' };
+      }
       if (no) {
         return confirmOrder(state, storeName);
       }
@@ -506,6 +515,15 @@ function handleTemplateState(message, state, storeName, preIntent) {
       const isPauseShow = /\b(rok[iy]?[ea]|ruk[oia]|ruk\s*ja|wait|theher|thr|thehr|abort|bas\s*bas|stop|rok\s*do)\b/i.test(l);
       if (isPauseShow) {
         return { reply: 'Ji bilkul, aaram se dekhein! Jab pasand aa jaye to number ya naam bata dein 😊', state: 'UPSELL_SHOW' };
+      }
+      // Cancel request in upsell — "cancel kr do", "cancel order" — do NOT confirm
+      const isCancelInUpsell = /\b(cancel|cancl|cansel)\s*(kr|kar|karo|kardo|krdo|order|krdein|kardein|kar\s*do)?\b/i.test(l) ||
+        /\b(order\s*cancel|cancel\s*order)\b/i.test(l);
+      if (isCancelInUpsell) {
+        state.current = 'CANCEL_AFTER_CONFIRM';
+        state._cancelTag = true;
+        const honorific = getHonorific(state.collected.name);
+        return { reply: `${state.collected.name || ''} ${honorific}, aapka parcel dispatch ho chuka hai — ab cancel nahi ho sakta. Delivery ke waqt rider se mil jayega. Shukriya!`.trim(), state: 'CANCEL_AFTER_CONFIRM' };
       }
       if (no) {
         // If pending upsell and customer says no → skip just the pending, confirm order
