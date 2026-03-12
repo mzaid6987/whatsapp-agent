@@ -26,6 +26,7 @@
     .badge-returned { background: #feebc8; color: #9c4221; }
     .badge-upsell { background: #fefcbf; color: #975a16; font-size: 10px; }
     .badge-source { background: #e2e8f0; color: #4a5568; font-size: 10px; }
+    .badge-addr-incomplete { background: #fed7d7; color: #e53e3e; font-size: 10px; }
     .order-time { font-size: 11px; color: #999; white-space: nowrap; }
     .order-details { display: none; padding: 0 16px 16px; border-top: 1px solid #f0f0f0; }
     .order-details.open { display: block; }
@@ -218,6 +219,7 @@
             <span class="order-customer">${o.customer_name} — ${o.customer_city}</span>
             <div class="order-meta">
               ${o.has_upsell ? '<span class="order-badge badge-upsell">UPSELL</span>' : ''}
+              ${o.address_incomplete ? '<span class="order-badge badge-addr-incomplete">ADDR INCOMPLETE</span>' : ''}
               <span class="order-badge badge-source">${o.source === 'bot' ? 'Bot' : 'Human'}</span>
               <span class="order-badge ${badgeClass}">${statusText}</span>
             </div>
@@ -255,6 +257,9 @@
               <span class="stat-chip">Templates: <strong>${o.template_count || 0}</strong></span>
               <span class="stat-chip">AI Cost: <strong>${fmtPrice(o.ai_cost_rs || 0)}</strong></span>
               <span class="stat-chip">Sync: ${o.portal_synced ? '<strong style="color:#38a169">Synced</strong>' : '<strong style="color:#e53e3e">Not synced</strong>'}</span>
+              ${o.conversation_id ? `<button class="stat-chip addr-incomplete-btn" data-conv-id="${o.conversation_id}" data-idx="${idx}" onclick="toggleAddrIncompleteOrder(this)" style="cursor:pointer;border:1px solid ${o.address_incomplete ? '#e53e3e' : '#ccc'};background:${o.address_incomplete ? '#fff5f5' : '#f7f7f7'};color:${o.address_incomplete ? '#e53e3e' : '#666'};font-weight:${o.address_incomplete ? '700' : '400'}">
+                ${o.address_incomplete ? '✕ Addr Incomplete' : '+ Mark Addr Incomplete'}
+              </button>` : ''}
             </div>
           </div>
         </div>`;
@@ -264,6 +269,31 @@
     function toggleOrder(idx) {
       const el = document.getElementById('orderDetail' + idx);
       if (el) el.classList.toggle('open');
+    }
+
+    async function toggleAddrIncompleteOrder(btn) {
+      const convId = btn.dataset.convId;
+      if (!convId) return;
+      try {
+        const res = await api(`/api/conversations/${convId}/address-incomplete`, { method: 'POST' });
+        if (res && res.ok) {
+          const isIncomplete = res.address_incomplete;
+          btn.style.border = `1px solid ${isIncomplete ? '#e53e3e' : '#ccc'}`;
+          btn.style.background = isIncomplete ? '#fff5f5' : '#f7f7f7';
+          btn.style.color = isIncomplete ? '#e53e3e' : '#666';
+          btn.style.fontWeight = isIncomplete ? '700' : '400';
+          btn.innerHTML = isIncomplete ? '✕ Addr Incomplete' : '+ Mark Addr Incomplete';
+          // Update badge in header
+          const card = btn.closest('.order-card');
+          const meta = card.querySelector('.order-meta');
+          const existingBadge = meta.querySelector('.badge-addr-incomplete');
+          if (isIncomplete && !existingBadge) {
+            meta.insertAdjacentHTML('afterbegin', '<span class="order-badge badge-addr-incomplete">ADDR INCOMPLETE</span>');
+          } else if (!isIncomplete && existingBadge) {
+            existingBadge.remove();
+          }
+        }
+      } catch (e) { console.error('Toggle addr incomplete failed:', e); }
     }
 
     function updateSummary(orders) {

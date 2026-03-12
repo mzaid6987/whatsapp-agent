@@ -1882,6 +1882,7 @@ app.get('/api/orders', requireAuth, (req, res) => {
         c.created_at as chat_started_at,
         c.message_count,
         c.ai_tokens_used,
+        c.address_incomplete,
         (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.source = 'template') as template_count,
         (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.source IN ('ai','gpt-4o-mini','gpt-4o')) as ai_count,
         (SELECT GROUP_CONCAT(DISTINCT m.source) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.direction = 'outgoing') as sources_used
