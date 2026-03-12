@@ -828,6 +828,44 @@ app.put('/api/conversations/:id/read', requireAuth, (req, res) => {
   }
 });
 
+// Admin update collected data for a conversation
+app.patch('/api/conversations/:id/collected', requireAuth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const conv = conversationModel.findById(id);
+    if (!conv) return res.status(404).json({ error: 'Not found' });
+    const collected = JSON.parse(conv.collected_json || '{}');
+    const updates = req.body;
+    // Merge updates into collected
+    for (const [key, val] of Object.entries(updates)) {
+      if (key === 'address_parts' && typeof val === 'object') {
+        collected.address_parts = { ...collected.address_parts, ...val };
+      } else {
+        collected[key] = val;
+      }
+    }
+    // Build address string from parts
+    if (collected.address_parts) {
+      const ap = collected.address_parts;
+      const parts = [ap.area, ap.street, ap.house, ap.landmark].filter(v => v && v !== 'nahi_pata');
+      if (parts.length > 0) {
+        collected.address = parts.join(', ') + (collected.city ? ', ' + collected.city : '');
+      }
+    }
+    // Update DB
+    const db = require('./db').getDb();
+    db.prepare('UPDATE conversations SET collected_json = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
+      .run(JSON.stringify(collected), id);
+    // Also update customer name if changed
+    if (updates.name && conv.customer_id) {
+      db.prepare('UPDATE customers SET name = ? WHERE id = ?').run(updates.name, conv.customer_id);
+    }
+    res.json({ ok: true, collected });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Save admin feedback on a message
 app.put('/api/messages/:id/feedback', requireAuth, (req, res) => {
   try {
