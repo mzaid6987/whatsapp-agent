@@ -97,6 +97,11 @@ function preCheck(message, currentState, collected, state) {
     return { intent: 'voice_unclear' };
   }
 
+  // 0a-1. UNSUPPORTED MEDIA — sticker, GIF, etc. → ignore / ask to type
+  if (/^\[unsupported\]$/i.test(msg.trim())) {
+    return { intent: 'voice_unclear' }; // reuse "please type" response
+  }
+
   // 0a. GIBBERISH / JUNK — single dot, random chars, emojis only, etc.
   // Treat as greeting so template responds (no AI cost)
   // BUT: "G", "K", "J", "Y", "N" etc are valid short responses (G=ji, K=ok, Y=yes, N=no)
@@ -168,8 +173,9 @@ function preCheck(message, currentState, collected, state) {
 
   // 0b0. GIFT CARD DETECTION — customer mentions gift card or sends gift card image
   // Works in ALL states — parcel ke sath gift card aata hai, customer image ya text bhejta hai
-  const isGiftCard = /\b(gift\s*card|giftcard|gift\s*kard|gft\s*card|gft\s*kard)\b/i.test(l) ||
-    /\b(gift)\b/i.test(l) && /\b(card|kard|mila|aya|aaya|aai|aayi|mil\s*gaya|mil\s*gya|received)\b/i.test(l) ||
+  const isGiftCard = /\b(gift\s*card|giftcard|gift\s*kard|gft\s*card|gft\s*kard|discount\s*card|discount\s*voucher|scratch\s*card)\b/i.test(l) ||
+    /\b(gift|voucher|coupon)\b/i.test(l) && /\b(card|kard|mila|aya|aaya|aai|aayi|mil\s*gaya|mil\s*gya|received|discount|rs\s*\d+)\b/i.test(l) ||
+    /\b(card)\b/i.test(l) && /\b(discount|rs\s*\d+|500|rupee|rupay)\b/i.test(l) ||
     /\[Image:.*\b(gift\s*card|giftcard|gift.*card|coupon|voucher|discount\s*card|scratch\s*card)\b/i.test(l);
   if (isGiftCard) {
     return { intent: 'gift_card' };
@@ -286,7 +292,7 @@ function preCheck(message, currentState, collected, state) {
   // "how to use", "kaise chalana", "use karna hai", "chalana kaise hai", "features kya hain"
   const isUsageQuestion = /\b(how\s*to\s*use|kaise?\s*(chala|use|istemal|istmal)|chala+na+\s*(kaise?|kesy)|use\s*kar(na|ne|ni)|features?\s*(kya|kia|batao|samjh)|instructions?|taree?qa)\b/i.test(l) ||
     /\b(is\s*ko|isko|ise|ye)\s*(chala|use|on|start|operate)\b/i.test(l);
-  if ((isPostDelivery || isUsageQuestion) && ['IDLE', 'GREETING', 'PRODUCT_SELECTION'].includes(currentState)) {
+  if ((isPostDelivery || isUsageQuestion) && ['IDLE', 'GREETING', 'PRODUCT_SELECTION', 'PRODUCT_INQUIRY'].includes(currentState)) {
     const pdProd = detectProduct(msg);
     return { intent: 'post_delivery', extracted: pdProd ? { product: pdProd } : {} };
   }
@@ -1119,8 +1125,8 @@ function preCheck(message, currentState, collected, state) {
     const isShortGibberish = l.trim().split(/\s+/).every(w => w.length <= 2) || /^(ya|ye|yeh|ha|ok|g|ji|na|ni)\s/i.test(l.trim());
     if (!foundAny && !isRefusal && wordCount <= 4 && /^[a-z\s]+$/i.test(l.trim()) && !isGarbageText && !isShortGibberish) {
       if (!ap.area) {
-        // Short text during area step → assume it's area name
-        parts.area = msg.trim();
+        // Short text during area step → assume it's area name (title-case it)
+        parts.area = msg.trim().replace(/\b\w/g, c => c.toUpperCase());
         foundAny = true;
       } else if (ap.area && !ap.landmark && (ap.house || ap.house === 'nahi_pata')) {
         // Have area+house, waiting for landmark → assume short text is landmark

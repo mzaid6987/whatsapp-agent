@@ -420,7 +420,7 @@ function handleTemplateState(message, state, storeName, preIntent) {
         return { reply: 'Ji sir, delivery bilkul FREE hai — koi extra charge nahi ✅\n\nOrder place kar dun? Haan bolen ya kuch change karna ho to bata dein.', state: 'ORDER_SUMMARY' };
       }
       // Delivery time question — answer it, then re-ask confirm
-      if (/\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|aye?\s*ga)|kitne?\s*din|delivery|tracking|kb\s*tk|kb\s*ayga)\b/i.test(l) ||
+      if (/\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|aye?\s*ga)|kitne?\s*din|delivery|tracking|kb\s*tk|kb\s*ayga|ponch|pohch|pahunch|pahoch)\s*(kitne?|kab|me|mein|tak)?\b/i.test(l) ||
         /\b(how\s*(much|long)\s*(time|days?)?)\b/i.test(l) && /\b(deliver|take|come|arrive|receive|get|ship)\b/i.test(l) ||
         /\b(when\s*will)\b/i.test(l) && /\b(deliver|receive|get|arrive|come|ship|reach)\b/i.test(l)) {
         const delReply = fillTemplate('DELIVERY_POST_ORDER', vars);
