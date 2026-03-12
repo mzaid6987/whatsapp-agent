@@ -3304,6 +3304,16 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       return { reply, state: state.current };
     }
 
+    case 'price_repeat': {
+      // Customer asking "Price?" / "Kitna?" when product is already set — repeat price info
+      const prProduct = state.product;
+      if (prProduct) {
+        const honorific = getHonorific(state.collected.name, state.gender);
+        return { reply: `${prProduct.name} Rs.${prProduct.price.toLocaleString()} ki hai 🏷️ ${prProduct.f1}. Order karna hai ${honorific}?`, state: state.current };
+      }
+      return null; // fallback to AI
+    }
+
     case 'delivery_charge_question': {
       const honorific = getHonorific(state.collected.name, state.gender);
       const ml = message.toLowerCase();

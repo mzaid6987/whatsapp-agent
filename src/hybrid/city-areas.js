@@ -2496,8 +2496,8 @@ const CITY_AREAS = {
 // Maps common misspellings/abbreviations to canonical city name keys
 const CITY_ALIASES = {
   // Major cities
-  'khi': 'karachi', 'krachi': 'karachi', 'karchi': 'karachi', 'karachil': 'karachi',
-  'karach': 'karachi', 'karaachi': 'karachi', 'karaci': 'karachi',
+  'khi': 'karachi', 'kar': 'karachi', 'krachi': 'karachi', 'karchi': 'karachi', 'karachil': 'karachi',
+  'karach': 'karachi', 'karaachi': 'karachi', 'karaci': 'karachi', 'kci': 'karachi',
   'lhr': 'lahore', 'lahor': 'lahore', 'lahire': 'lahore', 'lahora': 'lahore',
   'lshore': 'lahore', 'lohore': 'lahore',
   'isb': 'islamabad', 'islambad': 'islamabad', 'islambd': 'islamabad',

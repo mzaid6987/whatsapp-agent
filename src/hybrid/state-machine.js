@@ -270,6 +270,36 @@ function handleTemplateState(message, state, storeName, preIntent) {
           console.log(`[ORDER_SUMMARY] City corrected to: ${correctedCity}`);
         }
       }
+      // Area/address correction in ORDER_SUMMARY — "sahi hai lekin X nahi Y hai", "area X nahi Y hai"
+      // Customer partially confirming but correcting a specific part (area, street, landmark)
+      const hasAreaNegation = /\b(nahi|nhi|ni|nai|galat|ghalat|wrong)\b/i.test(l) && state.collected.address_parts;
+      if (hasAreaNegation) {
+        const ap = state.collected.address_parts;
+        // Try to find the replacement: "X nahi hai Y hai" or "X nahi Y"
+        const correctionMatch = l.match(/\b(\w[\w\s]{2,20})\s+(?:nahi|nhi|ni|nai|galat|wrong)\s+(?:hai?\s+|he\s+|h\s+)?(\w[\w\s]{2,20}?)(?:\s+(?:hai|he|h)\b|\s*$)/i);
+        if (correctionMatch) {
+          const oldPart = correctionMatch[1].trim().toLowerCase();
+          const newPart = correctionMatch[2].trim();
+          // Check if oldPart matches any existing address part
+          const areaLower = (ap.area || '').toLowerCase();
+          const streetLower = (ap.street || '').toLowerCase();
+          const landmarkLower = (ap.landmark || '').toLowerCase();
+          if (areaLower && (areaLower.includes(oldPart) || oldPart.includes(areaLower))) {
+            ap.area = newPart.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+            const addrStrCorr = buildAddressString(ap, state.collected.city);
+            state.collected.address = state.collected.city ? addrStrCorr + ', ' + state.collected.city : addrStrCorr;
+            const smCorr = buildOrderSummary(state, storeName);
+            return { reply: `${ap.area} update ho gaya ✅\n\n` + smCorr.reply, state: 'ORDER_SUMMARY' };
+          }
+          if (landmarkLower && (landmarkLower.includes(oldPart) || oldPart.includes(landmarkLower))) {
+            ap.landmark = newPart.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+            const addrStrCorr = buildAddressString(ap, state.collected.city);
+            state.collected.address = state.collected.city ? addrStrCorr + ', ' + state.collected.city : addrStrCorr;
+            const smCorr = buildOrderSummary(state, storeName);
+            return { reply: `Landmark update ho gaya ✅\n\n` + smCorr.reply, state: 'ORDER_SUMMARY' };
+          }
+        }
+      }
       if (yes) {
         // Save order to DB IMMEDIATELY so it's never lost (even if customer doesn't reply to upsell)
         const items = (state.products || []).length ? state.products : [state.product];

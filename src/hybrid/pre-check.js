@@ -369,20 +369,30 @@ function preCheck(message, currentState, collected, state) {
   const complaint = isComplaint(l);
   const trust = TRUST_WORDS.test(l);
   const isQualityQuestion = /\b(to\s*nahi|toh?\s*nahi|nahi\s*ho|nhi\s*ho|nahi\s*na|hogi|hoga|jayega|jayegi|sakti|sakta)\b/i.test(l) && complaint;
+  // Strong complaint = clearly reporting an issue (past tense, active problem)
+  // "sending damage", "not work", "broken hai", "kharab mila", "charger issue" etc.
+  // "receive" alone is NOT a complaint — "call receive kar lunga" is normal. Only "receive nhi/nahi" is complaint.
+  const strongComplaint = complaint && (/\b(sending|sent|mila|receive[d]?\s*(nahi|nhi|ni|nai)|not work|not fit|broken|damage[d]?\s*product|issue|problem|stopped|charger|band ho|chal nahi|chal nhi|chalt[ai]\s*(hi\s*)?(nahi|nhi|ni)|work\s*nahi|work\s*nhi|working\s*nahi|working\s*nhi|sahi\s*work|sahi\s*kam|sahi\s*nahi|hilta|missing|toota|tuta|kaam\s*ka\s*nahi|kaam\s*ka\s*nhi|kaat\s*nahi|kaat\s*nhi|kaat\s*saka|nuqsan|paise?\s*wapas|paisay?\s*wapas|ek\s*bhi\s*kaam|kisi\s*bhi?\s*kaam)\b/i.test(l) || isPastOrder);
   // Question tone: "kya fake hai?", "ye kharab to nahi?", ends with ? — asking, not reporting
   const isQuestionTone = complaint && !strongComplaint && (
     /[?؟]\s*$/.test(l) ||
     /^(kya|ye|yeh|ya|to)\b/i.test(l) ||
     /\b(haina|hai\s*na|he\s*na|na\s*ho|hog[aie]|milega|chalega|chalegi|lag[ae]\s*ga|sakta|sakti|to\s*nahi|toh?\s*nahi)\b/i.test(l)
   );
-  // Strong complaint = clearly reporting an issue (past tense, active problem)
-  // "sending damage", "not work", "broken hai", "kharab mila", "charger issue" etc.
-  // "receive" alone is NOT a complaint — "call receive kar lunga" is normal. Only "receive nhi/nahi" is complaint.
-  const strongComplaint = complaint && (/\b(sending|sent|mila|receive[d]?\s*(nahi|nhi|ni|nai)|not work|not fit|broken|damage[d]?\s*product|issue|problem|stopped|charger|band ho|chal nahi|chal nhi|chalt[ai]\s*(hi\s*)?(nahi|nhi|ni)|work\s*nahi|work\s*nhi|working\s*nahi|working\s*nhi|sahi\s*work|sahi\s*kam|sahi\s*nahi|hilta|missing|toota|tuta|kaam\s*ka\s*nahi|kaam\s*ka\s*nhi|kaat\s*nahi|kaat\s*nhi|kaat\s*saka|nuqsan|paise?\s*wapas|paisay?\s*wapas|ek\s*bhi\s*kaam|kisi\s*bhi?\s*kaam)\b/i.test(l) || isPastOrder);
   if (isQualityQuestion && !strongComplaint) {
     return { intent: 'trust_question' };
   }
   if (isQuestionTone) {
+    return { intent: 'trust_question' };
+  }
+  // "5 bar kharab niklti hai" / "har bar cheez kharab milti hai" / "pehle bhi kharab aya"
+  // General online shopping distrust — NOT a complaint about THIS store's product
+  const isGeneralDistrust = complaint && (
+    /\b(har\s*ba+r|bar\s*bar|hamesha|aksar|zyada\s*tar|\d+\s*(ba+r|dafa|time))\b/i.test(l) ||
+    /\b(pehle\s*(bhi|b)|pahle\s*(bhi|b)|online\s*(order|shopping)\s*(se|mein|me|mai))\b/i.test(l) ||
+    /\b(kisi\s*bhi|koi\s*bhi|sab)\s*(store|shop|company|seller)\b/i.test(l)
+  );
+  if (isGeneralDistrust && !strongComplaint) {
     return { intent: 'trust_question' };
   }
   if (complaint && (!trust || strongComplaint)) {
@@ -1119,7 +1129,10 @@ function preCheck(message, currentState, collected, state) {
   // 4b. ACKNOWLEDGMENT in collection states — "ok", "acha", "theek", "hmm" → re-ask current field
   // Also: "order krna he", "order karna hai" during collection = just acknowledging, re-ask field
   if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_ADDRESS', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {
-    const isAck = /^(ik|ok+|okay|acha+|ach+a|theek|thik|thk|tik|hmm+|hm+|g|k|jee?|ji|ha+n|haan|hn|yes+|yup|samajh\s*(aa?\s*ga[yi]?|aa?\s*gai)?|thanks?|thank\s*you|thankyou|shukriya|shukria|meherbani)\s*[.!]?\s*$/i.test(l);
+    // Also catch pure punctuation ("...", "???", "!!") as frustration/ack → re-ask
+    const isPunctuationOnly = /^[.\-_,;:!?\s*#+@^~`'"…]+$/.test(msg.trim());
+    const isAck = isPunctuationOnly ||
+      /^(ik|ok+|okay|acha+|ach+a|theek|thik|thk|tik|hmm+|hm+|g|k|jee?|ji|ha+n|haan|hn|yes+|yup|samajh\s*(aa?\s*ga[yi]?|aa?\s*gai)?|thanks?|thank\s*you|thankyou|shukriya|shukria|meherbani)\s*[.!]?\s*$/i.test(l);
     // In COLLECT_ADDRESS: if address parts are substantially filled, "ok" = confirming address (not just acknowledging)
     // This handles case where address_confirming flag was lost (e.g. server restart)
     if (isAck && currentState === 'COLLECT_ADDRESS' && collected.address_parts) {
@@ -1257,6 +1270,15 @@ function preCheck(message, currentState, collected, state) {
       /\b(price|rate)\s*(hai|he|h|kya|kia)\b/i.test(l);
     if (isPriceAskInPI) {
       return { intent: 'product_selected', extracted: { product: state.product } };
+    }
+  }
+
+  // 6z. STANDALONE PRICE QUESTION — "Price", "Price?", "Rate", "Kitna", "Kitne ka hai"
+  // Customer asking price when product is already set — repeat price info
+  if (['PRODUCT_INQUIRY', 'GREETING', 'HAGGLING'].includes(currentState) && state && state.product) {
+    const isStandalonePrice = /^(price|rate|qeemat|qimat|kitna|kitny|kitne?\s*ka|kya\s*price|kia\s*price|price\s*kya|rate\s*kya)\s*[?؟.!]?\s*$/i.test(l.trim());
+    if (isStandalonePrice) {
+      return { intent: 'price_repeat' };
     }
   }
 
