@@ -336,10 +336,12 @@ function preCheck(message, currentState, collected, state) {
     const hasNoWord = /\b(nahi|nhi|no|nope|na+h|mat|cancel)\b/i.test(noWordCleaned);
     // "krlungi/karlunga/karlungi/krlnga" = "I'll do it" = YES (receive kar lungi/lunga)
     const hasWillDo = /\b(kr\s*lun?g[ia]|kar\s*lun?g[ia]|receive\s*kr|receive\s*kar)\b/i.test(l);
-    if (/\b(isi|same|yehi|yahi|wohi)\b/i.test(l) || isYes(l) || /^k+$/i.test(l.trim()) || (hasYesWord && !hasNoWord) || (startsWithYes && hasNoWord) || hasWillDo) {
+    // "Nahi yahi number hai" / "nahi isi pe" / "no this only" / "only this no" = SAME phone, NOT rejection
+    const nahiButSame = hasNoWord && /\b(yahi|yehi|yhi|isi|issi|same|only\s*this|this\s*only|ya\s*hi|ye\s*hi|wohi|wahi)\b/i.test(l);
+    if (/\b(isi|same|yehi|yahi|yhi|wohi|wahi)\b/i.test(l) || nahiButSame || isYes(l) || /^k+$/i.test(l.trim()) || (hasYesWord && !hasNoWord) || (startsWithYes && hasNoWord) || hasWillDo) {
       return { intent: 'same_phone', extracted: { same_phone: true } };
     }
-    if (isNo(l) || (hasNoWord && !hasYesWord && !startsWithYes)) {
+    if (isNo(l) || (hasNoWord && !hasYesWord && !startsWithYes && !nahiButSame)) {
       return { intent: 'no' };
     }
   }
@@ -714,7 +716,10 @@ function preCheck(message, currentState, collected, state) {
     const isConversationalPhrase = /\b(wait|ruk[oa]?|soch|think|later|baad|bad|abhi\s*nahi|pehle|phle|already|thanks|shukriya|thank\s*you)\b/i.test(l) ||
       /^(ok\s+wait|no\s+thanks?|not\s+now|let\s+me|hold\s+on|one\s+min|ek\s+min)\b/i.test(l);
     const isProductKeyword = detectProduct(msg) !== null;
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isProductKeyword && !endsWithBhi && words.length >= 2) {
+    // Urdu phrases that look like 2-3 English words but are NOT names
+    const isUrduPhrase = /^(g\s+brother|ji\s+sir|ji\s+madam|g\s+sir|easily|easyli|dono\s+sath|sath\s+milj|sath\s+mil|required\s+me|final\s+price|last\s+price|ok\s+sir|ok\s+madam|ok\s+done|aik\s+piece|ek\s+piece|one\s+piece)\s*$/i.test(l) ||
+      /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|krwana|mangwao|mangwana|bhejdo|bhejdein|bhejna|deliver|delivery|receive|receive)\b/i.test(l);
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isProductKeyword && !endsWithBhi && !isUrduPhrase && words.length >= 2) {
       // 2+ word name in PRODUCT_INQUIRY = implicit yes + name (e.g. "Shazia Jamshed")
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_in_product_inquiry', extracted: { name } };
@@ -755,8 +760,11 @@ function preCheck(message, currentState, collected, state) {
     const isConversationalPhrase = /\b(wait|ruk[oa]?|soch|think|later|baad|bad|abhi\s*nahi|thanks|shukriya|thank\s*you)\b/i.test(l) ||
       /^(ok\s+wait|no\s+thanks?|not\s+now|let\s+me|hold\s+on|one\s+min|ek\s+min)\b/i.test(l);
     // Name refusal — "not required", "zaroorat nahi", "naam nahi bataunga", "ok not required"
-    const isNameRefusal = /\b(not\s*required|no\s*need|zaroorat?\s*nahi|zarurat?\s*nahi|naam\s*(nahi|nhi|ni|nai)|nahi?\s*batao?n?g[aie]?|nai\s*btaon?g[aie]?)\b/i.test(l);
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername) {
+    const isNameRefusal = /\b(not\s*required|no\s*need|zaroorat?\s*nahi|zarurat?\s*nahi|naam\s*(nahi|nhi|ni|nai)|nahi?\s*batao?n?g[aie]?|nai\s*btaon?g[aie]?|order\s*(nahi|nhi|ni|nai)|nahi?\s*kr[nw]a|cancel|nai\s*krna)\b/i.test(l);
+    // Urdu phrases that look like English names but are NOT names
+    const isUrduPhrase = /^(g\s+brother|ji\s+sir|ji\s+madam|g\s+sir|easily|easyli|dono\s+sath|required\s+me|final\s+price|last\s+price|ok\s+sir|ok\s+done)\s*$/i.test(l) ||
+      /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|mangwao|bhejdo|deliver|delivery|receive)\b/i.test(l);
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isUrduPhrase) {
       // Capitalize properly
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_given', extracted: { name } };
@@ -817,23 +825,24 @@ function preCheck(message, currentState, collected, state) {
     }
   }
 
-  // 4b-CODE: CODE-FIRST ADDRESS EXTRACTION — extract address parts in code, skip AI
-  // Runs all extractors on customer's message. If ANY part found, return it.
-  // This handles 70-80% of address responses without AI cost.
-  if (currentState === 'COLLECT_ADDRESS' && state && !state.address_confirming) {
-    // Cancel/order refusal detection BEFORE address extraction
-    // "Mjhy order nai krna", "order cancel", "nahi chahiye", "mai ni btaonga"
+  // Cancel/refusal detection in ALL address states (including confirming)
+  if (currentState === 'COLLECT_ADDRESS') {
     const isOrderCancel = /\b(order|ordr)\s*(nai|nahi|nhi|ni|na|mat|cancel)\s*(kr|kar|karn[aie]|krn[aie])?\b/i.test(l) ||
       /\b(nai|nahi|nhi|ni|na|mat)\s*(order|ordr)\s*(kr|kar|karn[aie]|krn[aie])?\b/i.test(l) ||
       /\b(mjh[ey]?|mujh[ey]?)\s*(order|kuch)?\s*(nai|nahi|nhi|ni|na)\s*(kr|kar|karn[aie]|krn[aie]|chahiye|chaiye)\b/i.test(l) ||
       /\b(cancel|cancl)\s*(kr|kar|karo|krdo|kardo|order)?\b/i.test(l) ||
       /\b(nahi|nhi|ni|nai|mat)\s*(chahiye|chaiye|mangta|manga|lena)\b/i.test(l);
-    // Explicit refusal to give info — "nai btaonga", "nai bta rha", "mai ni btaonga"
     const isInfoRefusal = /\b(nai|nahi|nhi|ni|na|mat)\s*(bta|btaon?g[aie]|batao?n?g[aie]|bataon?g[aie])\b/i.test(l) ||
       /\b(mai|mein|me|main)\s*(nai|nahi|nhi|ni)\s*(bta|btaon?g[aie]|batao?n?g[aie]|bataon?g[aie])\b/i.test(l) ||
       /\b(nai|nahi|nhi)\s*(bta|bat[ao])\s*(rh?a|rh?i|raha|rahi)\b/i.test(l);
     if (isOrderCancel) return { intent: 'no_order_now' };
     if (isInfoRefusal) return { intent: 'no_order_now' };
+  }
+
+  // 4b-CODE: CODE-FIRST ADDRESS EXTRACTION — extract address parts in code, skip AI
+  // Runs all extractors on customer's message. If ANY part found, return it.
+  // This handles 70-80% of address responses without AI cost.
+  if (currentState === 'COLLECT_ADDRESS' && state && !state.address_confirming) {
 
     const ap = collected.address_parts || {};
     const city = collected.city || null;
