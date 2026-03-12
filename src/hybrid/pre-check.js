@@ -795,7 +795,13 @@ function preCheck(message, currentState, collected, state) {
     // Urdu phrases that look like English names but are NOT names
     const isUrduPhrase = /^(g\s+brother|ji\s+sir|ji\s+madam|g\s+sir|easily|easyli|dono\s+sath|required\s+me|final\s+price|last\s+price|ok\s+sir|ok\s+done)\s*$/i.test(l) ||
       /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|mangwao|bhejdo|deliver|delivery|receive)\b/i.test(l);
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isUrduPhrase) {
+    // English non-name words — pronouns, verbs, adjectives that are NEVER Pakistani names
+    // Catches: "I Went This", "Required Me", "Ok Not Required", "Send Me", "Just Fine" etc.
+    const ENGLISH_NON_NAME_WORDS = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|much|also|too|only|went|want|wanted|go|going|gone|come|came|coming|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|does|make|made|take|took|tell|told|know|knew|see|saw|look|let|try|put|run|set|keep|show|find|call|feel|think|said|please|plz|pls|fine|good|bad|nice|great|here|there|from|into|will|can|may|should|would|could|must|shall|required|available)\b/i;
+    const isEnglishNonName = words.length >= 2 && ENGLISH_NON_NAME_WORDS.test(l);
+    // Single common English words that are NOT names (but could pass looksLikeName)
+    const isSingleEnglishWord = words.length === 1 && /^(yes|no|ok|hi|hey|hello|bye|please|thanks|sorry|sure|fine|good|nice|great|love|like|want|need|help|send|done|wait|stop|start|open|close|free|new|old|big|small|fast|slow|easy|hard|real|true|best|last|next|same|other|much|more|less|just|only|even|still|also|back|down|here|there|away|home|long|full|high|low|off|sir|madam|bro|dear|boss|dude|miss|mam|available|required)$/i.test(l);
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isUrduPhrase && !isEnglishNonName && !isSingleEnglishWord) {
       // Capitalize properly
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_given', extracted: { name } };
@@ -809,14 +815,35 @@ function preCheck(message, currentState, collected, state) {
   // 4b0-CITY. CITY CORRECTION — "Lahore nahi Fatehpur hai" / "city galat hai X hai"
   // Customer correcting wrongly detected city — update city and re-ask address
   if (currentState === 'COLLECT_ADDRESS' || currentState === 'COLLECT_CITY') {
-    const cityCorrection = /\b(nhi|nahi|na|ni|nai|galat|ghalat|wrong)\b/i.test(l);
-    if (cityCorrection) {
-      const allCities = extractAllCities(msg);
-      const currentCity = (collected.city || '').toLowerCase();
-      // Find the NEW city (not the current one)
+    const currentCity = (collected.city || '').toLowerCase();
+    const allCities = extractAllCities(msg);
+    // Method 1: Negation + new city — "nahi X hai", "X nahi Y hai", "galat city"
+    const hasNegation = /\b(nhi|nahi|na|ni|nai|galat|ghalat|wrong|change|correct)\b/i.test(l);
+    if (hasNegation && allCities.length > 0) {
       const newCity = allCities.find(c => c.toLowerCase() !== currentCity);
       if (newCity) {
         return { intent: 'city_correction', extracted: { city: newCity } };
+      }
+    }
+    // Method 2: Explicit city statement — "mein X se hoon", "city X hai", "X mein delivery"
+    // Only triggers if the mentioned city is DIFFERENT from current city
+    if (currentCity && allCities.length > 0) {
+      const isCityStatement = /\b(city|shehr|shehar)\s*(mera|meri|hmari|hamari)?\s*(h[ae]i?|ye|yeh)\b/i.test(l) ||
+        /\b(mein|main|me|hum|ham)\s*(to|toh?)?\s*.{0,20}\s*(se|sy|say)\s*(hu+n?|ho+n?|hain)\b/i.test(l) ||
+        /\b(delivery|parcel|order)\s*.{0,10}\s*(mein|me|pe|par|ko)\b/i.test(l);
+      if (isCityStatement) {
+        const newCity = allCities.find(c => c.toLowerCase() !== currentCity);
+        if (newCity) {
+          return { intent: 'city_correction', extracted: { city: newCity } };
+        }
+      }
+    }
+    // Method 3: Customer just sends a city name (only) that's different from current
+    // "Faisalabad" when current is "Lahore" — clearly a correction
+    if (currentCity && allCities.length === 1 && msg.trim().split(/\s+/).length <= 3) {
+      const mentionedCity = allCities[0].toLowerCase();
+      if (mentionedCity !== currentCity) {
+        return { intent: 'city_correction', extracted: { city: allCities[0] } };
       }
     }
   }

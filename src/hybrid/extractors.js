@@ -323,7 +323,15 @@ function extractNameFromFullMsg(msg) {
 function isLikelyName(msg) {
   const trimmed = msg.trim();
   // 1-4 words, only letters and spaces, no numbers
-  return /^[A-Za-z\s]{2,50}$/.test(trimmed) && trimmed.split(/\s+/).length <= 4;
+  if (!/^[A-Za-z\s]{2,50}$/.test(trimmed) || trimmed.split(/\s+/).length > 4) return false;
+  // Reject English non-name words (pronouns, verbs, adjectives, common words)
+  const l = trimmed.toLowerCase();
+  const ENGLISH_NON_NAME = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|much|also|too|only|went|want|wanted|go|going|gone|come|came|coming|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|does|make|made|take|took|tell|told|know|knew|see|saw|look|let|try|put|run|set|keep|show|find|call|feel|think|said|please|plz|fine|good|bad|nice|great|here|there|from|into|will|can|may|should|would|could|must|shall|required|available|ok|okay|sir|madam|brother|easily)\b/i;
+  const words = trimmed.split(/\s+/);
+  if (words.length >= 2 && ENGLISH_NON_NAME.test(l)) return false;
+  // Reject Urdu conversational phrases
+  if (/\b(chahiy[ae]|milj[aie]|miljiengy|milengy|ayenge|jayenge|hojaye|krwao|mangwao|bhejdo|deliver|delivery|easyli)\b/i.test(l)) return false;
+  return true;
 }
 
 // ============= ADDRESS KEYWORDS =============

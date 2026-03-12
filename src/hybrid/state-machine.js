@@ -688,11 +688,77 @@ function handleTemplateState(message, state, storeName, preIntent) {
         const nextVars = buildVars(state, storeName);
         return { reply: fillTemplate('PRODUCT_INQUIRY', nextVars), state: 'PRODUCT_INQUIRY' };
       }
+      // Address correction/update after order confirmed — "address sahi krin", "yeh mera address hai", or customer sends full address
+      const isAddrCorrection = /\b(address|pata|adrs|adress)\s*(sahi|correct|change|update|fix|theek|thik|kr|kar|kro|karo|krdo|kardo|krdein|ye|yeh)\b/i.test(l) ||
+        /\b(sahi|correct|change|update|fix|theek|thik)\s*(address|pata|adrs|adress)\b/i.test(l) ||
+        /\b(galat|wrong)\s*(address|pata)\b/i.test(l) ||
+        /\b(ye|yeh|yahi|yehi)\s*(mera|hmara|hamara)?\s*(address|pata)\s*(hai|he|h)\b/i.test(l);
+      // Also detect if customer is sending what looks like an address (has area/street/house keywords)
+      const looksLikeAddress = /\b(house|ghar|flat|makan|plot|street|gali|galli|block|sector|phase|road|colony|town|nagar|mohall[ae]h?|near|nazd[ei]k|ke\s*paas|chowk|bazaar|market|masjid|school)\b/i.test(l) && l.length > 15;
+      if (isAddrCorrection || (looksLikeAddress && !isMediaReqConf && !isCancel && !isPriceReq && !isShowProductsReq && !newProduct)) {
+        state._thanked = false;
+        // Try to parse the address from the message
+        const { extractArea, extractHouse: exHouse, extractStreet: exStreet, extractLandmark: exLm, buildAddressString: buildAddr } = require('./extractors');
+        const ap = state.collected.address_parts || { area: null, street: null, house: null, landmark: null };
+        const detArea = extractArea(message, state.collected.city);
+        const detStreet = exStreet(message);
+        const detHouse = exHouse(message);
+        const detLm = exLm(message);
+        if (detArea) ap.area = detArea;
+        if (detStreet) ap.street = detStreet;
+        if (detHouse) ap.house = detHouse;
+        if (detLm) ap.landmark = detLm;
+        state.collected.address_parts = ap;
+        const addrStr = buildAddr(ap, state.collected.city);
+        state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
+        // Update order in DB
+        try {
+          if (state._saved_order_id) {
+            const db = require('../db').getDb();
+            db.prepare('UPDATE orders SET customer_address = ? WHERE order_id = ?').run(state.collected.address, state._saved_order_id);
+          }
+        } catch (e) { console.error('[ORDER] Address update error:', e.message); }
+        return { reply: `Address update ho gaya ✅\n📍 ${state.collected.address}\n\nShukriya! ${vars.delivery_time} mein delivery ho jaegi.`, state: 'ORDER_CONFIRMED' };
+      }
+      // Quality/trust question — "quality kaisi hai", "achi hai?", "original hai?"
+      const isQualityQ = /\b(quality|qualiti|qlty|asl[iy]|original|asli|naqli|nakli|fake|genuine|branded|copy|first\s*copy|china|local|imported)\b/i.test(l) ||
+        /\b(ach[aie]|kais[aie]|thik|theek|sahi)\s*(h[ae]i?|hog[aie]|hota|hoti)?\s*(\?|$)/i.test(l) && /\b(product|cheez|samaan|maal|item)\b/i.test(l);
+      if (isQualityQ) {
+        state._thanked = false;
+        return { reply: fillTemplate('QUALITY_REASSURANCE', vars), state: 'ORDER_CONFIRMED' };
+      }
+      // Trust/COD/payment question — "paisa pehle dena hai?", "cod hai?", "advance?"
+      const isTrustQ = /\b(cod|cash\s*on|advance|pehle\s*pais[ae]|payment|pay\s*kr|pais[ae]\s*(kab|kaise|kitne|pehle|advance)|check\s*kr\s*sakt[ae]|khol\s*ke\s*dekh|rider\s*ke?\s*saamne)\b/i.test(l) ||
+        /\b(guarantee|garanti|exchange|replace|return|wapas|wapis|vapas|vapsi)\b/i.test(l);
+      if (isTrustQ) {
+        state._thanked = false;
+        return { reply: fillTemplate('TRUST_QUALITY', vars), state: 'ORDER_CONFIRMED' };
+      }
+      // Courier/shipping question — "konsi courier", "TCS se?", "leopard?"
+      const isCourierQ = /\b(courier|courir|kureer|tcs|leopard|leopards|postex|call\s*courier|m\s*&?\s*p)\b/i.test(l) ||
+        /\b(kis|konsi?|kaun\s*si?|which)\s*(courier|company|service)\b/i.test(l);
+      if (isCourierQ) {
+        state._thanked = false;
+        return { reply: `${vars.honorific === 'sir' ? 'Sir' : 'Madam'}, delivery TCS/Leopard/PostEx se hoti hai — jo aapke area mein available ho. Parcel ${vars.delivery_time} mein mil jaega 📦`, state: 'ORDER_CONFIRMED' };
+      }
+      // Charges/shipping cost question — "delivery charges?", "shipping free?"
+      const isChargesQ = /\b(charges?|charg|fee|fees|cost|kharcha|kharch)\b/i.test(l) ||
+        /\b(delivery|shipping)\s*(ka|ke|ki)?\s*(charges?|pais[ae]|cost|fee|kitne?)\b/i.test(l);
+      if (isChargesQ) {
+        state._thanked = false;
+        return { reply: `${vars.honorific === 'sir' ? 'Sir' : 'Madam'}, delivery bilkul FREE hai — koi extra charge nahi ✅ Sirf product ki price deni hai, COD pe. ${vars.delivery_time} mein delivery.`, state: 'ORDER_CONFIRMED' };
+      }
       // Generic product question without specific product — "yeh kitne ka hai?", "price batao"
       const isProductQuestion = /\b(price|rate|qeemat|qimat|kitne?\s*ka|kitny?\s*ka|kitni\s*ki|kitna|kitne|features?|details?|batao|btao|chahiye|chahea|mangta|lena|order\s*krna|order\s*karna)\b/i.test(l);
       if (isProductQuestion) {
         state._thanked = false;
         return { reply: `${getHonorific(state.collected.name)}, konsa product chahiye? Yeh available hain:\n\n${productList()}\n\nNumber ya naam bata dein 😊`, state: 'ORDER_CONFIRMED' };
+      }
+      // Unknown question (contains ?) — give helpful response instead of dead-end "already confirmed"
+      const isQuestion = /[?؟]\s*$/.test(message.trim()) || /\b(kya|kab|kaise|kitna|kitne|kitni|konsa|konsi|kaun|kidhar|kahan)\b/i.test(l);
+      if (isQuestion) {
+        state._thanked = false;
+        return { reply: `${vars.honorific === 'sir' ? 'Sir' : 'Madam'}, aapka order confirm hai ✅ ${vars.delivery_time} mein delivery hogi. Koi aur sawal ho to poochein! 😊`, state: 'ORDER_CONFIRMED' };
       }
       return { reply: fillTemplate('AFTER_ORDER', vars), state: 'ORDER_CONFIRMED' };
     }
