@@ -861,7 +861,12 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       /\b(bol\s*ke|bol\s*kr|bolke|bolkr)\s*(bata[od]?o?|smjha[od]?o?|samjha[od]?o?)\b/i.test(cl) ||
       /\b(awaaz|awaz|aawaz)\s*(mein|me|mai|m)\s*(bata[od]?o?|bhej[od]?o?|bol[od]?o?)\b/i.test(cl) ||
       /\b(voice\s*(msg|message|note)|voice)\s*(chahiye|chahie|chaiye|mangta|mangti)\b/i.test(cl);
-    if (isVoiceMsgReq) {
+    // Skip PATH0C if "call kar" matched in COLLECT_DELIVERY_PHONE context
+    // "is number pe call kar zeke" = confirming delivery phone, NOT requesting voice call
+    const isDeliveryPhoneContext = state.current === 'COLLECT_DELIVERY_PHONE' &&
+      /\b(number|phone|nmbr|mobile)\b/i.test(cl) &&
+      /\b(theek|thek|thik|sahi|haan|ji|ok|on\s*hai|on\s*he)\b/i.test(cl);
+    if (isVoiceMsgReq && !isDeliveryPhoneContext) {
       const reply = 'Okay thora sabr karein please, me ap ko voice message karti hu 🎤';
       state.messages.push({ role: 'user', content: message });
       state.messages.push({ role: 'assistant', content: reply });
@@ -1038,8 +1043,13 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
       };
     }
-    const flexYes = /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|done|theek|thek|thik|thk|tik|hn|hm+|g+|acha|accha|achha|bhej\s*d[oae]|bhejd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|kr\s*d[oae]|kard[oae]|krd[oae])\b/i.test(l) && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
-    const flexNo = /\b(nahi+|nhi*|nh|no+|galat|nope|na+h|mat|cancel)\b/i.test(l) && !isConditionalNah;
+    // Address CORRECTION detection — "9 number nahi hai 19 number hai" / "house 19 hai sorry"
+    // Customer is correcting a part (usually house), NOT rejecting the address
+    const isAddressCorrection = /\b(house|ghar|makan|number|no|plot)\s*#?\s*\d+/i.test(l) ||
+      /\b\d+\s*(number|no|nmbr)\s*(h[ae]i?|he)\b/i.test(l) ||
+      /\b(sorry|galti|mistake|ghalti)\b/i.test(l) && /\d+/.test(l);
+    const flexYes = /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|okay|done|theek|thek|thik|thk|tik|hn|hm+|g+|acha|accha|achha|bhej\s*d[oae]|bhejd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|kr\s*d[oae]|kard[oae]|krd[oae])\b/i.test(l) && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
+    const flexNo = /\b(nahi+|nhi*|nh|no+|galat|nope|na+h|mat|cancel)\b/i.test(l) && !isConditionalNah && !isAddressCorrection;
 
     if (flexYes) {
       state.address_confirming = false;
