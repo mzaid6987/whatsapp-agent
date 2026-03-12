@@ -1214,7 +1214,11 @@ function preCheck(message, currentState, collected, state) {
     /\b(kb\s*t[aeu]?k\s*(ayga|aayga|ajayga|ajaye?ga|milega|pohchega)?)\b/i.test(l) ||
     /\b(parcel|order)\s*(kab|kb|kub)\s*(aaye?ga|ajaye?ga|milega|pohche?ga)?\b/i.test(l) ||
     /\b(aa\s*jaye?\s*ga|mil\s*jaye?\s*ga|pohch\s*jaye?\s*ga)\b/i.test(l) ||
-    /\b(katni|katny|katne)\s*(deno|dino|din)\s*(m|me|mein|mai)?\s*(mil|mily?|mileg[aie]?|ayg[aie]?|aayg[aie]?)\b/i.test(l);
+    /\b(katni|katny|katne)\s*(deno|dino|din)\s*(m|me|mein|mai)?\s*(mil|mily?|mileg[aie]?|ayg[aie]?|aayg[aie]?)\b/i.test(l) ||
+    // Event-based delivery questions: "Eid se pehle delivery ho jayegi?", "kal tak mil jayega?"
+    /\b(eid|kal|parso|parsoo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|somo?war|mangal|budh|jumerat|juma|hafta|itwar|chand\s*raat)\s*(se|say|sy|s)?\s*(pehl[aey]|pahla?y?|pehla?y?)\s*(delivery|deliver|mil|pohch|aa|parcel)?\s*(ho|hoja|hojaye?|hojayeg[aie]?|mil|mileg[aie]?|milj[aie]?|pohch|aaj[aie]?|ajaye?g[aie]?|jayeg[aie]?|jay\s*g+[aie]?|ga|gi|ge)?\b/i.test(l) ||
+    // "delivery ho jayegi/jaye gi/ho jaye ga" — general delivery completion question
+    /\b(delivery|deliver|parcel|order)\s*(ho\s*jaye?\s*g[aie]+|hojaye?\s*g[aie]+|ho\s*jay\s*g+[aie]+|hojay\s*g+[aie]+)\b/i.test(l);
   if (isDeliveryTimeQ) {
     // Check if message ALSO has order intent — "order karna hai ... kab tak ayega"
     const hasOrderWords = /\b(order|mangwa|chahiye|chahea|krna|karna|krdo|kardo|kar\s*do|book)\b/i.test(l);
