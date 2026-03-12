@@ -754,7 +754,9 @@ function preCheck(message, currentState, collected, state) {
     // Common conversational phrases that are NOT names — "ok wait", "no thanks", "not now" etc.
     const isConversationalPhrase = /\b(wait|ruk[oa]?|soch|think|later|baad|bad|abhi\s*nahi|thanks|shukriya|thank\s*you)\b/i.test(l) ||
       /^(ok\s+wait|no\s+thanks?|not\s+now|let\s+me|hold\s+on|one\s+min|ek\s+min)\b/i.test(l);
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername) {
+    // Name refusal — "not required", "zaroorat nahi", "naam nahi bataunga", "ok not required"
+    const isNameRefusal = /\b(not\s*required|no\s*need|zaroorat?\s*nahi|zarurat?\s*nahi|naam\s*(nahi|nhi|ni|nai)|nahi?\s*batao?n?g[aie]?|nai\s*btaon?g[aie]?)\b/i.test(l);
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername) {
       // Capitalize properly
       const name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { intent: 'name_given', extracted: { name } };
@@ -819,6 +821,20 @@ function preCheck(message, currentState, collected, state) {
   // Runs all extractors on customer's message. If ANY part found, return it.
   // This handles 70-80% of address responses without AI cost.
   if (currentState === 'COLLECT_ADDRESS' && state && !state.address_confirming) {
+    // Cancel/order refusal detection BEFORE address extraction
+    // "Mjhy order nai krna", "order cancel", "nahi chahiye", "mai ni btaonga"
+    const isOrderCancel = /\b(order|ordr)\s*(nai|nahi|nhi|ni|na|mat|cancel)\s*(kr|kar|karn[aie]|krn[aie])?\b/i.test(l) ||
+      /\b(nai|nahi|nhi|ni|na|mat)\s*(order|ordr)\s*(kr|kar|karn[aie]|krn[aie])?\b/i.test(l) ||
+      /\b(mjh[ey]?|mujh[ey]?)\s*(order|kuch)?\s*(nai|nahi|nhi|ni|na)\s*(kr|kar|karn[aie]|krn[aie]|chahiye|chaiye)\b/i.test(l) ||
+      /\b(cancel|cancl)\s*(kr|kar|karo|krdo|kardo|order)?\b/i.test(l) ||
+      /\b(nahi|nhi|ni|nai|mat)\s*(chahiye|chaiye|mangta|manga|lena)\b/i.test(l);
+    // Explicit refusal to give info — "nai btaonga", "nai bta rha", "mai ni btaonga"
+    const isInfoRefusal = /\b(nai|nahi|nhi|ni|na|mat)\s*(bta|btaon?g[aie]|batao?n?g[aie]|bataon?g[aie])\b/i.test(l) ||
+      /\b(mai|mein|me|main)\s*(nai|nahi|nhi|ni)\s*(bta|btaon?g[aie]|batao?n?g[aie]|bataon?g[aie])\b/i.test(l) ||
+      /\b(nai|nahi|nhi)\s*(bta|bat[ao])\s*(rh?a|rh?i|raha|rahi)\b/i.test(l);
+    if (isOrderCancel) return { intent: 'no_order_now' };
+    if (isInfoRefusal) return { intent: 'no_order_now' };
+
     const ap = collected.address_parts || {};
     const city = collected.city || null;
     const parts = {};
@@ -1002,7 +1018,10 @@ function preCheck(message, currentState, collected, state) {
     /\b(abhi|ab)\s*(nahi|nhi|ni|nai)\s*(chahiye|chaiye|chaye)\b/i.test(l) ||
     /\b(baad|bad)\s*(mein|me|mai|m)\s*(bata|contact|rabta|call)\b/i.test(l) ||
     /\b(jab\s*(chahiye|chaiye|chaye|zaroorat|zarurat)\s*(hog[ai]|ho)\s*(to|toh?)?\s*(bata|contact|rabta))\b/i.test(l) ||
-    /\b(jab\s*(order|zaroorat)\s*(chaya|chahiye|hog[ai])\s*(to|toh?)?\s*(rabta|contact|bata))\b/i.test(l);
+    /\b(jab\s*(order|zaroorat)\s*(chaya|chahiye|hog[ai])\s*(to|toh?)?\s*(rabta|contact|bata))\b/i.test(l) ||
+    /\b(order|ordr)\s*(nai|nahi|nhi|ni|na|mat)\s*(kr|kar|karn[aie]|krn[aie])?\b/i.test(l) ||
+    /\b(mjh[ey]?|mujh[ey]?)\s*(order|kuch)?\s*(nai|nahi|nhi|ni|na)\s*(kr|kar|karn[aie]|krn[aie]|chahiye|chaiye)\b/i.test(l) ||
+    /\b(nai|nahi|nhi|ni|na|mat)\s*(chahiye|chaiye|mangta|manga|lena)\s*(order)?\b/i.test(l);
   if (isNoOrder && !['IDLE', 'GREETING'].includes(currentState)) {
     return { intent: 'no_order_now' };
   }
