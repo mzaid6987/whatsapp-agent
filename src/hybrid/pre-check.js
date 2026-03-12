@@ -72,10 +72,14 @@ function isComplaint(l) {
 
 // ============= YES / NO DETECTION =============
 function isYes(l) {
+  // Urdu script yes: ہاں، جی، ٹھیک، اوکے، بلکل
+  if (/^(ہا+ں?|جی+|ٹھیک\s*[ہھ][ےیٰ]?|اوکے|بلکل|ہاں\s*جی|جی\s*ہاں|اچھا|ٹھیک)\s*[.!۔]?\s*$/.test(l)) return true;
   return /^(ha+n?|hm+|ji+|jee|g|ge|yes+|yess+|yup|ik|o?k+a*y+|o?ki+|ok\s*ok|o?ok(ay|k|y)?|done|th[ie]*k|tik|sai|sahi|sa[ih]i?|bilkul|c[oa]n?f[iou]r?m(ed)?|comf[io]rm(ed)?|conf?rim(ed)?|zaroor|hn+|kr\s*do|kardo|krdo|kar\s*do|bhejwa?\s*d[oae]|bhijwa?\s*d[oae]|mangwa?\s*d[oae]|laga?\s*d[oae])\s*[.!]?\s*$/i.test(l);
 }
 
 function isNo(l) {
+  // Urdu script no: نہیں، نہ، کینسل
+  if (/^(نہیں|نہ|نئ|کینسل|مت)\s*[.!۔]?\s*$/.test(l)) return true;
   return /^(nahi+|nhi+|no+|cancel|nope|na+h?|mat|band|nai|rehne\s*do|chor[od]|ni+)\s*[.!]?\s*$/i.test(l);
 }
 

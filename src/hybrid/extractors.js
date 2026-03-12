@@ -373,6 +373,13 @@ function extractHouse(msg) {
       let val = m[1].trim();
       // Don't match street/block/sector prefixes as house numbers (but allow "ST-8/1" style plot numbers)
       if (/^(st|blk?|sec|ph)\d/i.test(val) && !/[-\/]/.test(val)) continue;
+      // Don't extract "number X" when preceded by gali/street/block/sector/lane/phase
+      // e.g. "gali number 1" → "1" is gali number, NOT house number
+      const matchIdx = msg.toLowerCase().indexOf(m[0].toLowerCase());
+      if (matchIdx > 0) {
+        const before = msg.substring(0, matchIdx).toLowerCase().trim();
+        if (/\b(gali|galli|street|st|block|blk|sector|sec|phase|lane)\s*$/i.test(before)) continue;
+      }
       return val;
     }
   }
