@@ -855,8 +855,15 @@ app.patch('/api/conversations/:id/collected', requireAuth, (req, res) => {
     }
     // Update DB
     const db = require('./db').getDb();
-    db.prepare('UPDATE conversations SET collected_json = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
-      .run(JSON.stringify(collected), id);
+    // Allow state override from admin (e.g. un-cancel)
+    if (updates._state) {
+      db.prepare('UPDATE conversations SET collected_json = ?, state = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
+        .run(JSON.stringify(collected), updates._state, id);
+      delete collected._state;
+    } else {
+      db.prepare('UPDATE conversations SET collected_json = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
+        .run(JSON.stringify(collected), id);
+    }
     // Also update customer record if changed
     if (conv.customer_id) {
       if (updates.name) db.prepare('UPDATE customers SET name = ? WHERE id = ?').run(updates.name, conv.customer_id);
