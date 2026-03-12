@@ -301,9 +301,9 @@ function extractDetailsFromMsg(msg, productShort) {
   for (const line of lines) {
     const lineLower = line.toLowerCase();
 
-    // Skip phone line (contains phone digits or "phone num" label)
+    // Skip phone line (contains phone digits or "phone num" label or short "ph" prefix)
     if (phone && line.replace(/[\s\-\.]/g, '').includes(phone.replace(/[\s\-]/g, ''))) continue;
-    if (/^phone\s*(num|number|no)?\.?\s*$/i.test(line)) continue;
+    if (/^(phone|ph|mob|mobile|num|number|fone)\s*(num|number|no|nomber|nmbr)?\.?\s*$/i.test(line)) continue;
 
     // Skip city-only line
     if (city && extractCity(line) && line.split(/\s+/).length <= 2) continue;
@@ -323,6 +323,23 @@ function extractDetailsFromMsg(msg, productShort) {
     if (!details.name && isLikelyName(line) && !hasAddressKeywords(line)) {
       details.name = line.trim();
       continue;
+    }
+
+    // Mixed name+address line: "Hussain shah Hayatt plaza" → split name from address
+    // If no name found yet and line starts with name-like words followed by address keywords
+    if (!details.name && line.split(/\s+/).length >= 3) {
+      const lineWords = line.split(/\s+/);
+      // Try taking first 1-3 words as name, check if remaining has address keywords
+      for (let nameLen = Math.min(3, lineWords.length - 1); nameLen >= 1; nameLen--) {
+        const candidateName = lineWords.slice(0, nameLen).join(' ');
+        const remainingText = lineWords.slice(nameLen).join(' ');
+        if (isLikelyName(candidateName) && !hasAddressKeywords(candidateName) && hasAddressKeywords(remainingText)) {
+          details.name = candidateName.trim();
+          if (remainingText.length > 1) addressParts.push(remainingText);
+          break;
+        }
+      }
+      if (details.name) continue;
     }
 
     // Everything else → address hint (not full address, needs proper collection)
