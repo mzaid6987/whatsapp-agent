@@ -632,7 +632,17 @@ function handleTemplateState(message, state, storeName, preIntent) {
       const isSoftCancel = /\b(nahi|nhi|ni|nai|na|mat)\s*(chahiy[ae]?|chaiy[ae]?|mangta|manga|lena|bhej|ship|krna|karna)\b/i.test(l) ||
         /\bmat\s*(bhej|send|ship)\b/i.test(l) ||
         /\b(rehne?\s*do|chor\s*do|chhoro|chhod\s*do|nahi\s*chahiy|hamay?\s*nahi|hame\s*nahi|mujhe?\s*nahi|abhi\s*nahi)\b/i.test(l);
-      const isCancel = isExplicitCancel || (isSoftCancel && !hasAddrComplaint);
+      // "sirf pehla order bhej do" / "wahi bhej do" / "bas yehi chahiye" = upsell reject, NOT cancel
+      const isUpsellReject = /\b(sirf|srf|bas|bss|only)\b/i.test(l) && /\b(bhej|send|ship|wahi|wohi|yehi|yahi|pehla|pahla|order|diya)\b/i.test(l) ||
+        /\b(wahi|wohi|yehi|yahi|pehla|pahla)\s*(bhej|send|ship|de|do|dena)\b/i.test(l) ||
+        /\b(jo\s*order\s*diya|jo\s*order\s*kiya|jo\s*manga|pehle\s*wala)\b/i.test(l);
+      const isCancel = isExplicitCancel || (isSoftCancel && !hasAddrComplaint && !isUpsellReject);
+      // If soft cancel + upsell reject → acknowledge and confirm original order
+      if (isSoftCancel && isUpsellReject) {
+        state._thanked = false;
+        const honorific = getHonorific(state.collected.name);
+        return { reply: `Bilkul ${state.collected.name || ''} ${honorific}, aapka order confirm hai ✅ ${vars.delivery_time} mein delivery ho jaegi. Shukriya!`, state: 'ORDER_CONFIRMED' };
+      }
       // If soft cancel + address complaint → route to address correction, not cancel
       if (isSoftCancel && hasAddrComplaint) {
         state._thanked = false;
@@ -805,8 +815,13 @@ function handleTemplateState(message, state, storeName, preIntent) {
       return { reply: fillTemplate('AFTER_ORDER', vars), state: 'ORDER_CONFIRMED' };
     }
 
-    // ===== CANCEL AFTER CONFIRM — fully silent, no more replies =====
+    // ===== CANCEL AFTER CONFIRM — mostly silent, but handle delivery/tracking questions =====
     case 'CANCEL_AFTER_CONFIRM': {
+      // Delivery time question — "kab milega", "kab tak", "parcel kab"
+      const isCancelDeliveryQ = /\b(k[ae]?b\s*(t[ae]?k|aaye?|milega|ayga|aye?\s*ga|pohanche?|pohnche?)|kitne?\s*din|delivery|tracking|parcel\s*kab|kab\s*parcel)\b/i.test(l);
+      if (isCancelDeliveryQ) {
+        return { reply: fillTemplate('DELIVERY_POST_ORDER', vars), state: 'CANCEL_AFTER_CONFIRM' };
+      }
       return { reply: null, state: 'CANCEL_AFTER_CONFIRM' };
     }
 
