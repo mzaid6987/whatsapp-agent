@@ -166,6 +166,12 @@ function handleTemplateState(message, state, storeName, preIntent) {
 
     // ===== ORDER SUMMARY =====
     case 'ORDER_SUMMARY': {
+      // Free delivery question — "delivery free hai na?", "feri haina", "feeri haona"
+      const isFreeDelSummary = /\b(free|fre+i?|feri|fe+ri|muft)\s*(h[ae]i?n?a?|hona|hoga|hogi|hai\s*na|he\s*na|he\s*k[ey]?|na)\b/i.test(l) ||
+        /\b(delivery|delivry|dlivry)\s*(to|toh?)?\s*(free|fre+i?|feri|fe+ri|muft)\s*(h[ae]i?n?a?|hona|hoga|hogi|hai\s*na|he\s*na|he\s*k[ey]?|na)?\b/i.test(l);
+      if (isFreeDelSummary) {
+        return { reply: 'Ji bilkul, delivery bilkul FREE hai — koi extra charge nahi ✅ Order confirm karein?', state: 'ORDER_SUMMARY' };
+      }
       // Quality/reassurance questions — "kharab to nahi hoga?", "quality theek hai?", "original hai?"
       // These contain "nahi" but are NOT rejection — customer is just worried, reassure them
       // Patterns: "quality to khrab nahi hogi?", "kharab to nahi hoga?", "tootega to nahi?", "quality kaisi hai?"
