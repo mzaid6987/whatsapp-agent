@@ -857,9 +857,11 @@ app.patch('/api/conversations/:id/collected', requireAuth, (req, res) => {
     const db = require('./db').getDb();
     db.prepare('UPDATE conversations SET collected_json = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
       .run(JSON.stringify(collected), id);
-    // Also update customer name if changed
-    if (updates.name && conv.customer_id) {
-      db.prepare('UPDATE customers SET name = ? WHERE id = ?').run(updates.name, conv.customer_id);
+    // Also update customer record if changed
+    if (conv.customer_id) {
+      if (updates.name) db.prepare('UPDATE customers SET name = ? WHERE id = ?').run(updates.name, conv.customer_id);
+      if (collected.address) db.prepare('UPDATE customers SET last_address = ? WHERE id = ?').run(collected.address, conv.customer_id);
+      if (updates.city) db.prepare('UPDATE customers SET city = ? WHERE id = ?').run(updates.city, conv.customer_id);
     }
     res.json({ ok: true, collected });
   } catch (e) {
