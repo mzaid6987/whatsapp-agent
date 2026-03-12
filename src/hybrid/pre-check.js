@@ -1226,10 +1226,11 @@ function preCheck(message, currentState, collected, state) {
     if (isNo(l)) return { intent: 'no' };
   }
 
-  // 6z. WEBSITE/LINK REQUEST — "link bhejo", "website ka link", "link share karo"
-  const isLinkRequest = /\b(link|website|web\s*site|url)\s*(share|bhej|de|do|send|dedo|bhejo|kar\s*do|batao|btao|dikhao)\b/i.test(l) ||
+  // 6z. WEBSITE/LINK REQUEST — "link bhejo", "website ka link", "link share karo", "link to share kar dain"
+  const isLinkRequest = /\b(link|website|web\s*site|url)\s*(to\s*)?(share|bhej|de|do|send|dedo|bhejo|kar\s*do|batao|btao|dikhao)\b/i.test(l) ||
     /\b(share|bhej|de|send|dedo|bhejo)\s*(link|website)\b/i.test(l) ||
-    /\b(apn[ia]|hamari|shop\s*ki|store\s*ki)\s*(website|link|site)\b/i.test(l);
+    /\b(apn[ia]|hamari|shop\s*ki|store\s*ki)\s*(website|link|site)\b/i.test(l) ||
+    /\b(link|website)\s*(to\s+)?(share|bhej)\s*(kr|kar|karo|krdo|kardo|kar\s*d[oae]|kr\s*d[oae]|dein|dain|den)\b/i.test(l);
   if (isLinkRequest) {
     return { intent: 'website_link' };
   }

@@ -443,7 +443,7 @@ async function webhookHandler(req, res) {
       const replyMap = {
         sticker: '😊 Apna sawal ya order text mein likh ke bhejein — main madad karti hun!',
         document: 'Ji, document mil gaya. Agar koi sawal hai to text mein likh dein 😊',
-        location: 'Ji location mil gayi. Agar order dena hai to text mein batayein 😊',
+        location: 'Location receive hui lekin hum address text mein lete hain — apna area, gali aur ghar number type kar dein please 📍',
         contacts: 'Ji, contact mil gaya. Agar koi sawal hai to text mein likh dein 😊',
       };
       const politeReply = replyMap[msgTypeLabel] || 'Ji, yeh samajh nahi aaya — apna sawal text mein likh ke bhejein 😊';

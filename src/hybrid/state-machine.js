@@ -569,6 +569,12 @@ function handleTemplateState(message, state, storeName, preIntent) {
         const honorific = getHonorific(state.collected.name);
         return { reply: `${state.collected.name || ''} ${honorific}, aapka parcel dispatch ho chuka hai — ab cancel nahi ho sakta. Delivery ke waqt rider se mil jayega. Shukriya!`.trim(), state: 'CANCEL_AFTER_CONFIRM' };
       }
+      // "No one" / "none" / "no one ok" / "koi bhi nahi" = upsell rejection (both flexNo+flexYes can be true here)
+      const isNoneReject = /\b(no\s*one|none|no\s*thanks?|koi\s*(bhi\s*)?n[ah]i?|kuch\s*n[ah]i?|not\s*interested)\b/i.test(l);
+      if (isNoneReject) {
+        if (state._pending_upsell) state._pending_upsell = null;
+        return confirmOrder(state, storeName);
+      }
       if (no) {
         // If pending upsell and customer says no → skip just the pending, confirm order
         if (state._pending_upsell) {
@@ -785,6 +791,14 @@ function handleTemplateState(message, state, storeName, preIntent) {
         state._thanked = false;
         return { reply: `${vars.honorific === 'sir' ? 'Sir' : 'Madam'}, din ke time pe delivery hoti hai — koi fix time nahi hota courier walo ka. Lekin rider delivery se pehle call karega, aap ready rakhein 📞`, state: 'ORDER_CONFIRMED' };
       }
+      // Office/shop address question — "ap ka address", "shop kahan hai", "office kahan"
+      const isOfficeQ = /\b(ap\s*ka|apka|aap\s*ka|aapka|tumhara|your)\s*(address|pata|shop|office|dukaan|store)\b/i.test(l) ||
+        /\b(shop|office|dukaan|store)\s*(kahan|kidhar|where|address|pata)\b/i.test(l) ||
+        /\b(kahan|kidhar|where)\s*(se|say|sy)?\s*(ho|hai|he|h)\b/i.test(l) && /\b(ap|aap|tum)\b/i.test(l);
+      if (isOfficeQ) {
+        state._thanked = false;
+        return { reply: 'Hamara office Rafah e Aam, Karachi mein hai 🏢', state: 'ORDER_CONFIRMED' };
+      }
       // Gratitude/bye — reply ONCE with THANKS_REPLY, then go silent
       const isGratitude = /\b(shukri?ya|thanks?|thank\s*you|bye|allah\s*hafiz|khuda\s*hafiz|khush\s*raho?)\b/i.test(l);
       if (isGratitude) {
@@ -882,12 +896,13 @@ function handleTemplateState(message, state, storeName, preIntent) {
         state._thanked = false;
         return { reply: fillTemplate('TRUST_QUALITY', vars), state: 'ORDER_CONFIRMED' };
       }
-      // Courier/shipping question — "konsi courier", "TCS se?", "leopard?"
-      const isCourierQ = /\b(courier|courir|kureer|tcs|leopard|leopards|postex|call\s*courier|m\s*&?\s*p)\b/i.test(l) ||
-        /\b(kis|konsi?|kaun\s*si?|which)\s*(courier|company|service)\b/i.test(l);
+      // Courier/shipping question — "konsi courier", "TCS se?", "leopard?", "courier name"
+      const isCourierQ = /\b(courier|courir|couriar|kureer|tcs|leopard|leopards|postex|call\s*courier|m\s*&?\s*p)\b/i.test(l) ||
+        /\b(kis|konsi?|kaun\s*si?|which)\s*(courier|company|service)\b/i.test(l) ||
+        /\b(courier|company|service)\s*(konsi?|kaun\s*si?|kya|kia|kon|name|naam|bta|batao)\b/i.test(l);
       if (isCourierQ) {
         state._thanked = false;
-        return { reply: `${vars.honorific === 'sir' ? 'Sir' : 'Madam'}, delivery TCS/Leopard/PostEx se hoti hai — jo aapke area mein available ho. Parcel ${vars.delivery_time} mein mil jaega 📦`, state: 'ORDER_CONFIRMED' };
+        return { reply: `${vars.honorific === 'sir' ? 'Sir' : 'Madam'}, hamari 3 courier companies hain — Postex, TCS aur Pakistan Post 📦 Aapke area ke hisaab se jo available hogi ussi se bheja jaega.`, state: 'ORDER_CONFIRMED' };
       }
       // Charges/shipping cost question — "delivery charges?", "shipping free?"
       const isChargesQ = /\b(charges?|charg|fee|fees|cost|kharcha|kharch)\b/i.test(l) ||

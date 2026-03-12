@@ -271,7 +271,10 @@ function extractAllCities(msg) {
       // Short city names (< 5 chars like "wah", "hub") must NOT use substring match on full message
       // — "wahan" (meaning "there") would false-positive match "wah" city
       const isShortCity = normCity.length < 5;
-      if ((norm === normCity || (!isShortCity && norm.length >= 4 && norm.includes(normCity)) || (norm.length >= 4 && normCity.includes(norm))) && !seen.has(c)) {
+      // For "normCity contains norm" check, require input to be at least 60% of city name length
+      // to avoid "gali" matching "nathiagali" (4/10 = 40%) or similar partial matches
+      const normContainsInput = norm.length >= 4 && normCity.includes(norm) && norm.length >= normCity.length * 0.6;
+      if ((norm === normCity || (!isShortCity && norm.length >= 4 && norm.includes(normCity)) || normContainsInput) && !seen.has(c)) {
         found.push(c.charAt(0).toUpperCase() + c.slice(1));
         seen.add(c);
         break;

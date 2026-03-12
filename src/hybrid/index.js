@@ -1681,7 +1681,12 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
 
     // Name extraction — in COLLECT_NAME, PRODUCT_SELECTION (early info), or explicit "name X" in any state
     const hasExplicitName = /\b(name|naam|my\s*name|mera\s*naam)\s+/i.test(message);
-    if (extracted.name && (state.current === 'COLLECT_NAME' || state.current === 'PRODUCT_SELECTION' || hasExplicitName)) {
+    // Guard: "father name X", "walid ka naam X", "abbu X" — NOT the customer's name
+    const isFamilyName = /\b(father|dad|daddy|papa|abbu|abu|walid|mother|mom|ammi|wife|husband|bhai|brother|sister|behn|behen)\s*(ka|ki|ke|k)?\s*(name|naam)\b/i.test(message) ||
+      /\b(name|naam)\s*(father|dad|daddy|papa|abbu|abu|walid|mother|mom|ammi|wife|husband|bhai|brother|sister)\b/i.test(message);
+    // Don't overwrite existing name with family member's name
+    const nameAlreadyLocked = state.collected.name && !['COLLECT_NAME', 'PRODUCT_SELECTION'].includes(state.current);
+    if (extracted.name && (state.current === 'COLLECT_NAME' || state.current === 'PRODUCT_SELECTION' || (hasExplicitName && !isFamilyName && !nameAlreadyLocked))) {
       const name = extracted.name.trim();
       // Guard: don't store question fragments as name (e.g. "kya hai" from "tumhara naam kya hai")
       const isQuestionFragment = /^(kya|kia|what|kaun|kon|who|how|kaise|kitna|kitne)\b/i.test(name) ||
@@ -3294,7 +3299,7 @@ function handlePreCheck(pre, message, state, storeName, phone) {
     case 'delivery_process_question': {
       // Customer asking HOW delivery works — "kis trha deliver hoga", "kaise bhejte ho"
       const honorific = getHonorific(state.collected.name, state.gender);
-      let reply = `${state.collected.name || ''} ${honorific}, hum Postex aur TCS ke through parcel bhijwate hain 🚚 Cash on Delivery (COD) hai — paisa delivery ke waqt dena hai. Pehle check karein phir paisa dein.`.trim();
+      let reply = `${state.collected.name || ''} ${honorific}, hamari 3 courier companies hain — Postex, TCS aur Pakistan Post 📦 Aapke area ke hisaab se jo available hogi ussi se bheja jaega. COD hai — paisa delivery ke waqt dena hai.`.trim();
       if (state.current.startsWith('COLLECT_')) {
         const reask = askNextField(state, storeName);
         if (reask) reply += ' ' + reask.reply;
