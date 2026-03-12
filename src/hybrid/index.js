@@ -776,7 +776,15 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     const cl = message.toLowerCase().trim();
     // Angry emojis (😡🤬😤💢) = complaint/frustration signal → escalate to human
     const hasAngryEmoji = /[\u{1F621}\u{1F624}\u{1F92C}\u{1F4A2}]/u.test(message);
-    if ((isComplaint(cl) || hasAngryEmoji) && !(/\b(to\s*nahi|toh?\s*nahi|hogi|hoga|jayega|jayegi)\b/i.test(cl))) {
+    // Trust/exchange context — "agar kharab hua to exchange kesy", "toot gaya to return hoga?"
+    // These are pre-purchase questions, NOT complaints
+    const hasTrustWord = /\b(exchange|return|warranty|waranty|warnty|replace|replacement|cod|cash\s*on|refund|wapas|wapis|vapas|vapsi)\b/i.test(cl);
+    const isHypothetical = /\b(agar|agr|aagar|to)\b/i.test(cl) && /\b(hua|hui|hoa|hoye|ho\s*gaya|ho\s*gayi|gaya|gayi|jaye|jayen?g?[eai]?|ho\s*jayen?g?[eai]?)\b/i.test(cl);
+    const isExchangeQuestion = hasTrustWord && /\b(kais[ey]|kesy|kaisy|how|karna|krna|hota|hoti|milti|milta|hog[aie])\b/i.test(cl);
+    // "samajh nahi aaye to return" = hypothetical return question, not complaint
+    const isConditionalReturn = /\b(agar|agr|to)\b/i.test(cl) && hasTrustWord;
+    const isTrustNotComplaint = (hasTrustWord && isComplaint(cl)) || isHypothetical || isExchangeQuestion || isConditionalReturn;
+    if ((isComplaint(cl) || hasAngryEmoji) && !isTrustNotComplaint && !(/\b(to\s*nahi|toh?\s*nahi|hogi|hoga|jayega|jayegi|jayenge)\b/i.test(cl))) {
       // Strong complaint (not a quality question like "kharab to nahi hogi?")
       const vars = buildVars(state, storeName);
       state.current = 'COMPLAINT';
@@ -1302,9 +1310,13 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     const lastMsg = state.messages.length > 0 ? state.messages[state.messages.length - 1]?.content || '' : '';
     const askedZilla = /zill[ae]|district/i.test(lastMsg);
     if (askedZilla && message.trim().length >= 2) {
-      const zillaText = message.trim().replace(/^\s*(zilla|zila|district)\s+/i, '').replace(/\s*(zilla|zila|district|ka|ki|ke|mein|mai|me|se)\s*$/i, '').trim();
-      if (zillaText.length >= 2) {
-        state.collected.address_parts.zilla = zillaText.charAt(0).toUpperCase() + zillaText.slice(1).toLowerCase();
+      // Guard: "ok", "okay", "haan", "ji", "g", "theek" = acknowledgment, NOT zilla name
+      const isAck = /^(ok+|okay|ha+n|ji+|jee|je|g+|hn|hm+|theek|thik|thk|yes|yup|acha|accha|achha|done|sahi|bilkul)\s*[.!]?\s*$/i.test(message.trim());
+      if (!isAck) {
+        const zillaText = message.trim().replace(/^\s*(zilla|zila|district)\s+/i, '').replace(/\s*(zilla|zila|district|ka|ki|ke|mein|mai|me|se)\s*$/i, '').trim();
+        if (zillaText.length >= 2) {
+          state.collected.address_parts.zilla = zillaText.charAt(0).toUpperCase() + zillaText.slice(1).toLowerCase();
+        }
       }
     }
   }
@@ -1892,8 +1904,10 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
           if (!ap.landmark) ap.landmark = 'nahi_pata';
         } else if (ap.landmark && ap.landmark !== 'nahi_pata' && ap.landmark !== newParts.landmark) {
           // If already have a landmark from bulk_info, combine (don't overwrite)
-          const existLower = ap.landmark.toLowerCase();
-          const newLower = newParts.landmark.toLowerCase();
+          // Normalize: replace newlines/commas/extra spaces with single space for comparison
+          const normLandmark = (s) => s.toLowerCase().replace(/[\n\r,]+/g, ' ').replace(/\s+/g, ' ').trim();
+          const existLower = normLandmark(ap.landmark);
+          const newLower = normLandmark(newParts.landmark);
           if (!existLower.includes(newLower) && !newLower.includes(existLower)) {
             ap.landmark = `${newParts.landmark}, ${ap.landmark}`;
           } else if (newLower.length > existLower.length) {
@@ -2273,13 +2287,15 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     // Product + order → show product info + start collection
     if (aiIntent === 'product_with_order' && state.product) {
       // Extract details from multi-line message (name, phone, city, address if detailed)
+      // SKIP address extraction in PRODUCT_SELECTION — message is product numbers, not address
+      const skipAddressExtract = _stateBefore === 'PRODUCT_SELECTION';
       const aiPwoDetails = extractDetailsFromMsg(message, state.product?.short);
       if (aiPwoDetails.name) state.collected.name = aiPwoDetails.name;
       if (aiPwoDetails.phone) state.collected.phone = aiPwoDetails.phone;
       if (aiPwoDetails.city) state.collected.city = aiPwoDetails.city;
-      if (aiPwoDetails.address) state.collected.address = aiPwoDetails.address;
-      if (aiPwoDetails.addressHint) state.addressHint = aiPwoDetails.addressHint;
-      if (aiPwoDetails.addressParts) {
+      if (!skipAddressExtract && aiPwoDetails.address) state.collected.address = aiPwoDetails.address;
+      if (!skipAddressExtract && aiPwoDetails.addressHint) state.addressHint = aiPwoDetails.addressHint;
+      if (!skipAddressExtract && aiPwoDetails.addressParts) {
         const ap = state.collected.address_parts;
         if (aiPwoDetails.addressParts.area && !ap.area) ap.area = aiPwoDetails.addressParts.area;
         if (aiPwoDetails.addressParts.street && !ap.street) ap.street = aiPwoDetails.addressParts.street;
@@ -2289,7 +2305,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         if (aiPwoDetails.addressParts.zilla) ap.zilla = aiPwoDetails.addressParts.zilla;
       }
 
-      if (aiPwoDetails.name || aiPwoDetails.phone || aiPwoDetails.city || aiPwoDetails.address || aiPwoDetails.addressParts) {
+      if (aiPwoDetails.name || aiPwoDetails.phone || aiPwoDetails.city || (!skipAddressExtract && (aiPwoDetails.address || aiPwoDetails.addressParts))) {
         const nextField = askNextField(state, storeName);
         if (nextField) return returnTemplate(nextField);
       }
