@@ -1434,6 +1434,53 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
   }
 });
 
+// Send product media (video/image) to customer — uses stored media files
+app.post('/api/conversations/:id/send-product-media', requireAuth, async (req, res) => {
+  try {
+    const convId = parseInt(req.params.id);
+    const { product_id, type } = req.body;
+    if (!product_id) return res.status(400).json({ error: 'product_id required' });
+    const mediaType = type || 'video';
+
+    const conv = conversationModel.findById(convId);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    const customer = customerModel.findById(conv.customer_id);
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+
+    const mediaFiles = mediaModel.getByProduct(parseInt(product_id), mediaType);
+    if (mediaFiles.length === 0) return res.status(404).json({ error: `No ${mediaType} found for product ${product_id}` });
+
+    const accessToken = settingsModel.get('meta_whatsapp_token', '');
+    const phoneNumberId = settingsModel.get('meta_phone_number_id', '');
+    if (!accessToken || !phoneNumberId) return res.status(500).json({ error: 'WhatsApp credentials not configured' });
+
+    const serverUrl = settingsModel.get('server_url', 'https://wa.nuvenza.shop');
+    const intlPhone = toInternational(customer.phone);
+    let sent = 0;
+    for (const m of mediaFiles) {
+      const mediaUrl = `${serverUrl}/media/${m.filename}`;
+      const caption = m.caption || null;
+      const sendResult = mediaType === 'image'
+        ? await sendImage(intlPhone, mediaUrl, caption, phoneNumberId, accessToken)
+        : await sendVideo(intlPhone, mediaUrl, caption, phoneNumberId, accessToken);
+      if (sendResult.success) {
+        sent++;
+        // Save to DB so it shows on dashboard
+        const contentText = mediaType === 'video'
+          ? `[🎥 Video: ${caption || m.original_name || m.filename}]`
+          : `[📷 Image: ${caption || m.original_name || m.filename}]`;
+        messageModel.create(convId, 'outgoing', 'human', contentText, { source: 'admin' });
+      }
+    }
+    conversationModel.setHumanOnly(convId, true);
+    broadcast({ type: 'new_message', conversationId: convId });
+    res.json({ success: true, sent, total: mediaFiles.length });
+  } catch (e) {
+    console.error('[API] Send product media error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Customers
 app.get('/api/customers', requireAuth, (req, res) => {
   try {
