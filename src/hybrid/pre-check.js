@@ -498,7 +498,16 @@ function preCheck(message, currentState, collected, state) {
     if (phone) {
       const validation = validatePhone(phone);
       if (validation.valid) {
-        return { intent: 'phone_given', extracted: { phone: validation.phone } };
+        const extracted = { phone: validation.phone };
+        // Extract name attached to phone — "03001234567.Ahsan", "03001234567 Ali Khan"
+        const remaining = msg.replace(/[\+]?(?:92|0)?3\d{2}[\s\.\-]?\d{7}/g, '').replace(/[.,\-]/g, ' ').trim();
+        if (remaining.length >= 2 && remaining.length <= 30 && /^[A-Za-z\s]+$/.test(remaining)) {
+          const nameWords = remaining.trim().split(/\s+/);
+          if (nameWords.length >= 1 && nameWords.length <= 3 && nameWords[0].length >= 2) {
+            extracted.name = nameWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+          }
+        }
+        return { intent: 'phone_given', extracted };
       }
       return { intent: 'phone_invalid', extracted: { error: validation.error } };
     }

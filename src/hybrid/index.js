@@ -1072,11 +1072,16 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     }
     // Address CORRECTION detection — "9 number nahi hai 19 number hai" / "house 19 hai sorry"
     // Customer is correcting a part (usually house), NOT rejecting the address
+    // Also: "Flat No.A/518. Phase 3. Block 17" = full address (not rejection even though "No" appears)
     const isAddressCorrection = /\b(house|ghar|makan|number|no|plot)\s*#?\s*\d+/i.test(l) ||
+      /\b(flat|house|ghar|makan|plot|apartment|apt)\s*(no|number|#)?\s*\.?\s*[a-z0-9]/i.test(l) ||
       /\b\d+\s*(number|no|nmbr)\s*(h[ae]i?|he)\b/i.test(l) ||
       /\b(sorry|galti|mistake|ghalti)\b/i.test(l) && /\d+/.test(l);
+    // Full address submission — customer sending complete address with block/phase/flat details
+    const isFullAddress = l.length > 20 && /\b(flat|block|phase|sector|floor|road|street|gali|colony|town|mohall[ae]h?|near|masjid|school|hospital|chowk)\b/i.test(l) &&
+      (/\b(no|number|#)\b/i.test(l) || /\d/.test(l));
     const flexYes = /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|okay|done|theek|thek|thik|thk|tik|hn|hm+|g+|acha|accha|achha|bhej\s*d[oae]|bhejd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|kr\s*d[oae]|kard[oae]|krd[oae])\b/i.test(l) && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
-    const flexNo = /\b(nahi+|nhi*|nh|no+|galat|nope|na+h|mat|cancel)\b/i.test(l) && !isConditionalNah && !isAddressCorrection;
+    const flexNo = /\b(nahi+|nhi*|nh|no+|galat|nope|na+h|mat|cancel)\b/i.test(l) && !isConditionalNah && !isAddressCorrection && !isFullAddress;
 
     if (flexYes) {
       state.address_confirming = false;
@@ -3087,6 +3092,10 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       } else {
         state.collected.phone = pre.extracted.phone;
         state.collected.delivery_phone = null;
+      }
+      // Name attached to phone — "03001234567.Ahsan" → update name if not set or currently wrong
+      if (pre.extracted.name && (!state.collected.name || /^(yes|ok|hi|hello|salam)/i.test(state.collected.name))) {
+        state.collected.name = pre.extracted.name;
       }
       const sidePrefix = sideQuestionPrefix(message, state, storeName);
       const nextField = askNextField(state, storeName);
