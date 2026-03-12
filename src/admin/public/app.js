@@ -95,6 +95,10 @@ function formatPhone(phone) {
 
 // ---- API HELPERS ----
 async function api(url, opts = {}) {
+  // LiteSpeed WAF blocks POST requests without body — always include empty JSON body for POST/PATCH/PUT
+  if (['POST', 'PATCH', 'PUT'].includes((opts.method || '').toUpperCase()) && !opts.body) {
+    opts.body = '{}';
+  }
   const res = await fetch(url, {
     ...opts,
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', ...opts.headers }
