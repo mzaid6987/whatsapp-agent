@@ -364,6 +364,8 @@ function extractHouse(msg) {
     /(?:house|ghar|flat|apartment|apt|plot|makan|villa)\s*(?:no\.?|number|nmbr)?\s*(\d+[a-z]?(?:[-\/]\d+)?)/i,
     // "No. 45", "# 12", "Number 8"
     /(?:no\.?|number|nmbr|#)\s*(\d+[a-z]?)\s*(?:house|ghar|flat|makan)?/i,
+    // Composite house numbers like "888/29-G", "123/4-A", "45/12" (plot/sub-plot format)
+    /\b(\d{1,4}\/\d{1,4}[-]?[A-Za-z]{0,2})\b/i,
     // Letter-number combo like "R68", "E-45", "B/13", "2-C" (common Pakistan house numbers)
     /\b([A-Za-z][-\/]?\d{1,4}[a-z]?)\b/i,
     /\b(\d{1,4}[-\/][A-Za-z])\b/i,

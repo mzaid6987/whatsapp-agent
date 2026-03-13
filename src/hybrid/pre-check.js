@@ -390,7 +390,9 @@ function preCheck(message, currentState, collected, state) {
     /\b(product|order|parcel|cheez|chiz|item)\s*(return|exchange|replace|wapas)\b/i.test(l) ||
     /\b(exchange|exchnage|replace|return)\s*(this|ye|yeh|yhe|is|my)\s*(product|order|parcel|cheez|chiz|item)?\b/i.test(l) ||
     /\b(i\s+)?want\s+to\s+(exchange|exchnage|return|replace|refund)\b/i.test(l) ||
-    /\b(faulty|defective)\s*(product|order|item|machine|trimmer|cutter)?\b/i.test(l);
+    /\b(faulty|defective)\s*(product|order|item|machine|trimmer|cutter)?\b/i.test(l) ||
+    /\b(wrong|galat|ghalat)\s*(product|order|parcel|cheez|chiz|item|maal)\b/i.test(l) ||
+    /\b(product|order|parcel|item)\s*(wrong|galat|ghalat)\b/i.test(l);
   if (isReturnRequest) {
     return { intent: 'complaint', needs_human: true };
   }
@@ -826,8 +828,11 @@ function preCheck(message, currentState, collected, state) {
       return { intent: 'order_intent', extracted: {} };
     }
     // "2 chahiye" / "3 mangta" / "do chahiye" — quantity + want word = order intent
-    if (/\b(\d{1,2}|do|teen|char|panch|chhay?|saat|aath|nau|das)\s*(chahiy[ae]|chaiy[ae]|chay[ae]|chahea|chahye|chaea|chahe|mangta|mangti|mangwao|bhej\s*do|bhejdo)\b/i.test(l)) {
-      return { intent: 'order_intent', extracted: {} };
+    const qtyMatch = l.match(/\b(\d{1,2}|do|teen|char|panch|chhay?|saat|aath|nau|das)\s*(chahiy[ae]|chaiy[ae]|chay[ae]|chahea|chahye|chaea|chahe|mangta|mangti|mangwao|bhej\s*do|bhejdo)\b/i);
+    if (qtyMatch) {
+      const URDU_NUMS = { do: 2, teen: 3, char: 4, panch: 5, chhay: 6, chay: 6, saat: 7, aath: 8, nau: 9, das: 10 };
+      const qtyVal = parseInt(qtyMatch[1]) || URDU_NUMS[qtyMatch[1].toLowerCase()] || 1;
+      return { intent: 'order_intent', extracted: { quantity: qtyVal > 0 && qtyVal <= 20 ? qtyVal : 1 } };
     }
   }
 
@@ -850,7 +855,8 @@ function preCheck(message, currentState, collected, state) {
     const isProductKeyword = detectProduct(msg) !== null;
     // Urdu phrases that look like 2-3 English words but are NOT names
     const isUrduPhrase = /^(g\s+brother|ji\s+sir|ji\s+madam|g\s+sir|easily|easyli|dono\s+sath|sath\s+milj|sath\s+mil|required\s+me|final\s+price|last\s+price|ok\s+sir|ok\s+madam|ok\s+done|aik\s+piece|ek\s+piece|one\s+piece)\s*$/i.test(l) ||
-      /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|krwana|mangwao|mangwana|bhejdo|bhejdein|bhejna|deliver|delivery|receive|receive)\b/i.test(l);
+      /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|krwana|mangwao|mangwana|bhejdo|bhejdein|bhejna|deliver|delivery|receive|receive)\b/i.test(l) ||
+      /\b(pictures?|photos?|pics?|images?|videos?|tasveer|tasv[ei]+r)\s*(bij[vw]a(d[oae])?|bhej[oae]?|dikha[oae]?|send|bhj|bhjwa(d[oae])?|bjwa(d[oae])?)/i.test(l);
     // English non-name words — "I Went This", "Yes Ok", "Not Now" etc.
     const ENGLISH_NON_NAME_PI = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|much|also|too|only|went|want|wanted|go|going|gone|come|came|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|make|take|took|tell|told|know|said|please|plz|fine|good|bad|here|there|from|will|can|may|should|would|must|required|available|how|what|when|where|why|which)\b/i;
     const isEnglishNonNamePI = ENGLISH_NON_NAME_PI.test(l);

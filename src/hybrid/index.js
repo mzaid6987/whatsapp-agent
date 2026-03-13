@@ -2985,17 +2985,26 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       // Fill city
       if (ext.city) state.collected.city = ext.city;
 
-      // Fill address parts
+      // Fill address parts — parse bulk address_text into structured parts
       if (ext.address_text || ext.landmark) {
         if (!state.collected.address_parts) state.collected.address_parts = { area: null, street: null, house: null, landmark: null };
         if (ext.address_text) {
-          state.collected.address_parts.area = ext.address_text;
+          // Parse structured parts from the bulk address text
+          const bulkHouse = extractHouse(ext.address_text);
+          const bulkStreet = extractStreet(ext.address_text);
+          const bulkArea = extractArea(ext.address_text, ext.city || state.collected.city);
+          const bulkLandmark = extractLandmark(ext.address_text);
+          // Set parsed parts (don't overwrite existing non-null values)
+          if (bulkHouse) state.collected.address_parts.house = bulkHouse;
+          if (bulkStreet) state.collected.address_parts.street = bulkStreet;
+          if (bulkLandmark && !state.collected.address_parts.landmark) state.collected.address_parts.landmark = bulkLandmark;
+          // Area: use matched area if found, otherwise fall back to full address_text
+          state.collected.address_parts.area = bulkArea || ext.address_text;
           // Check if bulk address is already detailed enough (has house/office/flat/plot number + area)
-          const addrLower = ext.address_text.toLowerCase();
-          const hasHouseNum = /\b(house|makan|ghar|flat|apartment|apt|office|plot|floor|ground\s*floor)\s*(no\.?|number|#)?\s*[a-z0-9]/i.test(ext.address_text) ||
+          const hasHouseNum = bulkHouse || /\b(house|makan|ghar|flat|apartment|apt|office|plot|floor|ground\s*floor)\s*(no\.?|number|#)?\s*[a-z0-9]/i.test(ext.address_text) ||
             /\b(no\.?|#)\s*[a-z]?\s*\d+/i.test(ext.address_text) ||
-            /\b\d+\s*-?\s*[a-z]\b/i.test(addrLower);
-          const hasArea = /\b(phase|block|sector|colony|town|society|scheme|bahria|dha|gulberg|gulshan|iqbal|model|cantt|saddar|johar|north|south|east|west|garden|nazimabad|clifton|defence)\b/i.test(ext.address_text);
+            /\b\d+\s*-?\s*[a-z]\b/i.test(ext.address_text.toLowerCase());
+          const hasArea = bulkArea || /\b(phase|block|sector|colony|town|society|scheme|bahria|dha|gulberg|gulshan|iqbal|model|cantt|saddar|johar|north|south|east|west|garden|nazimabad|clifton|defence)\b/i.test(ext.address_text);
           if (hasHouseNum && hasArea) {
             // Address is complete — set final address directly to skip COLLECT_ADDRESS
             const city = ext.city || state.collected.city;
@@ -3830,6 +3839,10 @@ function handlePreCheck(pre, message, state, storeName, phone) {
 
     case 'order_intent':
     case 'yes': {
+      // Store quantity if detected ("2 chahiye", "do bhej do")
+      if (pre.extracted?.quantity && pre.extracted.quantity > 1) {
+        state.product_quantity = pre.extracted.quantity;
+      }
       // Product extracted from pre-check → set it and start order collection
       if (state.product) {
         const nextField = askNextField(state, storeName);

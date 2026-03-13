@@ -37,9 +37,13 @@ function buildVars(state, storeName) {
   const product = state.product;
   const honorific = getHonorific(c.name, state.gender);
   const items = (state.products || []).length ? state.products : (product ? [product] : []);
-  let total = items.reduce((s, p) => s + p.price, 0);
+  const mainQtyBV = state.product_quantity || 1;
+  let total = items.reduce((s, p) => {
+    const qty = (product && p.id === product.id) ? mainQtyBV : 1;
+    return s + p.price * qty;
+  }, 0);
   // Haggle discount applies ONLY to main product, not upsell items
-  if (state.discount_percent && product) total -= Math.round(product.price * state.discount_percent / 100);
+  if (state.discount_percent && product) total -= Math.round(product.price * mainQtyBV * state.discount_percent / 100);
 
   // Alt phone: if delivery_phone is a different number (not "same"), include it
   const altPhone = (c.delivery_phone && c.delivery_phone !== 'same' && c.delivery_phone !== c.phone) ? c.delivery_phone : '';
@@ -65,9 +69,11 @@ function buildVars(state, storeName) {
     product_list: productList(),
     items_list: items.map(p => {
       // Show discounted price for main product if haggle discount exists
-      const isMainProduct = state.product && p.short === state.product.short && p.price === state.product.price;
+      const isMainProduct = state.product && p.id === state.product.id;
+      const qty = isMainProduct ? mainQtyBV : 1;
       const dp = isMainProduct && state.discount_percent ? Math.round(p.price * (1 - state.discount_percent / 100)) : p.price;
-      return `- ${p.name}: ${fmtPrice(dp)}`;
+      const qtyLabel = qty > 1 ? ` x${qty}` : '';
+      return `- ${p.name}${qtyLabel}: ${fmtPrice(dp * qty)}`;
     }).join('\n'),
     total: total.toLocaleString(),
     discount_percent: state.discount_percent || 0,
@@ -90,7 +96,12 @@ function confirmOrder(state, storeName, prefix = '') {
   state.current = 'ORDER_CONFIRMED';
   state._thanked = false; // reset for post-order thanks tracking
   const items = (state.products || []).length ? state.products : [state.product];
-  let subtotal = items.reduce((s, p) => s + p.price, 0);
+  const mainQty = state.product_quantity || 1;
+  let subtotal = items.reduce((s, p) => {
+    // Apply quantity only to main product, upsell items are always qty 1
+    const qty = (state.product && p.id === state.product.id) ? mainQty : 1;
+    return s + p.price * qty;
+  }, 0);
   // Haggle discount applies ONLY to main product, not upsell items (they already have adjusted prices)
   const mainProductPrice = state.product ? state.product.price : subtotal;
   const discountTotal = state.discount_percent ? Math.round(mainProductPrice * state.discount_percent / 100) : 0;
@@ -102,7 +113,7 @@ function confirmOrder(state, storeName, prefix = '') {
     // Update existing order with upsell items/discount
     try {
       orderModel.updateOrder(oid, {
-        items: items.map(p => ({ name: p.short, price: p.price, quantity: 1 })),
+        items: items.map(p => ({ name: p.short, price: p.price, quantity: (state.product && p.id === state.product.id) ? mainQty : 1 })),
         subtotal, discount_percent: state.discount_percent || 0,
         discount_total: discountTotal, grand_total: grandTotal,
       });
@@ -126,7 +137,7 @@ function confirmOrder(state, storeName, prefix = '') {
         delivery_phone: state.collected.delivery_phone || null,
         customer_city: state.collected.city,
         customer_address: state.collected.address,
-        items: items.map(p => ({ name: p.short, price: p.price, quantity: 1 })),
+        items: items.map(p => ({ name: p.short, price: p.price, quantity: (state.product && p.id === state.product.id) ? mainQty : 1 })),
         subtotal, delivery_fee: 0,
         discount_percent: state.discount_percent || 0,
         discount_total: discountTotal,
@@ -303,7 +314,11 @@ function handleTemplateState(message, state, storeName, preIntent) {
       if (yes) {
         // Save order to DB IMMEDIATELY so it's never lost (even if customer doesn't reply to upsell)
         const items = (state.products || []).length ? state.products : [state.product];
-        let subtotal = items.reduce((s, p) => s + p.price, 0);
+        const mainQtyOS = state.product_quantity || 1;
+        let subtotal = items.reduce((s, p) => {
+          const qty = (state.product && p.id === state.product.id) ? mainQtyOS : 1;
+          return s + p.price * qty;
+        }, 0);
         const discountTotal = state.discount_percent ? Math.round(subtotal * state.discount_percent / 100) : 0;
         const grandTotal = subtotal - discountTotal;
         const oid = orderModel.generateOrderId('NRV');
@@ -319,7 +334,7 @@ function handleTemplateState(message, state, storeName, preIntent) {
             delivery_phone: state.collected.delivery_phone || null,
             customer_city: state.collected.city,
             customer_address: state.collected.address,
-            items: items.map(p => ({ name: p.short, price: p.price, quantity: 1 })),
+            items: items.map(p => ({ name: p.short, price: p.price, quantity: (state.product && p.id === state.product.id) ? mainQtyOS : 1 })),
             subtotal, delivery_fee: 0,
             discount_percent: state.discount_percent || 0,
             discount_total: discountTotal,
@@ -374,8 +389,11 @@ function handleTemplateState(message, state, storeName, preIntent) {
         return { reply: fillTemplate('CHANGE_PHONE', vars), state: 'COLLECT_PHONE' };
       }
       // House number correction in ORDER_SUMMARY — "house 19 hai", "1170d nahi 1190d hai"
+      // Guard: Skip if message looks like price/haggle — "1000 mein ayega", "1000 rupees", "1000 ka"
+      const isPriceContext = /\b\d{3,}\s*(mein|me|mai|m|mai?n|rupee?s?|rs\.?|ka|ki|ke|pe|wala|total|hog[aie]|ayeg[aie]|dedo|karo|kardo|kr|krdo)\b/i.test(l) ||
+        /\b(price|rate|pais[ey]|qeemat|daam|total|bill)\b/i.test(l);
       // Update just the house part without wiping entire address
-      const houseCorrection = extractHouse(message);
+      const houseCorrection = isPriceContext ? null : extractHouse(message);
       if (houseCorrection && state.collected.address_parts) {
         state.collected.address_parts.house = houseCorrection;
         const addrStr = buildAddressString(state.collected.address_parts, state.collected.city);
