@@ -795,7 +795,7 @@ function preCheck(message, currentState, collected, state) {
     const words = trimmed.split(/\s+/);
     const looksLikeName = words.length >= 1 && words.length <= 3 &&
       /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 3 && trimmed.length <= 40;
-    const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|kitny|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|hy|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|chahiya|chahya|chaiya|mangta|mangwa|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board|milega|melega|milta|milti|mein|sabzi|beef|chicken|mutton|gosht|qeema|keema|meat|bnata|banta|hota|bnta|mujhe|mujhy|mjhe|yah|yeh|ye|lena|dena|karna|krna|dono|sath|saath|mil|milengy|miljiengy|miljaenge|miljayenge|ayenge|aenge|ajaenge|ajayenge|pehle|phle|zaroor|zaror|required|need|needed|want|wanted|interested|send|please|urgent|available|necessary)\b/i.test(l);
+    const isQuestionWord = /\b(kab|kub|kya|kitna|kitne|kitni|kitny|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|hy|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|chahiya|chahya|chaiya|mangta|mangwa|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board|milega|melega|milta|milti|mein|sabzi|beef|chicken|mutton|gosht|qeema|keema|meat|bnata|banta|hota|bnta|mujhe|mujhy|mjhe|yah|yeh|ye|lena|dena|karna|krna|dono|sath|saath|mil|milengy|miljiengy|miljaenge|miljayenge|ayenge|aenge|ajaenge|ajayenge|pehle|phle|zaroor|zaror|required|need|needed|want|wanted|interested|send|please|urgent|available|necessary|how|much|what|when|where|why|which)\b/i.test(l);
     // Single-letter "B" at end = "bhi" (also) in WhatsApp Urdu — NOT a name initial
     const endsWithBhi = /\s+b\s*$/i.test(l.trim());
     const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm|ha+n?|hn|hanji|hnji)\s*[.!]?\s*$/i.test(l) ||
@@ -809,7 +809,7 @@ function preCheck(message, currentState, collected, state) {
     const isUrduPhrase = /^(g\s+brother|ji\s+sir|ji\s+madam|g\s+sir|easily|easyli|dono\s+sath|sath\s+milj|sath\s+mil|required\s+me|final\s+price|last\s+price|ok\s+sir|ok\s+madam|ok\s+done|aik\s+piece|ek\s+piece|one\s+piece)\s*$/i.test(l) ||
       /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|krwana|mangwao|mangwana|bhejdo|bhejdein|bhejna|deliver|delivery|receive|receive)\b/i.test(l);
     // English non-name words — "I Went This", "Yes Ok", "Not Now" etc.
-    const ENGLISH_NON_NAME_PI = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|also|too|only|went|want|wanted|go|going|gone|come|came|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|make|take|took|tell|told|know|said|please|plz|fine|good|bad|here|there|from|will|can|may|should|would|must|required|available)\b/i;
+    const ENGLISH_NON_NAME_PI = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|much|also|too|only|went|want|wanted|go|going|gone|come|came|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|make|take|took|tell|told|know|said|please|plz|fine|good|bad|here|there|from|will|can|may|should|would|must|required|available|how|what|when|where|why|which)\b/i;
     const isEnglishNonNamePI = ENGLISH_NON_NAME_PI.test(l);
     // Greeting check — "Assalamu Alaikum", "AoA", etc.
     const isGreetingPI = /^(assalam|wa?\s*[ao]?l[ae]i?ku?m|aoa|salam|slam|slaam|hello|hi|hey)\b/i.test(l);
@@ -869,8 +869,9 @@ function preCheck(message, currentState, collected, state) {
     // 1-3 words, all letters (with spaces), 2-40 chars, no numbers, no question/order words
     const looksLikeName = words.length >= 1 && words.length <= 3 &&
       /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 2 && trimmed.length <= 40;
-    const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|discont|discoutn|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|dedo|kardo|krdo|chahiye|chahie|mangta|bhejo|trimmer|cutter|remover|nebulizer|duster|spray)\b/i.test(l);
-    const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm|ha+n|hn|hanji|hnji|han\s*ji)\s*[.!]?\s*$/i.test(l) ||
+    const isQuestionWord = /\b(kab|kub|kya|kitna|kitne|kitni|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|discont|discoutn|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|dedo|kardo|krdo|chahiye|chahie|mangta|bhejo|trimmer|cutter|remover|nebulizer|duster|spray|how|much|what|when|where|why|which)\b/i.test(l);
+    const isCommonNonName = /^(ok+|okok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done?|cancel|sahi|bilkul|confirm|ha+n|hn|hanji|hnji|han\s*ji)\s*[.!]?\s*$/i.test(l) ||
+      /^(ok\s*){2,}(don[e]?|done?)?\s*[.!]?\s*$/i.test(l) ||
       /^h+n\s*(g+|ji|jee|bhai|sir|madam)\s*[.!]?\s*$/i.test(l) ||
       /^(g+|ji|jee)\s*(h+n|ha+n|sir|bhai|madam)\s*[.!]?\s*$/i.test(l);
     const isAddressLabel = /^(address|city|phone|number|mobile|area|mohalla|colony|gali|street|house|flat|landmark)\s*$/i.test(l);
@@ -908,12 +909,12 @@ function preCheck(message, currentState, collected, state) {
       /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|mangwao|bhejdo|deliver|delivery|receive)\b/i.test(l);
     // English non-name words — pronouns, verbs, adjectives that are NEVER Pakistani names
     // Catches: "I Went This", "Required Me", "Ok Not Required", "Send Me", "Just Fine" etc.
-    const ENGLISH_NON_NAME_WORDS = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|much|also|too|only|went|want|wanted|go|going|gone|come|came|coming|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|does|make|made|take|took|tell|told|know|knew|see|saw|look|let|try|put|run|set|keep|show|find|call|feel|think|said|please|plz|pls|fine|good|bad|nice|great|here|there|from|into|will|can|may|should|would|could|must|shall|required|available)\b/i;
+    const ENGLISH_NON_NAME_WORDS = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|much|also|too|only|went|want|wanted|go|going|gone|come|came|coming|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|does|make|made|take|took|tell|told|know|knew|see|saw|look|let|try|put|run|set|keep|show|find|call|feel|think|said|please|plz|pls|fine|good|bad|nice|great|here|there|from|into|will|can|may|should|would|could|must|shall|required|available|how|what|when|where|why|which)\b/i;
     const isEnglishNonName = words.length >= 2 && ENGLISH_NON_NAME_WORDS.test(l);
     // Single common English words that are NOT names (but could pass looksLikeName)
     const isSingleEnglishWord = words.length === 1 && /^(yes|no|ok|hi|hey|hello|bye|please|thanks|sorry|sure|fine|good|nice|great|love|like|want|need|help|send|done|wait|stop|start|open|close|free|new|old|big|small|fast|slow|easy|hard|real|true|best|last|next|same|other|much|more|less|just|only|even|still|also|back|down|here|there|away|home|long|full|high|low|off|sir|madam|bro|dear|boss|dude|miss|mam|available|required)$/i.test(l);
     // Urdu connector words — "rani ke bachon", "ap ka order" = phrases, NOT names
-    const hasUrduConnector = words.length >= 2 && /\b(ke|ki|ka|ko|ne|se|mein|par|pe|wala|wali|wale|bhi|toh?|hai|he|aur|ya)\b/i.test(l);
+    const hasUrduConnector = words.length >= 2 && /\b(ke|ki|ka|ko|ne|se|mein|par|pe|wala|wali|wale|bhi|toh?|hai|he|aur|ya|ga|gi|ge|gaa|gee|aye|aaye|aya|aaya)\b/i.test(l);
     if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isGreeting && !isProductPhrase && !isGibberish && !isComboPhrase && !isUrduPhrase && !isEnglishNonName && !isSingleEnglishWord && !hasUrduConnector) {
       // Strip "Name"/"Naam" prefix — "Name Arshad Luck" → "Arshad Luck"
       let nameWords = words;
