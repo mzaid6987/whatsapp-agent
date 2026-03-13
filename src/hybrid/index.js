@@ -1720,7 +1720,10 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const isGibberishName = /(.)\1{2,}/i.test(name) || name.split(/\s+/).some(w => w.length > 1 && new Set(w.toLowerCase()).size === 1);
       // Guard: reject Urdu phrases with connector/verb words — "rani ke bachon", "Bataya Tha Faisal", "Diya Gaya Hai", "Wana Likha Watha"
       const hasUrduConnector = nameWords.length >= 2 && /\b(ke|ki|ka|ko|ne|se|mein|par|pe|wala|wali|wale|bhi|toh?|hai|he|aur|ya|tha|thi|the|gaya|gayi|gaye|raha|rahi|rahe|hoga|hogi|watha|likha|likhi|bataya|batayi|diya|diye|diyi|laga|lagaya|karna|krna|wana|chuka|chuki|pata|nahi|nhi)\b/i.test(nameL);
-      if (name.length >= 2 && name.length <= 50 && !isQuestionFragment && !hasEnglishNonName && !isUrduConversational && !isGreetingName && !isProductName && !isGibberishName && !hasUrduConnector) {
+      // Guard: reject multi-word ack phrases — "Okok Don", "Ok Done", "Yes Ok", "Han Ji"
+      const ACK_WORDS = /^(ok+|okok+|okay|done?|don|yes|yep|yup|yeah|ha+n?|haan|ji|jee|g|k|hn|acha+|accha+|theek|thik|tik|sahi|bilkul|confirm|sure|hmm+|bas|no|nahi|nhi|cancel)$/i;
+      const isAllAckWords = nameWords.length >= 2 && nameWords.every(w => ACK_WORDS.test(w));
+      if (name.length >= 2 && name.length <= 50 && !isQuestionFragment && !hasEnglishNonName && !isUrduConversational && !isGreetingName && !isProductName && !isGibberishName && !hasUrduConnector && !isAllAckWords) {
         state.collected.name = name;
       }
     }
