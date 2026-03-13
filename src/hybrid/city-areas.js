@@ -2596,6 +2596,7 @@ const CITY_ALIASES = {
   'kotaddu': 'kot addu', 'kot adu': 'kot addu',
   'sadiqabd': 'sadiqabad', 'sadiq abad': 'sadiqabad',
   'ahmedpureast': 'ahmedpur east', 'ahmed pur east': 'ahmedpur east',
+  'ahmedpur sharqia': 'ahmedpur east', 'ahmedpur sharkyia': 'ahmedpur east', 'ahmedpur sharqiya': 'ahmedpur east', 'ahmedpur sharqi': 'ahmedpur east', 'ahmed pur sharqia': 'ahmedpur east',
   'pinddadankhan': 'pind dadan khan', 'pind dadan': 'pind dadan khan',
   'lalamusa': 'lala musa', 'lala moosa': 'lala musa',
   'sanglahil': 'sangla hill', 'sangla': 'sangla hill',

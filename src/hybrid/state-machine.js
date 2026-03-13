@@ -576,6 +576,32 @@ function handleTemplateState(message, state, storeName, preIntent) {
       if (no) {
         return confirmOrder(state, storeName);
       }
+      // Name correction in UPSELL_HOOK — "naam X hai", "name Mohammad Nasir"
+      const nameFixHook = message.match(/\b(?:naam|name|mera\s*naam)\s+(?:hai\s+|he\s+|h\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b/i);
+      if (nameFixHook) {
+        let corrName = nameFixHook[1].trim().replace(/\s+(hai|he|h|hain|ha)$/i, '').trim();
+        corrName = corrName.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        if (corrName.length >= 3 && !/^(Hai|He|Address|Phone|Number)$/i.test(corrName.split(/\s+/)[0])) {
+          state.collected.name = corrName;
+        }
+      }
+      // Confusion — "kya?", "kia?", "what?", "kia dekhun", "?" — treat as yes, show products
+      const isConfusedHook = /^[?؟\s!.]+$/.test(l) || /\b(kiy?a|kya|what|konsa|kia)\s*(dekh[nu]|hai|h[ea]i?n?|dekhna)?\s*[?؟]?\s*$/i.test(l);
+      if (isConfusedHook && state.upsell_candidates && state.upsell_candidates.length) {
+        state.current = 'UPSELL_SHOW';
+        let uList = state.upsell_candidates.map((p, i) => {
+          const upsellPrice = Math.max((p.upsell_price || p.price) - 500, 499);
+          return `${i + 1}. ${p.short} — ${fmtPrice(upsellPrice)}`;
+        }).join('\n');
+        const uVars = { ...vars, upsell_list: uList };
+        const _upsellVideos = state.upsell_candidates.map(p => ({ product_id: p.id, type: 'video', product_name: p.short }));
+        return { reply: fillTemplate('UPSELL_SHOW', uVars), state: 'UPSELL_SHOW', _media_batch: _upsellVideos };
+      }
+      // After 2 unanswered upsell asks, skip upsell and confirm order
+      state._upsell_ask_count = (state._upsell_ask_count || 0) + 1;
+      if (state._upsell_ask_count >= 2) {
+        return confirmOrder(state, storeName);
+      }
       return { reply: fillTemplate('UPSELL_ASK_YESNO', vars), state: 'UPSELL_HOOK' };
     }
 
