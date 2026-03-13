@@ -57,7 +57,7 @@ const COMPLAINT_WORDS = [
   'on hi nhi','on hi nahi','on he nhi','on he nahi'
 ];
 
-const TRUST_WORDS = /\b(asli|original|cod|cash\s*on|return\s*policy|exchange\s*policy|warranty|guarantee|quality|bharosa|trust|reliable|kaisi?\s*quality|allow\s*to\s*open|open\s*(parcel|box|packet)|parcel\s*(open|khol)|khol\s*k[ae]?\s*(dekh|check)|pehle\s*check|check\s*kar\s*k[ae]?|sulook|salook|slook|exchange|replace|wapas|wapis|vapas|vapsi)\b/i;
+const TRUST_WORDS = /\b(asli|original|cod|cash\s*on|return\s*policy|exchange\s*policy|warranty|waranty|waranti|vrinti|varnti|garantee?|granti|guarantee|quality|bharosa|trust|reliable|kaisi?\s*quality|allow\s*to\s*open|open\s*(parcel|box|packet)|parcel\s*(open|khol)|khol\s*k[ae]?\s*(dekh|check)|pehle\s*check|check\s*kar\s*k[ae]?|sulook|salook|slook|exchange|exchnage|exchang|replace|wapas|wapis|vapas|vapsi)\b/i;
 // Note: "fake" removed from TRUST_WORDS — it's almost always a complaint, not a trust question
 // "achi he na", "theek hogi na ye", "chalegi na", "kaisi hai", "quality kesi he" — quality reassurance questions
 // BUT NOT "kam krta he" / "sahi kam krta he" / "works?" — those are product functionality questions (AI handles)
