@@ -1702,8 +1702,9 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       // Strip "naam/name" prefix — "Naam Hashim" → "Hashim"
       name = name.replace(/^(naam|name|nm)\s+/i, '').trim();
       // Guard: don't store question fragments as name (e.g. "kya hai" from "tumhara naam kya hai")
-      const isQuestionFragment = /^(kya|kia|what|kaun|kon|who|how|kaise|kitna|kitne)\b/i.test(name) ||
-        /\b(hai|he|h|ho|hain)\s*[?]?\s*$/i.test(name);
+      // Also catches "Kub Aye Ga" (when will it come), "Kitne Ka Hai" (how much) etc.
+      const isQuestionFragment = /^(kya|kia|what|kaun|kon|who|how|kaise|kitna|kitne|kab|kub|kb|jab)\b/i.test(name) ||
+        /\b(hai|he|h|ho|hain|ga|gi|ge|gaa|gee|aye\s*ga|aye\s*gi|milega|milegi|ayega|ayegi|hoga|hogi)\s*[?]?\s*$/i.test(name);
       // Guard: reject English non-name words (pronouns, verbs, adjectives)
       const nameL = name.toLowerCase();
       const nameWords = name.split(/\s+/);
