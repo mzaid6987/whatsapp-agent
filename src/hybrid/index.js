@@ -6,7 +6,7 @@
  * AI handles: GREETING, PRODUCT_INQUIRY, COLLECT_NAME, COLLECT_ADDRESS, HAGGLING
  * Code handles: phone/city validation, complaints, ORDER_SUMMARY, UPSELL, ORDER_CONFIRMED
  */
-const { preCheck, isYes, isNo, isComplaint } = require('./pre-check');
+const { preCheck, isYes, isNo, isComplaint, URDU_YES_WORD_RE, URDU_NO_WORD_RE } = require('./pre-check');
 const { handleTemplateState, askNextField, buildOrderSummary, nextMissingState, buildVars, confirmOrder } = require('./state-machine');
 const { qualityGate } = require('./quality-gate');
 const { composePrompt } = require('../ai/prompt-composer');
@@ -1087,8 +1087,8 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     const isFullAddress = l.length > 20 && /\b(flat|block|phase|sector|floor|road|street|gali|colony|town|mohall[ae]h?|near|masjid|school|hospital|chowk)\b/i.test(l) &&
       (/\b(no|number|#)\b/i.test(l) || /\d/.test(l));
     // Urdu script yes/no — اوکے (okei), ہاں (haan), جی (ji), ٹھیک (theek), بالکل (bilkul)
-    const urduYes = /[\u0627][\u0648][\u06a9][\u06d2]|[\u06c1][\u0627][\u06ba\u0646]|[\u062c][\u06cc]|[\u0679][\u06be][\u06cc][\u06a9]|[\u0628][\u0627][\u0644][\u06a9][\u0644]/.test(message);
-    const urduNo = /[\u0646][\u06c1][\u06cc\u0627][\u06ba\u0646]?|[\u063a][\u0644][\u0637]/.test(message);
+    const urduYes = URDU_YES_WORD_RE.test(message);
+    const urduNo = URDU_NO_WORD_RE.test(message);
     const flexYes = (urduYes || /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|okay|done|theek|thek|thik|thk|tik|hn|hm+|g+|acha|accha|achha|bhej\s*d[oae]|bhejd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|kr\s*d[oae]|kard[oae]|krd[oae])\b/i.test(l)) && !urduNo && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
     const flexNo = (urduNo || /\b(nahi+|nhi*|nh|no+|galat|nope|na+h|mat|cancel)\b/i.test(l)) && !urduYes && !isConditionalNah && !isAddressCorrection && !isFullAddress;
 

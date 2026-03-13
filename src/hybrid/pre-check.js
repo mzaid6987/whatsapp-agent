@@ -73,15 +73,22 @@ function isComplaint(l) {
 }
 
 // ============= YES / NO DETECTION =============
+// Urdu script yes patterns — reusable across all detection points
+const URDU_YES_RE = /^[\s]*(ہا+ں?|جی+|ٹھیک|اوکے|بلکل|بالکل|اچھا|ہاں\s*جی|جی\s*ہاں|جی\s*بالکل|ٹھیک\s*[ہھ][ےیٰ]|جی\s*[ہھ]ا+ں?|کر\s*دو|بھیج\s*دو|لگا\s*دو|ضرور|کنفرم)[\s.!۔]*$/u;
+// Urdu script no patterns
+const URDU_NO_RE = /^[\s]*(نہیں|نہ|نئ|کینسل|مت|نا|بند|چھوڑو|رہنے\s*دو|منسوخ)[\s.!۔]*$/u;
+// Urdu script yes — non-anchored (for flexYes checks within longer text)
+const URDU_YES_WORD_RE = /(?:اوکے|ہا+ں|جی|ٹھیک|بلکل|بالکل|اچھا|ضرور|کنفرم)/u;
+// Urdu script no — non-anchored
+const URDU_NO_WORD_RE = /(?:نہیں|نہ|نئ|کینسل|مت|نا|بند|چھوڑو|منسوخ)/u;
+
 function isYes(l) {
-  // Urdu script yes: ہاں، جی، ٹھیک، اوکے، بلکل
-  if (/^(ہا+ں?|جی+|ٹھیک\s*[ہھ][ےیٰ]?|اوکے|بلکل|ہاں\s*جی|جی\s*ہاں|اچھا|ٹھیک)\s*[.!۔]?\s*$/.test(l)) return true;
+  if (URDU_YES_RE.test(l)) return true;
   return /^(ha+n?|hm+|ji+|jee|g|ge|yes+|yess+|yup|ik|o?k+a*y+|o?ki+|ok\s*ok|o?ok(ay|k|y)?|done|th[ie]*k|tik|sai|sahi|sa[ih]i?|bilkul|c[oa]n?f[iou]r?m(ed)?|comf[io]rm(ed)?|conf?rim(ed)?|zaroor|hn+|kr\s*do|kardo|krdo|kar\s*do|bhejwa?\s*d[oae]|bhijwa?\s*d[oae]|mangwa?\s*d[oae]|laga?\s*d[oae])\s*[.!]?\s*$/i.test(l);
 }
 
 function isNo(l) {
-  // Urdu script no: نہیں، نہ، کینسل
-  if (/^(نہیں|نہ|نئ|کینسل|مت)\s*[.!۔]?\s*$/.test(l)) return true;
+  if (URDU_NO_RE.test(l)) return true;
   return /^(nahi+|nhi+|no+|cancel|nope|na+h?|mat|band|nai|rehne\s*do|chor[od]|ni+)\s*[.!]?\s*$/i.test(l);
 }
 
@@ -712,6 +719,28 @@ function preCheck(message, currentState, collected, state) {
   // 4a-0b. NAME IN MIXED MESSAGE — voice messages often have name + question together
   // "Yaar Sukkur mein kab delivery hogi aur mera naam hai Amjad" → extract name, answer question
   // Must run BEFORE other COLLECT_NAME checks to not lose the name
+  // Urdu script name extraction — runs for ANY length (Urdu messages are shorter)
+  // "میرا نام فیاض عالم ھے" → extract "فیاض عالم"
+  if (currentState === 'COLLECT_NAME') {
+    const urduNameMatch = msg.match(/(?:میرا|مرا)\s*(?:نام)\s+([\u0600-\u06FF\s]{2,40}?)(?:\s*(?:[ہھ][ےیٰ]|ہے|ھے)\s*[۔.!]?\s*$|\s*$)/u) ||
+      msg.match(/(?:نام)\s+([\u0600-\u06FF]{2,20}(?:\s+[\u0600-\u06FF]{2,20}){0,2})\s*(?:[ہھ][ےیٰ]|ہے|ھے)/u);
+    if (urduNameMatch) {
+      const urduName = urduNameMatch[1].trim();
+      const urduCommon = /^(یہ|وہ|کیا|ہاں|نہیں|جی|ابھی|پہلے|بعد|آرڈر|ڈلیوری|پروڈکٹ)$/u.test(urduName);
+      if (!urduCommon && urduName.length >= 2) {
+        return { intent: 'name_given', extracted: { name: urduName } };
+      }
+    }
+    // Urdu script name + Roman Urdu "hai mera" — "فیاض عالم naam hai mera"
+    const urduNameRoman = msg.match(/([\u0600-\u06FF]{2,20}(?:\s+[\u0600-\u06FF]{2,20}){0,2})\s+(?:naam|name)\s+(?:hai|he|h)/iu);
+    if (urduNameRoman) {
+      const urduName = urduNameRoman[1].trim();
+      if (urduName.length >= 2) {
+        return { intent: 'name_given', extracted: { name: urduName } };
+      }
+    }
+  }
+
   if (currentState === 'COLLECT_NAME' && msg.length > 20) {
     // Order matters: "X naam hai mera" pattern FIRST (more specific), then "naam hai X"
     // English: "my name is X Y Z" — must come before Urdu patterns
@@ -1949,4 +1978,4 @@ function preCheck(message, currentState, collected, state) {
   return null;
 }
 
-module.exports = { preCheck, isYes, isNo, isComplaint };
+module.exports = { preCheck, isYes, isNo, isComplaint, URDU_YES_RE, URDU_NO_RE, URDU_YES_WORD_RE, URDU_NO_WORD_RE };
