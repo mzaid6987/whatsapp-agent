@@ -857,7 +857,7 @@ function preCheck(message, currentState, collected, state) {
   // 4a0b. DISCOUNT/HAGGLE in collection states — "discount to do", "offer do", "sasta kro"
   // Must catch BEFORE name detection so "discount to do" is not saved as name
   if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {
-    const isDiscountInName = /\b(disc?o?u?n?t|discoutn|disocunt|discont|discoynt|off|offer|sast[aie]|kam\s*kr[oa]?|km\s*kr[oa]?|kam\s*kard?o?|km\s*kard?o?|kam\s*do|km\s*do|kuch\s*(to\s*)?km|mehn?g[aie]|price\s*kam|price\s*km|rate\s*kam|rate\s*km)\b/i.test(l);
+    const isDiscountInName = /\b(disc?o?u?n?t|discoutn|disocunt|discont|discoynt|off|offer|sast[aie]|kam\s*kr[oa]?|km\s*kr[oa]?|kam\s*kard?o?|km\s*kard?o?|kam\s*do|km\s*do|kuch\s*(to\s*)?km|mehn?g[aie]|price\s*kam|price\s*km|rate\s*kam|rate\s*km|less\s*(kr|kar|kard?o?|ho|ni|nhi)?|price\s*less|rate\s*less|koi\s*less)\b/i.test(l);
     if (isDiscountInName) return { intent: 'haggle_in_collection' };
   }
 
@@ -1274,7 +1274,8 @@ function preCheck(message, currentState, collected, state) {
       /\b(kam|km)\s*(kr[oa]?|kard?o?|do|dedo)\s*(rate|price|qeemat)?\b/i.test(l) ||
       /\b(kuch+|thod[aie]?|thora)\s*(kam|km)\s*(ho|kr|kar|kro|karo|do)\b/i.test(l) ||
       /\b(offer|offr)\s*(hai|he|h|do|dedo|milega|milta)?\b/i.test(l) ||
-      /\b(meh[ea]?n?g[aie]|bohot?\s*(meh[ea]?n?g|zyada))\b/i.test(l);
+      /\b(meh[ea]?n?g[aie]|bohot?\s*(meh[ea]?n?g|zyada))\b/i.test(l) ||
+      /\b(less\s*(kr|kar|kard?o?|ho|ni|nhi)?|price\s*less|rate\s*less|koi\s*less)\b/i.test(l);
     if (isHaggleInPI) {
       return { intent: 'haggle' };
     }

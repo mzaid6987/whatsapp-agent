@@ -35,7 +35,7 @@ const PRODUCTS = [
     desc:'Cotton buds se wax andar jaata hai, yeh safely bahar nikalta hai. Spring coil tool bhi hai deep cleaning ke liye. Safe hai kaan ke liye.' },
 
   { id:6, name:'Electric Vegetable Cutter 4-in-1', short:'Vegetable Cutter', price:2099,
-    kw:['vegetable','veg','cutter','chopper','slicer','sabzi','onion','pyaaz','garlic','electric cutter','veg cutter'],
+    kw:['vegetable','vagitable','vagetable','vegtable','veg','cutter','catter','katter','chopper','slicer','sabzi','onion','pyaaz','garlic','electric cutter','veg cutter','sabzi katne','sabzi kaatne'],
     f1:'One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein',
     f2:'Self-cleaning function hai, USB rechargeable, 4 blades included',
     desc:'Haath se kaatne ki zaroorat nahi — button press karo aur done. Aankh mein aansoo nahi aate pyaaz kaatne pe. Waterproof hai, paani mein dho sakte ho.' },
