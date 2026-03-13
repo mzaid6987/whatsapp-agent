@@ -1004,6 +1004,28 @@ function handleTemplateState(message, state, storeName, preIntent) {
 
     // ===== COMPLAINT =====
     case 'COMPLAINT': {
+      // Detect order intent — customer changed mind and wants to buy
+      const isOrderIntent = /\b(order\s*(kr|kar|kro|karo|krdo|kardo|krna|karna|krdein|dia|diya|de|do)|manga|mangwao|bhej\s*do|chahiy[ae]|lena\s*hai|le\s*lun|krna\s*hai)\b/i.test(l) ||
+        /\b(kitne?\s*din|delivery|days?\s*m[ei]?n?\s*mil[ey]?)/i.test(l);
+      if (isOrderIntent) {
+        // Re-engage: move to product inquiry or collect name
+        state.complaint_flag = false;
+        const honorific = getHonorific(state.collected.name);
+        if (state.product) {
+          const nextState = nextMissingState(state.collected);
+          if (nextState === 'ORDER_SUMMARY') {
+            state.current = 'ORDER_SUMMARY';
+            return buildOrderSummary(state, storeName);
+          }
+          state.current = nextState;
+          if (nextState === 'COLLECT_NAME') {
+            return { reply: `Zaroor ${honorific}! 😊 Apna naam bata dein?`, state: nextState };
+          }
+          return { reply: fillTemplate(nextState, vars), state: nextState };
+        }
+        state.current = 'GREETING';
+        return { reply: `Zaroor ${honorific}! 😊 Konsa product chahiye? Naam ya number bata dein:\n\n${productList()}`, state: 'GREETING' };
+      }
       if (!state._complaint_replied) {
         state._complaint_replied = true;
         return { reply: fillTemplate('COMPLAINT_FOLLOWUP', vars), state: 'COMPLAINT', needs_human: true };
