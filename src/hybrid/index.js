@@ -791,11 +791,13 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   // ============================================
   {
     const cl = message.toLowerCase().trim();
+    // Strip URLs before complaint checks — Google gclid URLs can contain random substrings like "wtf"
+    const clNoUrl = cl.replace(/https?:\/\/\S+/gi, '').trim();
     // Angry emojis (😡🤬😤💢) = complaint/frustration signal → escalate to human
     const hasAngryEmoji = /[\u{1F621}\u{1F624}\u{1F92C}\u{1F4A2}]/u.test(message);
     // Trust/exchange context — "agar kharab hua to exchange kesy", "toot gaya to return hoga?"
     // These are pre-purchase questions, NOT complaints
-    const hasTrustWord = /\b(exchange|return|warranty|waranty|warnty|replace|replacement|cod|cash\s*on|refund|wapas|wapis|vapas|vapsi)\b/i.test(cl);
+    const hasTrustWord = /\b(exchange|return|warranty|waranty|warnty|replace|replacement|cod|cash\s*on|refund|wapas|wapis|vapas|vapsi)\b/i.test(clNoUrl);
     const isHypothetical = /\b(agar|agr|aagar|to)\b/i.test(cl) && /\b(hua|hui|hoa|hoye|ho\s*gaya|ho\s*gayi|gaya|gayi|jaye|jayen?g?[eai]?|ho\s*jayen?g?[eai]?)\b/i.test(cl);
     const isExchangeQuestion = hasTrustWord && /\b(kais[ey]|kesy|kaisy|how|karna|krna|hota|hoti|milti|milta|hog[aie])\b/i.test(cl);
     // "samajh nahi aaye to return" = hypothetical return question, not complaint

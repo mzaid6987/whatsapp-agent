@@ -64,7 +64,9 @@ function isNo(l) {
 }
 
 function isComplaint(l) {
-  return COMPLAINT_WORDS.some(w => l.includes(w));
+  // Strip URLs before checking — Google gclid URLs can contain random substrings like "wtf"
+  const stripped = l.replace(/https?:\/\/\S+/gi, '').trim();
+  return COMPLAINT_WORDS.some(w => stripped.includes(w));
 }
 
 function isHaggle(l) {

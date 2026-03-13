@@ -67,7 +67,9 @@ const QUALITY_ASK = /(\b(ach+[ia]|theek|thik|thk|chale\s*g[ia])\b.*\b(hai|he|h|n
 const IS_FUNCTIONALITY_Q = /\b(kam\s*kr[yta]*[aie]?|kaam\s*kr[yta]*[aie]?|kam\s*kar[tae]*[aie]?|kaam\s*kar[tae]*[aie]?|works?|work\s*kart?a?|bn[ae]?t[aie]?\s*(h[aey]i?|hy)|bant[aie]?\s*(h[aey]i?|hy)|ho\s*t[aie]?\s*(h[aey]i?|hy)|kr\s*sakt[aie]?|kar\s*sakt[aie]?|cut\s*kart?a?|kaat\s*t?a?|kaat\s*sakt[aie]?)\b/i;
 
 function isComplaint(l) {
-  return COMPLAINT_WORDS.some(w => l.includes(w));
+  // Strip URLs before checking — Google gclid URLs can contain random substrings like "wtf"
+  const stripped = l.replace(/https?:\/\/\S+/gi, '').trim();
+  return COMPLAINT_WORDS.some(w => stripped.includes(w));
 }
 
 // ============= YES / NO DETECTION =============
