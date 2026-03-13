@@ -385,10 +385,11 @@ function preCheck(message, currentState, collected, state) {
   // 1. COMPLAINT — highest priority, any state (but not if also trust question)
   // RETURN/EXCHANGE REQUEST — "exchange karna hai", "wapas kardo", "return chahiye", "exchange this product"
   // These are actual requests needing human attention in ANY state, NOT trust questions
-  const isReturnRequest = /\b(return|exchange|exchnage|exchang|replace|wapas|wapis|vapas|vapsi|refund)\s*(kr|kar|karo|kardo|krdo|krna|karna|chahiy[ae]|chaiy[ae]|krdein|kar\s*do|ho\s*sak|krwa|karwa|policy|this|ye|yeh|is)\b/i.test(l) ||
+  const isReturnRequest = /\b(return|exchange|exchnage|exchang|replace|wapas|wapis|vapas|vapsi|refund)\s*(kr|kar|karo|kardo|krdo|krna|karna|chahiy[ae]|chaiy[ae]|krdein|kar\s*do|ho\s*sak|krwa|karwa|policy|this|ye|yeh|yhe|is)\b/i.test(l) ||
     /\b(kr|kar|karo|kardo)\s*(return|exchange|replace|wapas|wapis|vapas|refund)\b/i.test(l) ||
     /\b(product|order|parcel|cheez|chiz|item)\s*(return|exchange|replace|wapas)\b/i.test(l) ||
-    /\b(exchange|replace|return)\s*(this|ye|yeh|is)\s*(product|order|parcel|cheez|chiz|item)?\b/i.test(l) ||
+    /\b(exchange|exchnage|replace|return)\s*(this|ye|yeh|yhe|is|my)\s*(product|order|parcel|cheez|chiz|item)?\b/i.test(l) ||
+    /\b(i\s+)?want\s+to\s+(exchange|exchnage|return|replace|refund)\b/i.test(l) ||
     /\b(faulty|defective)\s*(product|order|item|machine|trimmer|cutter)?\b/i.test(l);
   if (isReturnRequest) {
     return { intent: 'complaint', needs_human: true };
@@ -936,7 +937,7 @@ function preCheck(message, currentState, collected, state) {
     // Name refusal — "not required", "zaroorat nahi", "naam nahi bataunga", "ok not required"
     const isNameRefusal = /\b(not\s*required|no\s*need|zaroorat?\s*nahi|zarurat?\s*nahi|naam\s*(nahi|nhi|ni|nai)|nahi?\s*batao?n?g[aie]?|nai\s*btaon?g[aie]?|order\s*(nahi|nhi|ni|nai)|nahi?\s*kr[nw]a|cancel|nai\s*krna)\b/i.test(l);
     // Islamic greetings that are NOT names — "Assalamu Alaikum", "Wa Alaikum Assalam", "AoA"
-    const isGreeting = /^(assalam[ou]?\s*[ao]?l[ae]i?ku?m|wa?\s*[ao]?l[ae]i?ku?m\s*(assalam|[ao]?ssalam)|aoa|salam|slam|slaam|asslam|asalam)\b/i.test(l) ||
+    const isGreeting = /^(assalam[ou]?\s*[ao]?l[ae]i?ku?m|aslam\s*[ou]\s*a?l?[ae]i?ku?m|wa?\s*[ao]?l[ae]i?ku?m\s*(assalam|[ao]?ssalam)|aoa|salam|slam|slaam|asslam|asalam)\b/i.test(l) ||
       /^(hello|hi|hey|helo|hlw|hellow|assalam)\s*(bhai|sir|madam|g|ji|dear|boss|bro)?\s*$/i.test(l);
     // Product-related phrases that are NOT names — "Cotton Machine", "Muje Masajar", "Itni Mehngi"
     const isProductPhrase = /\b(machine|mashin|trimmer|cutter|remover|nebulizer|duster|spray|massager|masajar|cotton|vegetable|facial|hair|knee|sleeve|board|cutting)\b/i.test(l) ||

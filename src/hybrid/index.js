@@ -1701,10 +1701,12 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       name = name.replace(/\s+(naam|name|nm)\s*$/i, '').trim();
       // Strip "naam/name" prefix — "Naam Hashim" → "Hashim"
       name = name.replace(/^(naam|name|nm)\s+/i, '').trim();
+      // Strip trailing "hai/he/h" (= "is" in Urdu) — "X Hai." → "X", "Ahmed Hai" → "Ahmed"
+      name = name.replace(/\s+(hai|he|h)[.!۔]?\s*$/i, '').trim();
       // Guard: don't store question fragments as name (e.g. "kya hai" from "tumhara naam kya hai")
       // Also catches "Kub Aye Ga" (when will it come), "Kitne Ka Hai" (how much) etc.
       const isQuestionFragment = /^(kya|kia|what|kaun|kon|who|how|kaise|kitna|kitne|kab|kub|kb|jab)\b/i.test(name) ||
-        /\b(hai|he|h|ho|hain|ga|gi|ge|gaa|gee|aye\s*ga|aye\s*gi|milega|milegi|ayega|ayegi|hoga|hogi)\s*[?]?\s*$/i.test(name);
+        /\b(hai|he|h|ho|hain|ga|gi|ge|gaa|gee|aye\s*ga|aye\s*gi|milega|milegi|ayega|ayegi|hoga|hogi)\s*[?.!۔]?\s*$/i.test(name);
       // Guard: reject English non-name words (pronouns, verbs, adjectives)
       const nameL = name.toLowerCase();
       const nameWords = name.split(/\s+/);
@@ -1713,7 +1715,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       // Guard: reject Urdu conversational phrases / order intent phrases
       const isUrduConversational = /\b(chahiy[ae]|milj[aie]|miljiengy|milengy|ayenge|jayenge|hojaye|krwao|mangwao|bhejdo|deliver|delivery|easily|easyli|dono\s+sath|bhej\s*d[eao]i?n?|bhejo|laga\s*d[oae]|kr\s*d[oae]|kardo|krdo|book\s*kr|order\s*kr|mangwa\s*d[oae])\b/i.test(nameL);
       // Guard: reject greetings (including full phrases like "Assalamu Alaikum")
-      const isGreetingName = /^(assalam|assalamu?\s*alaikum|wa\s*alaikum|salam|aoa|hello|hi|hey|g\s+bhej|ji\s+bhej)\b/i.test(nameL);
+      const isGreetingName = /^(assalam|assalamu?\s*al[ae]i?ku?m|aslam\s*[ou]\s*a?l?[ae]i?ku?m|wa\s*al[ae]i?ku?m|salam|aoa|hello|hi|hey|g\s+bhej|ji\s+bhej)\b/i.test(nameL);
       // Guard: reject product-related words
       const isProductName = /\b(machine|mashin|trimmer|cutter|remover|nebulizer|duster|massager|masajar|cotton|vegetable|facial|hair|knee|board|cutting|mehngi|sasti|itni|kitne|muje|mjhe|gunjaish)\b/i.test(nameL);
       // Guard: reject gibberish (repeated chars)
