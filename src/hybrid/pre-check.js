@@ -1150,7 +1150,9 @@ function preCheck(message, currentState, collected, state) {
   if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_ADDRESS', 'COLLECT_DELIVERY_PHONE'].includes(currentState)) {
     // Also catch pure punctuation ("...", "???", "!!") as frustration/ack → re-ask
     const isPunctuationOnly = /^[.\-_,;:!?\s*#+@^~`'"…]+$/.test(msg.trim());
-    const isAck = isPunctuationOnly ||
+    // Urdu script yes/ack: اوکے (okay), جی (ji), ہاں (haan), ٹھیک (theek), بالکل (bilkul), اچھا (acha)
+    const isUrduAck = /^[\s]*(?:اوکے|جی|ہا+ں?|ٹھیک|بالکل|اچھا|جی\s*ہاں|ہاں\s*جی|ٹھیک\s*ہے|ٹھیک\s*ھے)[\s.!۔]*$/u.test(msg.trim());
+    const isAck = isPunctuationOnly || isUrduAck ||
       /^(ik|ok+|okay|acha+|ach+a|theek|thik|thk|tik|hmm+|hm+|g|k|jee?|ji|ha+n|haan|hn|yes+|yup|samajh\s*(aa?\s*ga[yi]?|aa?\s*gai)?|thanks?|thank\s*you|thankyou|shukriya|shukria|meherbani)\s*[.!]?\s*$/i.test(l);
     // In COLLECT_ADDRESS: if address parts are substantially filled, "ok" = confirming address (not just acknowledging)
     // This handles case where address_confirming flag was lost (e.g. server restart)

@@ -498,7 +498,7 @@ function getOrCreateConv(phone) {
               address_parts: collected.address_parts || { area: null, street: null, house: null, landmark: null },
             },
             address_step: null,
-            address_confirming: false,
+            address_confirming: !!collected._address_confirming,
             haggle_round: dbConv.haggle_round || 0,
             discount_percent: dbConv.discount_percent || 0,
             upsell_candidates: upsellCandidates,
@@ -635,10 +635,14 @@ function saveMessages(dbConv, message, reply, intent, source, state, extra = {})
 function saveState(dbConv, state) {
   if (!dbConv) return;
   dbSave(() => {
+    // Persist address_confirming flag in collected JSON so it survives between requests
+    const collectedToSave = { ...state.collected };
+    if (state.address_confirming) collectedToSave._address_confirming = true;
+    else delete collectedToSave._address_confirming;
     conversationModel.updateState(dbConv.id, state.current,
       state.product ? JSON.stringify(state.product) : null,
       JSON.stringify(state.products),
-      JSON.stringify(state.collected),
+      JSON.stringify(collectedToSave),
       state.haggle_round, state.discount_percent,
       JSON.stringify(state.upsell_candidates),
       state.unknown_count
@@ -2147,6 +2151,40 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
         : (hasArea && (hasHouse || houseUnknown) && hasLandmark);
 
       if (addrComplete) {
+        // SAFETY NET: If last bot message was already an address confirmation, don't re-confirm — force proceed
+        // This prevents infinite confirmation loops when address_confirming flag was lost
+        const lastBotMsg = state.messages.filter(m => m.role === 'assistant').slice(-1)[0];
+        const wasAlreadyConfirming = lastBotMsg && /sahi hai\?|sahi hai \?|address.*confirm|Agar courier/i.test(lastBotMsg.content || '');
+        if (wasAlreadyConfirming) {
+          // Customer already saw confirmation — treat this as a "yes" and proceed to order summary
+          state.address_confirming = false;
+          const addrStr = buildAddressString(ap, state.collected.city);
+          state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
+          const dp = state.collected.delivery_phone;
+          if (dp && dp !== 'same' && dp !== state.collected.phone) {
+            state.collected.address += ` (agar call na lug rahi ho ya signal issue ho to ${dp} pr bhi call krlena)`;
+          }
+          const loopSmResult = buildOrderSummary(state, storeName);
+          state.current = loopSmResult.state;
+          state.messages.push({ role: 'user', content: message });
+          state.messages.push({ role: 'assistant', content: loopSmResult.reply });
+          if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+          const loopReply = qualityGate(loopSmResult.reply);
+          saveMessages(dbConv, message, loopReply, 'address_confirm_loop_break', 'template', state, {
+            tokens_in: aiResult?.tokens_in || 0, tokens_out: aiResult?.tokens_out || 0,
+            debug: { path: 'PATH3_CONFIRM_LOOP_BREAK', state_before: _stateBefore, collected: { ...state.collected }, address_parts: { ...ap } },
+          });
+          saveState(dbConv, state);
+          saveCustomer(dbCustomer, state);
+          return {
+            reply: loopReply, state: state.current, collected: { ...state.collected },
+            needs_human: false, source: 'template', intent: 'address_confirm_loop_break',
+            tokens_in: aiResult?.tokens_in || 0, tokens_out: aiResult?.tokens_out || 0,
+            response_ms: Date.now() - startTime,
+            db_customer_id: dbCustomer?.id, db_conversation_id: dbConv?.id,
+          };
+        }
+
         // Address complete — check if AI asked a relevant follow-up (landmark, street, etc.)
         const aiAskedFollowUp = aiResult && aiResult.reply &&
           /\b(landmark|mashoor|mashoor\s*jag[ah]|nearby|qareeb|qareebi|nazdee?k|koi\s*(jag[ah]|dukaan|masjid|school|hospital|chowk)|konsa|konsi|kis\s*ke?\s*paas|reference|pehchan)\b/i.test(aiResult.reply);
