@@ -260,6 +260,7 @@
               ${o.conversation_id ? `<button class="stat-chip addr-incomplete-btn" data-conv-id="${o.conversation_id}" data-idx="${idx}" onclick="toggleAddrIncompleteOrder(this)" style="cursor:pointer;border:1px solid ${o.address_incomplete ? '#e53e3e' : '#ccc'};background:${o.address_incomplete ? '#fff5f5' : '#f7f7f7'};color:${o.address_incomplete ? '#e53e3e' : '#666'};font-weight:${o.address_incomplete ? '700' : '400'}">
                 ${o.address_incomplete ? '✕ Addr Incomplete' : '+ Mark Addr Incomplete'}
               </button>` : ''}
+              ${o.status === 'confirmed' ? `<button class="stat-chip" onclick="cancelOrder(${o.id}, ${idx})" style="cursor:pointer;border:1px solid #e53e3e;background:#fff5f5;color:#e53e3e;font-weight:600">Cancel Order</button>` : ''}
             </div>
           </div>
         </div>`;
@@ -321,6 +322,18 @@
         const matchSearch = !search || card.dataset.text.includes(search);
         card.style.display = (matchStatus && matchSource && matchSearch) ? '' : 'none';
       });
+    }
+
+    async function cancelOrder(orderId, idx) {
+      if (!confirm('Order cancel karna hai? Yeh action undo nahi hoga.')) return;
+      try {
+        const res = await api(`/api/orders/${orderId}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status: 'cancelled'}) });
+        if (res && !res.error) {
+          loadOrders(); // Reload
+        } else {
+          alert('Cancel failed: ' + (res?.error || 'Unknown error'));
+        }
+      } catch(e) { alert('Error: ' + e.message); }
     }
 
     // Override loadOrders from app.js

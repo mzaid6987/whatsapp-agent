@@ -1795,6 +1795,21 @@ app.post('/api/conversations/:id/undo-complaint', requireAuth, (req, res) => {
   }
 });
 
+// Manual cancel — cancel conversation + associated order
+app.post('/api/conversations/:id/cancel', requireAuth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const db = getDb();
+    // Set conversation state to CANCEL_AFTER_CONFIRM
+    db.prepare("UPDATE conversations SET state = 'CANCEL_AFTER_CONFIRM', is_active = 0, updated_at = datetime('now','localtime') WHERE id = ?").run(id);
+    // Cancel any associated orders
+    const orderResult = db.prepare("UPDATE orders SET status = 'cancelled', updated_at = datetime('now','localtime') WHERE conversation_id = ? AND status = 'confirmed'").run(id);
+    res.json({ success: true, orders_cancelled: orderResult.changes });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Fix conversations with orders but wrong state
 app.post('/api/fix-order-states', requireAuth, (req, res) => {
   try {

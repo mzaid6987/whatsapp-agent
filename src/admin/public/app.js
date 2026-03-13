@@ -366,6 +366,12 @@ async function openChat(chatId) {
     btnFollowup.style.color = conv.followup_sent ? '#38a169' : '#D97706';
     btnFollowup.style.borderColor = conv.followup_sent ? '#38a169' : '#D97706';
   }
+  // Cancel button — show only when chat is active and not already cancelled
+  const btnCancel = document.getElementById('btnCancelChat');
+  if (btnCancel) {
+    const isCancellable = conv.state !== 'CANCEL_AFTER_CONFIRM' && conv.state !== 'IDLE';
+    btnCancel.style.display = isCancellable ? '' : 'none';
+  }
   if (conv.needs_human) {
     btnTakeOver.classList.add('hidden');
     btnResumeBot.classList.remove('hidden');
@@ -787,6 +793,25 @@ async function saveFeedback(msgId) {
     }
   } catch (e) {
     console.error('Save feedback error:', e);
+  }
+}
+
+async function cancelChat() {
+  if (!currentChatId) return;
+  if (!confirm('Chat cancel karna hai? Order bhi cancel ho jayega.')) return;
+  try {
+    const res = await api('/api/conversations/' + currentChatId + '/cancel', { method: 'POST' });
+    if (res?.success) {
+      const conv = conversations.find(c => c.id === currentChatId);
+      if (conv) {
+        conv.state = 'CANCEL_AFTER_CONFIRM';
+        conv.is_active = 0;
+      }
+      openChat(currentChatId);
+      renderChatList(conversations);
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
   }
 }
 
