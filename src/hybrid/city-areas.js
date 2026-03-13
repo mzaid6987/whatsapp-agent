@@ -209,6 +209,7 @@ const CITY_AREAS = {
       // === Housing societies ===
       'bahria town','baheria town','bahria enclave','dha phase 1','dha phase 2',
       'pwd','pwd housing','cda','mpchs e-11',
+      'soan garden','soan valley','soan star','park enclave','river garden','riverview',
       // === Universities/Hospitals ===
       'pims','nust','quaid e azam university','comsats','pieas',
       // === Parks ===

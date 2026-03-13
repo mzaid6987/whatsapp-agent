@@ -857,7 +857,8 @@ function preCheck(message, currentState, collected, state) {
     const trimmed = msg.trim();
     const words = trimmed.split(/\s+/);
     const looksLikeName = words.length >= 1 && words.length <= 3 &&
-      /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 3 && trimmed.length <= 40;
+      /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 3 && trimmed.length <= 40 &&
+      /[A-Za-z]{2,}/.test(trimmed); // Must have at least one 2+ letter word
     const isQuestionWord = /\b(kab|kub|kya|kitna|kitne|kitni|kitny|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|hy|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|chahiya|chahya|chaiya|mangta|mangwa|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board|milega|melega|milta|milti|mein|sabzi|beef|chicken|mutton|gosht|qeema|keema|meat|bnata|banta|hota|bnta|mujhe|mujhy|mjhe|yah|yeh|ye|lena|dena|karna|krna|dono|sath|saath|mil|milengy|miljiengy|miljaenge|miljayenge|ayenge|aenge|ajaenge|ajayenge|pehle|phle|zaroor|zaror|required|need|needed|want|wanted|interested|send|please|urgent|available|necessary|how|much|what|when|where|why|which)\b/i.test(l);
     // Single-letter "B" at end = "bhi" (also) in WhatsApp Urdu — NOT a name initial
     const endsWithBhi = /\s+b\s*$/i.test(l.trim());
@@ -933,7 +934,8 @@ function preCheck(message, currentState, collected, state) {
     const words = trimmed.split(/\s+/);
     // 1-3 words, all letters (with spaces), 2-40 chars, no numbers, no question/order words
     const looksLikeName = words.length >= 1 && words.length <= 3 &&
-      /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 2 && trimmed.length <= 40;
+      /^[A-Za-z\s.]+$/.test(trimmed) && trimmed.length >= 2 && trimmed.length <= 40 &&
+      /[A-Za-z]{2,}/.test(trimmed); // Must have at least one 2+ letter word (reject ". .", ".", "a")
     const isQuestionWord = /\b(kab|kub|kya|kitna|kitne|kitni|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|discont|discoutn|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|dedo|kardo|krdo|chahiye|chahie|mangta|bhejo|trimmer|cutter|remover|nebulizer|duster|spray|how|much|what|when|where|why|which)\b/i.test(l);
     const isCommonNonName = /^(ok+|okok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done?|cancel|sahi|bilkul|confirm|ha+n|hn|hanji|hnji|han\s*ji)\s*[.!]?\s*$/i.test(l) ||
       /^(ok\s*){2,}(don[e]?|done?)?\s*[.!]?\s*$/i.test(l) ||
