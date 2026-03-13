@@ -1687,7 +1687,11 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     // Don't overwrite existing name with family member's name
     const nameAlreadyLocked = state.collected.name && !['COLLECT_NAME', 'PRODUCT_SELECTION'].includes(state.current);
     if (extracted.name && (state.current === 'COLLECT_NAME' || state.current === 'PRODUCT_SELECTION' || (hasExplicitName && !isFamilyName && !nameAlreadyLocked))) {
-      const name = extracted.name.trim();
+      let name = extracted.name.trim();
+      // Strip "naam/name" suffix — "Hashim Naam" → "Hashim", "Faisal name" → "Faisal"
+      name = name.replace(/\s+(naam|name|nm)\s*$/i, '').trim();
+      // Strip "naam/name" prefix — "Naam Hashim" → "Hashim"
+      name = name.replace(/^(naam|name|nm)\s+/i, '').trim();
       // Guard: don't store question fragments as name (e.g. "kya hai" from "tumhara naam kya hai")
       const isQuestionFragment = /^(kya|kia|what|kaun|kon|who|how|kaise|kitna|kitne)\b/i.test(name) ||
         /\b(hai|he|h|ho|hain)\s*[?]?\s*$/i.test(name);
@@ -1704,8 +1708,8 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       const isProductName = /\b(machine|mashin|trimmer|cutter|remover|nebulizer|duster|massager|masajar|cotton|vegetable|facial|hair|knee|board|cutting|mehngi|sasti|itni|kitne|muje|mjhe|gunjaish)\b/i.test(nameL);
       // Guard: reject gibberish (repeated chars)
       const isGibberishName = /(.)\1{2,}/i.test(name) || name.split(/\s+/).some(w => w.length > 1 && new Set(w.toLowerCase()).size === 1);
-      // Guard: reject Urdu phrases with connector words (ke/ki/ka/ko/ne/se) — "rani ke bachon" is a phrase, not a name
-      const hasUrduConnector = nameWords.length >= 2 && /\b(ke|ki|ka|ko|ne|se|mein|par|pe|wala|wali|wale|bhi|toh?|hai|he|aur|ya)\b/i.test(nameL);
+      // Guard: reject Urdu phrases with connector/verb words — "rani ke bachon", "Bataya Tha Faisal", "Diya Gaya Hai", "Wana Likha Watha"
+      const hasUrduConnector = nameWords.length >= 2 && /\b(ke|ki|ka|ko|ne|se|mein|par|pe|wala|wali|wale|bhi|toh?|hai|he|aur|ya|tha|thi|the|gaya|gayi|gaye|raha|rahi|rahe|hoga|hogi|watha|likha|likhi|bataya|batayi|diya|diye|diyi|laga|lagaya|karna|krna|wana|chuka|chuki|pata|nahi|nhi)\b/i.test(nameL);
       if (name.length >= 2 && name.length <= 50 && !isQuestionFragment && !hasEnglishNonName && !isUrduConversational && !isGreetingName && !isProductName && !isGibberishName && !hasUrduConnector) {
         state.collected.name = name;
       }
@@ -3588,14 +3592,22 @@ function handlePreCheck(pre, message, state, storeName, phone) {
     case 'name_in_product_inquiry': {
       // Customer gave name directly in PRODUCT_INQUIRY (implicit YES + name)
       // e.g. Bot: "Order karna hai?" → Customer: "Shazia Jamshed"
-      state.collected.name = pre.extracted.name;
+      let piName = (pre.extracted.name || '').replace(/\s+(naam|name|nm)\s*$/i, '').trim();
+      // Quick guard: reject if Urdu connector/verb words present
+      const piNameWords = piName.split(/\s+/);
+      const piHasConnector = piNameWords.length >= 2 && /\b(ke|ki|ka|ko|ne|se|mein|par|pe|wala|wali|wale|bhi|toh?|hai|he|aur|ya|tha|thi|the|gaya|gayi|raha|rahi|hoga|hogi|bataya|diya|likha|wana|nahi|nhi|pata)\b/i.test(piName.toLowerCase());
+      if (piName && !piHasConnector) {
+        state.collected.name = piName;
+      }
       const nextField2 = askNextField(state, storeName);
-      // askNextField templates already include {name} {honorific}, no need to prepend
       return nextField2;
     }
 
     case 'name_given': {
-      state.collected.name = pre.extracted.name;
+      let ngName = (pre.extracted.name || '').replace(/\s+(naam|name|nm)\s*$/i, '').replace(/^(naam|name|nm)\s+/i, '').trim();
+      const ngWords = ngName.split(/\s+/);
+      const ngHasConnector = ngWords.length >= 2 && /\b(ke|ki|ka|ko|ne|se|mein|par|pe|wala|wali|wale|bhi|toh?|hai|he|aur|ya|tha|thi|the|gaya|gayi|raha|rahi|hoga|hogi|bataya|diya|likha|wana|nahi|nhi|pata)\b/i.test(ngName.toLowerCase());
+      state.collected.name = (ngName && !ngHasConnector) ? ngName : pre.extracted.name;
       // Also save city if extracted from same message (voice: "naam Amjad hai aur Sukkur mein delivery")
       if (pre.extracted.city && !state.collected.city) {
         state.collected.city = pre.extracted.city;
@@ -3773,7 +3785,8 @@ function handlePreCheck(pre, message, state, storeName, phone) {
         const nextField = askNextField(state, storeName);
         // If customer also asked delivery time ("G karna ha kB tak ajayga"), prepend answer
         if (nextField && pre.extracted?.side_question === 'delivery_time') {
-          nextField.reply = fillTemplate('DELIVERY_TIME', vars) + ' ' + nextField.reply;
+          const dtReply = fillTemplate('DELIVERY_GENERAL', vars);
+          if (dtReply) nextField.reply = dtReply + ' ' + nextField.reply;
         }
         return nextField;
       }

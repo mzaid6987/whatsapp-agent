@@ -437,7 +437,10 @@ function handleTemplateState(message, state, storeName, preIntent) {
           const areaName = prefixM[2].trim().toLowerCase();
           // Check if the mentioned area overlaps with existing area
           if (existingArea.includes(areaName) || areaName.includes(existingArea)) {
-            const newArea = prefix.charAt(0).toUpperCase() + prefix.slice(1).toLowerCase() + ' ' + state.collected.address_parts.area;
+            // Don't duplicate prefix if area already starts with it (e.g. "North Karachi" + "North" → don't make "North North Karachi")
+            const prefixLower = prefix.toLowerCase();
+            const alreadyHasPrefix = existingArea.startsWith(prefixLower + ' ');
+            const newArea = alreadyHasPrefix ? state.collected.address_parts.area : prefix.charAt(0).toUpperCase() + prefix.slice(1).toLowerCase() + ' ' + state.collected.address_parts.area;
             state.collected.address_parts.area = newArea;
             const addrStr = buildAddressString(state.collected.address_parts, state.collected.city);
             state.collected.address = state.collected.city ? addrStr + ', ' + state.collected.city : addrStr;
@@ -738,7 +741,15 @@ function handleTemplateState(message, state, storeName, preIntent) {
       const isUpsellReject = /\b(sirf|srf|bas|bss|only)\b/i.test(l) && /\b(bhej|send|ship|wahi|wohi|yehi|yahi|pehla|pahla|order|diya)\b/i.test(l) ||
         /\b(wahi|wohi|yehi|yahi|pehla|pahla)\s*(bhej|send|ship|de|do|dena)\b/i.test(l) ||
         /\b(jo\s*order\s*diya|jo\s*order\s*kiya|jo\s*manga|pehle\s*wala)\b/i.test(l);
-      const isCancel = isExplicitCancel || (isSoftCancel && !hasAddrComplaint && !isUpsellReject);
+      // "kuch nahi chahiye" / "koi nahi" / "aur nahi" / "aur kuch nahi" = nothing else needed, NOT cancel
+      const isNothingElse = /\b(kuch|koi|aur|or)\s*(nahi|nhi|ni|nai|b?hi\s*nahi|b?hi\s*nhi)\s*(chahiy[ae]?|chaiy[ae]?|mangta|lena)?\b/i.test(l) ||
+        /\b(aur\s*kuch\s*nahi|kuch\s*b?hi\s*nahi|koi\s*b?hi\s*nahi|bas\s*itna|nothing\s*else)\b/i.test(l);
+      const isCancel = isExplicitCancel || (isSoftCancel && !hasAddrComplaint && !isUpsellReject && !isNothingElse);
+      // "kuch nahi chahiye" / "nothing else" → acknowledge, don't cancel
+      if (isNothingElse && !isExplicitCancel) {
+        state._thanked = false;
+        return { reply: `Aapka order already confirm hai ${vars.honorific} ✅ Kuch aur chahiye to bata dein!`, state: 'ORDER_CONFIRMED' };
+      }
       // If soft cancel + upsell reject → acknowledge and confirm original order
       if (isSoftCancel && isUpsellReject) {
         state._thanked = false;
