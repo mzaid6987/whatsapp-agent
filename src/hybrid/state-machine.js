@@ -271,14 +271,27 @@ function handleTemplateState(message, state, storeName, preIntent) {
           return { reply: smResultH.reply || smResultH + '\n\nSahi hai? ✅', state: 'ORDER_SUMMARY' };
         }
       }
-      // Check for city correction in ORDER_SUMMARY — "City Wah Cantt hai. Yes"
+      // Check for city correction in ORDER_SUMMARY — "City Wah Cantt hai", "jalal pur sharif ha"
       // Customer may correct city while also confirming. Apply correction before confirming.
       const cityCorrectionMatch = /\b(city|shehr|shehar)\s*[.:=]?\s*/i.test(message);
-      if (cityCorrectionMatch || extractCity(message)) {
-        const correctedCity = extractCity(message);
-        if (correctedCity && correctedCity.toLowerCase() !== (state.collected.city || '').toLowerCase()) {
-          state.collected.city = correctedCity;
-          console.log(`[ORDER_SUMMARY] City corrected to: ${correctedCity}`);
+      const detectedCityOS = extractCity(message);
+      if (detectedCityOS && detectedCityOS.toLowerCase() !== (state.collected.city || '').toLowerCase()) {
+        state.collected.city = detectedCityOS;
+        // Rebuild address with new city
+        if (state.collected.address_parts) {
+          const { buildAddressString: _buildAddrC } = require('./extractors');
+          const addrStrC = _buildAddrC(state.collected.address_parts, state.collected.city);
+          state.collected.address = addrStrC + ', ' + state.collected.city;
+        } else if (state.collected.address) {
+          // Replace old city in address string
+          state.collected.address = state.collected.address.replace(/,\s*[^,]+$/, ', ' + detectedCityOS);
+        }
+        console.log(`[ORDER_SUMMARY] City corrected to: ${detectedCityOS}`);
+        // If customer ALSO said yes, don't block — let it fall through to confirmation
+        // But if no yes, show updated summary
+        if (!yes) {
+          const smCityCorr = buildOrderSummary(state, storeName);
+          return { reply: `City update ho gaya: ${detectedCityOS} ✅\n\n` + smCityCorr.reply, state: 'ORDER_SUMMARY' };
         }
       }
       // Area/address correction in ORDER_SUMMARY — "sahi hai lekin X nahi Y hai", "area X nahi Y hai"

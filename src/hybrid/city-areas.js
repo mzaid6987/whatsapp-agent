@@ -2568,7 +2568,7 @@ const CITY_ALIASES = {
   'faislabad': 'faisalabad', // 56+ orders use this spelling
   'gujarat': 'gujrat', // common confusion with country
   'sailkot': 'sialkot', 'sialkot': 'sialkot',
-  'jehlum': 'jhelum', 'jahlum': 'jhelum', 'jehlam': 'jhelum',
+  'jehlum': 'jhelum', 'jahlum': 'jhelum', 'jehlam': 'jhelum', 'jelum': 'jhelum', 'jhlum': 'jhelum', 'jhelem': 'jhelum',
   'shekhupura': 'sheikhupura', 'sheikhpura': 'sheikhupura', 'shekipura': 'sheikhupura',
   'abbotabad': 'abbottabad', 'abbattabad': 'abbottabad', 'abbottbad': 'abbottabad', 'abotabad': 'abbottabad', 'abotodab': 'abbottabad', 'abottabad': 'abbottabad', 'abtabad': 'abbottabad',
   'nowshehra': 'nowshera', 'naushehra': 'nowshera', 'noshehra': 'nowshera', 'noshera': 'nowshera',
@@ -2601,6 +2601,7 @@ const CITY_ALIASES = {
   'sanglahil': 'sangla hill', 'sangla': 'sangla hill',
   'renalakhurd': 'renala khurd',
   'jalalpurjattan': 'jalalpur jattan', 'jalalpur': 'jalalpur jattan',
+  'jalalpur sharif': 'jhelum', 'jalalpursharif': 'jhelum', 'jalal pur sharif': 'jhelum',
   'fortabbas': 'fort abbas',
   'pirmahal': 'pir mahal',
   'ahmedpureast': 'ahmedpur east',
