@@ -191,6 +191,13 @@ function extractCity(msg) {
         if (!fallbackCity) fallbackCity = titleCase(c);
         continue;
       }
+      // Check if city name is followed by road/highway/chowk — it's a road name, not a city
+      // e.g., "Peshawar Road", "Lahore Highway", "Multan Road"
+      const isRoadName = new RegExp('\\b' + c + '\\s+(road|raod|rd|highway|motorway|chowk|chouk|flyover|bridge|bypass|underpass|overpass)\\b', 'i').test(l);
+      if (isRoadName) {
+        if (!fallbackCity) fallbackCity = titleCase(c);
+        continue;
+      }
       return titleCase(c);
     }
   }
@@ -241,6 +248,9 @@ function extractAllCities(msg) {
   // Check full city names (word-boundary to avoid partial matches)
   for (const c of ALL_CITIES) {
     if (new RegExp('\\b' + c + '\\b').test(l) && !seen.has(c)) {
+      // Skip if city name is used as road name — "Peshawar Road", "Multan Highway"
+      const isRoadName = new RegExp('\\b' + c + '\\s+(road|raod|rd|highway|motorway|chowk|chouk|flyover|bridge|bypass|underpass|overpass)\\b', 'i').test(l);
+      if (isRoadName) continue;
       found.push(c.charAt(0).toUpperCase() + c.slice(1));
       seen.add(c);
     }

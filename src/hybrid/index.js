@@ -767,7 +767,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   // Gender detection from feminine verb forms (any message)
   if (!state.gender) {
     const lm = message.toLowerCase();
-    const isFeminine = /\b(btao\s*gi|batao\s*gi|krlun\s*gi|karun\s*gi|deti\s*h[ou]n|lun\s*gi|dalon\s*gi|bhejun\s*gi|krun\s*gi|karti\s*h[ou]n|krti\s*h[ou]n)\b/i.test(lm) ||
+    const isFeminine = /\b(btao\s*gi|batao\s*gi|krlun\s*gi|karun\s*gi|deti\s*h[ou]n|lun\s*gi|dalon\s*gi|bhejun\s*gi|krun\s*gi|karti\s*h[ou]n|krti\s*h[ou]n|rehti\s*h[ou]n|rahti\s*h[ou]n|rehta?\s*gi|rahta?\s*gi|chalti\s*h[ou]n|milti\s*h[ou]n|bhejon\s*gi|mangwa[ou]n\s*gi|krwa[ou]n\s*gi)\b/i.test(lm) ||
       /\b(m[ei]\s*nahi\s*btao\s*gi|meri\s*taraf)\b/i.test(lm);
     if (isFeminine) state.gender = 'female';
   }
@@ -1740,7 +1740,11 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
       // 1-3 words, all letters → likely a name
       const looksLikeName = words.length >= 1 && words.length <= 3 &&
         /^[A-Za-z\s.]+$/.test(msgText) && msgText.length >= 2 && msgText.length <= 40;
-      if (looksLikeName) {
+      // Guard: "My son name", "My daughter", "My wife" = relation phrase, NOT actual name
+      const isRelationPhrase = /^my\s+(son|daughter|wife|husband|brother|sister|father|mother|bhai|behen|beti|beta)\b/i.test(msgText);
+      // Guard: contains common English words that are NOT names
+      const hasNonNameWord = /\b(name|naam|son|daughter|wife|husband|brother|sister|father|mother|my|the|is|for|and|not)\b/i.test(msgText);
+      if (looksLikeName && !isRelationPhrase && !hasNonNameWord) {
         const correctedName = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
         state.collected.name = correctedName;
         console.log(`[AI] Name corrected: "${state.collected.name}" → "${correctedName}"`);
