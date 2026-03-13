@@ -468,9 +468,9 @@ function preCheck(message, currentState, collected, state) {
 
   // 1a. MEDIA REQUEST — "picture dikhao", "photo bhejo", "video dikhao", "image send karo"
   // Also: "X ki video", "X ki picture" (standalone, no action word needed)
-  const isMediaReq = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|bhejdo|send|de|do|dena|chahiye)\b/i.test(l) ||
-    /\b(video|vid|vidoe|vedio|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye)\b/i.test(l) ||
-    /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid|vidoe|vedio)\b/i.test(l) ||
+  const isMediaReq = /\b(picture|photo|pic|image|tasveer|tasver|tsveer)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|bhejen|bhejein|bhijein|send|de|do|dena|chahiye)\b/i.test(l) ||
+    /\b(video|vid|vidoe|vedio|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|bhejen|bhejein|bhijein|send|de|do|dena|chahiye)\b/i.test(l) ||
+    /\b(dikha|dikhana|dikhao|bhej|bhejo|bhejen|bhejein|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid|vidoe|vedio)\b/i.test(l) ||
     /\b(kaise?\s*(dikhta|lagta|hota)|kaisa\s*(hai|he|h|dikhta|lagta))\b/i.test(l) ||
     /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(l) ||
     /\bki\s+(video|vidoe|vedio|vid|picture|photo|pic|image|tasveer)\b/i.test(l) ||

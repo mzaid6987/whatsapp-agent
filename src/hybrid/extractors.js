@@ -731,21 +731,21 @@ function buildAddressString(parts, city) {
   if (isRural) {
     // Rural format: Landmark, Chak/Gaon (area), Tehsil, Zilla
     if (landmarkText) pieces.push(landmarkText);
-    if (parts.area && !areaDupsCity) pieces.push(parts.area);
-    if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
-    if (parts.zilla) pieces.push('Zilla ' + parts.zilla);
+    if (parts.area && !areaDupsCity && !skip(parts.area)) pieces.push(parts.area);
+    if (parts.tehsil && !skip(parts.tehsil)) pieces.push('Tehsil ' + parts.tehsil);
+    if (parts.zilla && !skip(parts.zilla)) pieces.push('Zilla ' + parts.zilla);
   } else if (isShopDelivery || isDeliveryPoint) {
     // Shop/delivery point format: Landmark (shop name), Area, City
     if (landmarkText) pieces.push(landmarkText);
-    if (parts.area && !areaDupsCity) pieces.push(parts.area);
-    if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
-    if (parts.zilla) pieces.push('Zilla ' + parts.zilla);
+    if (parts.area && !areaDupsCity && !skip(parts.area)) pieces.push(parts.area);
+    if (parts.tehsil && !skip(parts.tehsil)) pieces.push('Tehsil ' + parts.tehsil);
+    if (parts.zilla && !skip(parts.zilla)) pieces.push('Zilla ' + parts.zilla);
   } else {
     // Urban format: House, Street, Area, near Landmark
-    if (parts.area && !areaDupsCity) pieces.push(parts.area);
+    if (parts.area && !areaDupsCity && !skip(parts.area)) pieces.push(parts.area);
     if (landmarkText) pieces.push(landmarkText);
-    if (parts.tehsil) pieces.push('Tehsil ' + parts.tehsil);
-    if (parts.zilla) pieces.push('Zilla ' + parts.zilla);
+    if (parts.tehsil && !skip(parts.tehsil)) pieces.push('Tehsil ' + parts.tehsil);
+    if (parts.zilla && !skip(parts.zilla)) pieces.push('Zilla ' + parts.zilla);
   }
   return pieces.join(', ');
 }
