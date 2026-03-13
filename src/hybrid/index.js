@@ -767,7 +767,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
   // Gender detection from feminine verb forms (any message)
   if (!state.gender) {
     const lm = message.toLowerCase();
-    const isFeminine = /\b(btao\s*gi|batao\s*gi|krlun\s*gi|karun\s*gi|deti\s*h[ou]n|lun\s*gi|dalon\s*gi|bhejun\s*gi|krun\s*gi|karti\s*h[ou]n|krti\s*h[ou]n|rehti\s*h[ou]n|rahti\s*h[ou]n|rehta?\s*gi|rahta?\s*gi|chalti\s*h[ou]n|milti\s*h[ou]n|bhejon\s*gi|mangwa[ou]n\s*gi|krwa[ou]n\s*gi)\b/i.test(lm) ||
+    const isFeminine = /\b(btao\s*gi|batao\s*gi|krlun\s*gi|kar[uo]n\s*gi|deti\s*h[ou]n|lun\s*gi|dalon\s*gi|bhejun\s*gi|kr[uo]n\s*gi|karti\s*h[ou]n|krti\s*h[ou]n|rehti\s*h[ou]n|rahti\s*h[ou]n|rehta?\s*gi|rahta?\s*gi|chalti\s*h[ou]n|milti\s*h[ou]n|bhejon\s*gi|mangwa[ou]n\s*gi|krwa[ou]n\s*gi|dekhon\s*gi|rkhon\s*gi|rakhon\s*gi|aaon\s*gi|jaon\s*gi|lon\s*gi|don\s*gi|paon\s*gi)\b/i.test(lm) ||
       /\b(m[ei]\s*nahi\s*btao\s*gi|meri\s*taraf)\b/i.test(lm) ||
       // Urdu script feminine: گی (gi suffix — word-final), ہوں with feminine verb context
       /گی(?:\s|$|[۔،؟!])/.test(message) || /کروں\s*گی|بتاؤں\s*گی|لوں\s*گی|دوں\s*گی|بھیجوں\s*گی|رکھوں\s*گی|کرتی\s*ہوں|رہتی\s*ہوں|چلتی\s*ہوں|دیتی\s*ہوں|لیتی\s*ہوں/.test(message);
