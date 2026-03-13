@@ -850,6 +850,7 @@ function preCheck(message, currentState, collected, state) {
       /\b(rehne?\s*do|choro|chhoro|chor\s*ni|bas|nai\s*krwana|abhi?\s*nahi|filha?l\s*nahi|felha?l\s*nahi|abi?\s*nahi|abhi?\s*n[ai]h?i?|filha?l\s*n[ai]h?i?|felha?l\s*n[ai]h?i?|abi?\s*felha?l\s*n[ai]h?i?)\b/i.test(l) ||
       /\b(not\s*interested|no\s*thanks?|no\s*thnks?|don'?t\s*want|i'?m?\s*not\s*interested)\b/i.test(l) ||
       /\b(kuch\s*(bhi\s*)?n[ai]h?i?\s*(chahiy[ae]?|lena|mangta))\b/i.test(l) ||
+      /\b(some\s*time|time\s*to\s*think|think\s*(about|first)|soch\s*(ke|kr|kar)|mashwara\s*(kr|kar)|don'?t\s*confirm|not?\s*right\s*now|later|baad\s*mein|phir\s*bata)\b/i.test(l) ||
       isGoodbye || isNoMoney;
     if (isCancelInCollection) return { intent: 'no_order_now' };
   }
