@@ -11,7 +11,7 @@ const { PRODUCTS } = require('./data');
 
 // ============= COMPLAINT DETECTION =============
 const COMPLAINT_WORDS = [
-  'kharab','kharaab','khrab','khraab','toot','broken','defective','return karna','return','refund',
+  'kharab','kharabi','kharaab','khrab','khraab','toot','broken','defective','return karna','return','refund',
   'galat','wrong','scam','fake','fraud','dhoka','bakwas','pagal','nonsense','wtf',
   'bas karo','bekar','cheat','loot','nakli','naqli','wahiyat','ghatiya','complain',
   'complaint','compliant','complane','complane','toot gaya','kam nahi karta','kam nhi karta','kam ni karta',
@@ -69,7 +69,13 @@ const IS_FUNCTIONALITY_Q = /\b(kam\s*kr[yta]*[aie]?|kaam\s*kr[yta]*[aie]?|kam\s*
 function isComplaint(l) {
   // Strip URLs before checking — Google gclid URLs can contain random substrings like "wtf"
   const stripped = l.replace(/https?:\/\/\S+/gi, '').trim();
-  return COMPLAINT_WORDS.some(w => stripped.includes(w));
+  // Use word-boundary matching to prevent "dhokar" matching "dhoka", "bekarar" matching "bekar" etc.
+  return COMPLAINT_WORDS.some(w => {
+    // Multi-word phrases use includes (already specific enough)
+    if (w.includes(' ')) return stripped.includes(w);
+    // Single words use word boundary regex
+    return new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(stripped);
+  });
 }
 
 // ============= YES / NO DETECTION =============
@@ -863,7 +869,7 @@ function preCheck(message, currentState, collected, state) {
     // Greeting check — "Assalamu Alaikum", "AoA", etc.
     const isGreetingPI = /^(assalam|wa?\s*[ao]?l[ae]i?ku?m|aoa|salam|slam|slaam|hello|hi|hey)\b/i.test(l);
     // Combo phrases — "Don G Bhai", "Is Ki", "Ok Bhai", "Tobha H", "Bata Diya"
-    const isComboPI = /^(ok|g|ji|don|so|is|ye|yeh|tobha|toba|diya|bata)\s+(bhai|sir|madam|ki|ka|g|h|diya|dia)\b/i.test(l) ||
+    const isComboPI = /^(ok|g|ji|don|so|is|ye|yeh|tobha|toba|diya|bata)\s+(bhai|sir|madam|ki|ka|g|h|diya|dia|da|de|do|dein|den|by+e?|bye+|alvida)\b/i.test(l) ||
       /\b(bhai|sir|madam)\s*$/i.test(l);
     // Urdu meaning phrases mistaken as names — "Kuch Gunjaish", "Kitne ka hai", "Bata Diya"
     const isUrduMeaningPI = /^(kuch|kitne?|kitni|bata|btao|tobha|toba|yes\s*ok)\b/i.test(l) ||
@@ -883,7 +889,7 @@ function preCheck(message, currentState, collected, state) {
     // "ya nahi" / "ke nahi" / "ya na" at end = question ("X kar sakain ge ya nahi?"), NOT cancel
     const isQuestionSuffix = /\b(ya|k[ey]|ki)\s+(nahi|nhi|ni|nai|na|mat)\s*[?؟.!]?\s*$/i.test(l);
     // Standalone goodbye = cancel in collection states (customer leaving without ordering)
-    const isGoodbye = /\b(allah\s*haf[ie]z|khuda\s*haf[ie]z|bye+|good\s*bye|alvida)\b/i.test(l);
+    const isGoodbye = /\b(allah\s*haf[ie]z|khuda\s*haf[ie]z|by+e?|bye+|good\s*bye|alvida)\b/i.test(l);
     // "paise nahi" / "afford nahi" / "budget nahi" = soft financial cancel
     const isNoMoney = /\b(pais[ey]?\s*n[ai]h?i?|afford\s*n[ai]h?i?|budget\s*n[ai]h?i?|mehn?g[aie]?\s*(h[ae]i?|he)|mahang|zyada\s*(h[ae]i?|he)|abhi\s*pais[ey]?\s*n[ai]h?i?|pas\s*pais[ey]?\s*n[ai]h?i?)\b/i.test(l) ||
       /\b(n[ai]h?i?\s*pais[ey]?|paise?\s*nahi?\s*h[ae]i?n?)\b/i.test(l);
@@ -896,7 +902,7 @@ function preCheck(message, currentState, collected, state) {
       (!isQuestionSuffix && !isAddressNegation && /\b(nai|nahi|nhi|ni|na|nah|mat)\s*(kr|kar|karn[aie]|krn[aie])\s*(order|ordr)?\b/i.test(l)) ||
       /\b(nai|nahi|nhi|ni|na|nah|mat)\s*(chahiy[ae]|chaiy[ae]|mangta|manga|lena|laina|order|krna|karna)\b/i.test(l) ||
       /\b(nah?\s*laina|nah?\s*lena|nahi?\s*laina|nahi?\s*lena)\b/i.test(l) ||
-      /\b(rehne?\s*do|choro|chhoro|chor\s*ni|bas|nai\s*krwana|abhi?\s*nahi|filha?l\s*nahi|felha?l\s*nahi|abi?\s*nahi|abhi?\s*n[ai]h?i?|filha?l\s*n[ai]h?i?|felha?l\s*n[ai]h?i?|abi?\s*felha?l\s*n[ai]h?i?)\b/i.test(l) ||
+      /\b(rehne?\s*do|choro|chhoro|chor\s*ni|chhod[oa]?y?|chhoday|chhod\s*d[oae]|chhod\s*diy[ae]|bas|nai\s*krwana|abhi?\s*nahi|filha?l\s*nahi|felha?l\s*nahi|abi?\s*nahi|abhi?\s*n[ai]h?i?|filha?l\s*n[ai]h?i?|felha?l\s*n[ai]h?i?|abi?\s*felha?l\s*n[ai]h?i?)\b/i.test(l) ||
       /\b(not\s*interested|no\s*thanks?|no\s*thnks?|don'?t\s*want|i'?m?\s*not\s*interested)\b/i.test(l) ||
       /\b(kuch\s*(bhi\s*)?n[ai]h?i?\s*(chahiy[ae]?|lena|mangta))\b/i.test(l) ||
       /\b(some\s*time|time\s*to\s*think|think\s*(about|first)|soch\s*(ke|kr|kar)|mashwara\s*(kr|kar)|don'?t\s*confirm|not?\s*right\s*now|later|baad\s*mein|phir\s*bata)\b/i.test(l) ||
@@ -928,7 +934,7 @@ function preCheck(message, currentState, collected, state) {
     // Check if text matches a product keyword — "baal katny vala" is product demand, not name
     const isProductKeyword = detectProduct(msg) !== null;
     // Frustration/conversation phrases that look like names — "btaya to", "bata dia", "pehle bataya"
-    const isFrustration = /^(btaya|bata|bta)\s*(to|toh?|dia|diya|tha|thi|na|he|hai|h)\s*$/i.test(l) ||
+    const isFrustration = /^(btaya|bata|bta|btao)\s*(to|toh?|dia|diya|tha|thi|na|he|hai|h|da|de|do|dein|den)\s*[?؟]?\s*$/i.test(l) ||
       /^(pehle|phle|pehly|already)\s*(bata|btaya|bta|likha|told|given|sent|dia)\s*(to|tha|thi|na|he|hai|h)?\s*$/i.test(l) ||
       /^(upar|opar|oper)\s*(likh|dekh|bata|btaya)\s*(he|hai|h|a|dia)?\s*$/i.test(l);
     // Product qualifier patterns — "larkio vala", "ladies wala", "chota wala", "gents ka" = NOT a name
@@ -963,13 +969,19 @@ function preCheck(message, currentState, collected, state) {
       /\b(mein|me|mai|m)\s+(hai|he|h|hun|hoon|rehte?|rahte?|se)\b/i.test(l);
     // English non-name words — pronouns, verbs, adjectives that are NEVER Pakistani names
     // Catches: "I Went This", "Required Me", "Ok Not Required", "Send Me", "Just Fine" etc.
-    const ENGLISH_NON_NAME_WORDS = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|much|also|too|only|went|want|wanted|go|going|gone|come|came|coming|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|does|make|made|take|took|tell|told|know|knew|see|saw|look|let|try|put|run|set|keep|show|find|call|feel|think|said|please|plz|pls|fine|good|bad|nice|great|here|there|from|into|will|can|may|should|would|could|must|shall|required|available|how|what|when|where|why|which)\b/i;
+    const ENGLISH_NON_NAME_WORDS = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|much|also|too|only|went|want|wanted|go|going|gone|come|came|coming|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|does|make|made|take|took|tell|told|know|knew|see|saw|look|let|try|put|run|set|keep|show|find|call|feel|think|said|please|plz|pls|fine|good|bad|nice|great|here|there|from|into|will|can|may|should|would|could|must|shall|required|available|how|what|when|where|why|which|some|point|time|thing|any|every|nothing|something|son|daughter|wife|husband)\b/i;
     const isEnglishNonName = words.length >= 2 && ENGLISH_NON_NAME_WORDS.test(l);
     // Single common English words that are NOT names (but could pass looksLikeName)
-    const isSingleEnglishWord = words.length === 1 && /^(yes|no|ok|hi|hey|hello|bye|please|thanks|sorry|sure|fine|good|nice|great|love|like|want|need|help|send|done|wait|stop|start|open|close|free|new|old|big|small|fast|slow|easy|hard|real|true|best|last|next|same|other|much|more|less|just|only|even|still|also|back|down|here|there|away|home|long|full|high|low|off|sir|madam|bro|dear|boss|dude|miss|mam|available|required)$/i.test(l);
+    const isSingleEnglishWord = words.length === 1 && /^(yes|no|ok|hi|hey|hello|bye|by|please|thanks|sorry|sure|fine|good|nice|great|love|like|want|need|help|send|done|wait|stop|start|open|close|free|new|old|big|small|fast|slow|easy|hard|real|true|best|last|next|same|other|much|more|less|just|only|even|still|also|back|down|here|there|away|home|long|full|high|low|off|sir|madam|bro|dear|boss|dude|miss|mam|available|required)$/i.test(l);
     // Urdu connector words — "rani ke bachon", "ap ka order" = phrases, NOT names
     const hasUrduConnector = words.length >= 2 && /\b(ke|ki|ka|ko|ne|se|mein|par|pe|wala|wali|wale|bhi|toh?|hai|he|aur|ya|ga|gi|ge|gaa|gee|aye|aaye|aya|aaya)\b/i.test(l);
-    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isGreeting && !isProductPhrase && !isGibberish && !isComboPhrase && !isUrduPhrase && !isEnglishNonName && !isSingleEnglishWord && !hasUrduConnector) {
+    // Starts with negation — "Nai some point", "No thanks", "Nahi chahiye" = NOT a name
+    const startsWithNegation = /^(nai|nahi|nhi|ni|na|no|nae|nay)\s+/i.test(l) && words.length >= 2;
+    // Single-word city name — "Karachi", "Lahore" = city, not name
+    const isCityName = words.length === 1 && extractCity(msg) !== null;
+    // Relation phrases — "My Son Name", "My Daughter" = NOT a name
+    const isRelationPhrase = /^my\s+(son|daughter|wife|husband|brother|sister|father|mother|bhai|behen|beti|beta)\b/i.test(l);
+    if (looksLikeName && !isQuestionWord && !isCommonNonName && !isConversationalPhrase && !isNameRefusal && !isAddressLabel && !isProductKeyword && !isFrustration && !isProductQualifier && !isSuspiciousUsername && !isGreeting && !isProductPhrase && !isGibberish && !isComboPhrase && !isUrduPhrase && !isEnglishNonName && !isSingleEnglishWord && !hasUrduConnector && !startsWithNegation && !isCityName && !isRelationPhrase) {
       // Strip "Name"/"Naam" prefix — "Name Arshad Luck" → "Arshad Luck"
       let nameWords = words;
       if (nameWords.length >= 2 && /^(name|naam|naam)$/i.test(nameWords[0])) {
@@ -985,6 +997,10 @@ function preCheck(message, currentState, collected, state) {
     // Suspicious WhatsApp username detected — re-ask for real name
     if (looksLikeName && isSuspiciousUsername) {
       return { intent: 'suspicious_username', extracted: { username: trimmed } };
+    }
+    // City name in COLLECT_NAME — save as city, re-ask name
+    if (isCityName) {
+      return { intent: 'city_early', extracted: { city: extractCity(msg) } };
     }
   }
 
@@ -1350,9 +1366,9 @@ function preCheck(message, currentState, collected, state) {
   if (currentState === 'PRODUCT_INQUIRY' && state.product) {
     const isHaggleInPI = /\b(disc?o?u?n?t|discoutn|disocunt|discont)\b/i.test(l) ||
       /\b(sast[aie]|ssta)\s*(kr[oa]?|kard?o?|do|dedo|de\s*do|mein|me|mai|m)\b/i.test(l) ||
-      /\b(rate|price|qeemat|qimat|kimat|keemat)\s*(kuch+|thod[aie]?|thora)?\s*(kam|km)\s*(kr[oa]?|kard?o?|do|dedo|ho|hojaye?|hosakta|ho\s*sakta|hoskta)\b/i.test(l) ||
-      /\b(kam|km)\s*(kr[oa]?|kard?o?|do|dedo)\s*(rate|price|qeemat)?\b/i.test(l) ||
-      /\b(kuch+|thod[aie]?|thora)\s*(kam|km)\s*(ho|kr|kar|kro|karo|do)\b/i.test(l) ||
+      /\b(rate|price|qeemat|qimat|kimat|keemat)\s*(kuch+|thod[aie]?|thora)?\s*(kam|km|kum)\s*(kr[oa]?|kard?o?|do|dedo|ho|hojaye?|hosakta|ho\s*sakta|hoskta)\b/i.test(l) ||
+      /\b(kam|km|kum)\s*(kr[oa]?|kard?o?|do|dedo)\s*(rate|price|qeemat)?\b/i.test(l) ||
+      /\b(kuch+|thod[aie]?|thora)\s*(kam|km|kum)\s*(ho|kr|kar|kro|karo|do)\b/i.test(l) ||
       /\b(offer|offr)\s*(hai|he|h|do|dedo|milega|milta)?\b/i.test(l) ||
       /\b(meh[ea]?n?g[aie]|bohot?\s*(meh[ea]?n?g|zyada))\b/i.test(l) ||
       /\b(less\s*(kr|kar|kard?o?|ho|ni|nhi)?|price\s*less|rate\s*less|koi\s*less)\b/i.test(l);

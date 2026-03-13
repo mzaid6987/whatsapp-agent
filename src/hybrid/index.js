@@ -57,7 +57,9 @@ function extractDetailsFromMsg(msg, productShort) {
     const l = msg.toLowerCase();
     // Extract name: "name X" or "naam X" — words after keyword until address keyword
     const addrKeywords = /^(flat|house|ghar|gali|street|block|bloc|gate|near|mobile|phone|number|nomber|nmbr|city|area|address|plot|sector|mohalla|colony)\b/i;
-    const nameMatch = msg.match(/\b(?:name|naam)\s+(.+)/i);
+    // Guard: skip bot-echo messages — customer copy-pasted bot's template
+    const isBotEcho = /apna\s+naam\s+bata\s+dein/i.test(msg) || /phone\s+number\s+bata\s+dein/i.test(msg) || /order\s+karna\s+hai\s*[?؟]/i.test(msg);
+    const nameMatch = !isBotEcho && msg.match(/\b(?:name|naam)\s+(.+)/i);
     if (nameMatch) {
       const afterName = nameMatch[1].trim().split(/\s+/);
       const nameWords = [];
@@ -67,7 +69,7 @@ function extractDetailsFromMsg(msg, productShort) {
       }
       // Stop words guard — "ke name se" = "by the name of", not a person's name
       const NAME_STOP_WORDS = new Set(['se','ke','ka','ki','ko','me','mein','mai','hai','he','h','ho','hain','pe','par','ye','yeh','ya','to','toh','bhi','aur','or','wala','vala','wali','vali','na','nahi','nhi','ji','g','ok','do','de','kr','kar','dein','den','haan','han','nai']);
-      const filteredNameWords = nameWords.filter(w => !NAME_STOP_WORDS.has(w.toLowerCase()));
+      const filteredNameWords = nameWords.filter(w => !NAME_STOP_WORDS.has(w.toLowerCase().replace(/[?!.,؟۔]/g, '')));
       if (filteredNameWords.length > 0 && filteredNameWords.length <= 3) {
         details.name = filteredNameWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       }
@@ -809,7 +811,7 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     // "return policy kya hai?", "exchange ho sakta hai?" = policy question, not complaint
     const isReturnPolicyQ = hasTrustWord && (/[?؟]\s*$/.test(cl) || /\b(policy|polisi|polci|kya|kia|hota|hoti|hoga|hogi|ho\s*sakt[aie]|ho\s*jayeg[aie]|milega|milegi|kar\s*sakt[aie])\b/i.test(cl));
     const isTrustNotComplaint = (hasTrustWord && isComplaint(cl)) || isHypothetical || isExchangeQuestion || isConditionalReturn || isReturnPolicyQ;
-    if ((isComplaint(cl) || hasAngryEmoji) && !isTrustNotComplaint && !(/\b(to\s*nahi|toh?\s*nahi|hogi|hoga|jayega|jayegi|jayenge)\b/i.test(cl))) {
+    if ((isComplaint(cl) || hasAngryEmoji) && !isTrustNotComplaint && !(/\b(to\s*(nahi|nhi|nahin|ni|nai)|toh?\s*(nahi|nhi|nahin|ni|nai)|hogi|hoga|hgi|hoggi|jayega|jayegi|jayenge|milega|milegi|melega|ayega|ayegi|aayega)\b/i.test(cl))) {
       // Strong complaint (not a quality question like "kharab to nahi hogi?")
       const vars = buildVars(state, storeName);
       state.current = 'COMPLAINT';
@@ -3240,6 +3242,13 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       }
       const tpl = pre.extracted.error === 'incomplete' ? 'PHONE_INVALID_INCOMPLETE' : 'PHONE_INVALID_FORMAT';
       return { reply: fillTemplate(tpl, vars), state: state.current };
+    }
+
+    case 'city_early': {
+      // Customer gave city name in COLLECT_NAME — save city, re-ask name
+      state.collected.city = pre.extracted.city;
+      console.log(`[CITY_EARLY] City "${pre.extracted.city}" saved from COLLECT_NAME, re-asking name`);
+      return { reply: `${pre.extracted.city} note ho gaya ✅ Apna naam bata dein?`, state: 'COLLECT_NAME' };
     }
 
     case 'city_given': {
