@@ -626,8 +626,10 @@ function handleTemplateState(message, state, storeName, preIntent) {
         return { reply: `Pehle batayein konsa product pasand aaya? Number ya naam bata dein 😊\n\n${uList}`, state: 'UPSELL_SHOW' };
       }
       // Number pick — "8", "8 wala", "8 number", "number 8", "# 8", "no 8"
-      const nm = l.match(/^(\d)\s*(wala|vala|wali|number|no\.?|nmbr)?\s*$/i) ||
-                 l.match(/^(?:number|no\.?|nmbr|#)\s*(\d)\s*(wala|vala)?\s*$/i);
+      // Also: "Number 6. Facial hair removal" — customer copies product name from list
+      const nm = l.match(/^(\d)\s*[.\-:)]*\s*(wala|vala|wali|number|no\.?|nmbr)?\s*$/i) ||
+                 l.match(/^(\d)\s*[.\-:)]*\s+.{3,}/i) ||
+                 l.match(/^(?:number|no\.?|nmbr|#)\s*(\d)\s*[.\-:)]*\s*(wala|vala)?\s*.*$/i);
       if (nm) {
         const digit = nm[1];
         const idx = parseInt(digit) - 1;

@@ -383,6 +383,15 @@ function preCheck(message, currentState, collected, state) {
   }
 
   // 1. COMPLAINT — highest priority, any state (but not if also trust question)
+  // RETURN/EXCHANGE REQUEST — "exchange karna hai", "wapas kardo", "return chahiye"
+  // In post-order states, these are actual requests needing human attention, NOT trust questions
+  const isReturnRequest = /\b(return|exchange|exchnage|exchang|replace|wapas|wapis|vapas|vapsi|refund)\s*(kr|kar|karo|kardo|krdo|krna|karna|chahiy[ae]|chaiy[ae]|krdein|kar\s*do|ho\s*sak|krwa|karwa|policy)\b/i.test(l) ||
+    /\b(kr|kar|karo|kardo)\s*(return|exchange|replace|wapas|wapis|vapas|refund)\b/i.test(l) ||
+    /\b(product|order|parcel|cheez|chiz)\s*(return|exchange|replace|wapas)\b/i.test(l);
+  if (isReturnRequest && ['ORDER_CONFIRMED', 'IDLE', 'CANCEL_AFTER_CONFIRM'].includes(currentState)) {
+    return { intent: 'complaint', needs_human: true };
+  }
+
   // "kharab to nahi hogi" / "toot to nahi jayegi" = QUESTION about quality, not complaint
   const complaint = isComplaint(l);
   const trust = TRUST_WORDS.test(l);
@@ -938,7 +947,11 @@ function preCheck(message, currentState, collected, state) {
       /\b(bhai|bhej\s*dein|gaya\s*hai|sorry)\s*$/i.test(l);
     // Urdu phrases that look like English names but are NOT names
     const isUrduPhrase = /^(g\s+brother|ji\s+sir|ji\s+madam|g\s+sir|easily|easyli|dono\s+sath|required\s+me|final\s+price|last\s+price|ok\s+sir|ok\s+done|yes\s+ok|tobha\s+h|bata\s+diya?|kuch\s+gunjaish?)\s*$/i.test(l) ||
-      /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|mangwao|bhejdo|deliver|delivery|receive)\b/i.test(l);
+      /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|mangwao|bhejdo|deliver|delivery|receive)\b/i.test(l) ||
+      // "Pictures bijwado", "photo bhejo", "images dikhao" = request, NOT name
+      /\b(pictures?|photos?|pics?|images?|videos?|tasveer|tasv[ei]+r)\s*(bij[vw]a|bhej|dikha|send|bhj|bhjwa|bjwa)/i.test(l) ||
+      // "City mein hai" = location statement, NOT name (e.g., "Karachi mein hai")
+      /\b(mein|me|mai|m)\s+(hai|he|h|hun|hoon|rehte?|rahte?|se)\b/i.test(l);
     // English non-name words — pronouns, verbs, adjectives that are NEVER Pakistani names
     // Catches: "I Went This", "Required Me", "Ok Not Required", "Send Me", "Just Fine" etc.
     const ENGLISH_NON_NAME_WORDS = /\b(i|me|my|he|she|we|us|they|them|it|this|that|these|those|the|and|but|or|for|with|not|just|very|much|also|too|only|went|want|wanted|go|going|gone|come|came|coming|need|needed|send|sent|get|got|gave|give|have|had|has|done|did|does|make|made|take|took|tell|told|know|knew|see|saw|look|let|try|put|run|set|keep|show|find|call|feel|think|said|please|plz|pls|fine|good|bad|nice|great|here|there|from|into|will|can|may|should|would|could|must|shall|required|available|how|what|when|where|why|which)\b/i;
@@ -1080,6 +1093,14 @@ function preCheck(message, currentState, collected, state) {
       /^(haan|han|ji|g|yes|ok|done|theek|confirm)\s*[.!]?\s*$/i.test(l);
     if (isOrderIntent && msg.trim().split(/\s+/).length <= 5) {
       return null; // Let AI handle as order intent, not address
+    }
+
+    // Guard: Frustration/question containing address keywords — NOT actual address
+    // "block gali kahan se aa gei", "colony kaise milegi", "area kab batao ge"
+    const isFrustrationWithAddrWords = /\b(kahan|kha+n|kidhr|kidhar|kaise|kese|kaisy|kesy|kab|kyun|kiun|kiu|q)\s+(se|say)?\s*(aa|a+|mil|aaye?|mile?g[aie]|ayeg[aie]|aye?\s*g[aie]|btao|batao|pata)\b/i.test(l) &&
+      /\b(block|gali|galli|colony|sector|street|mohall[ae]h?|area|ilaq[ae])\b/i.test(l);
+    if (isFrustrationWithAddrWords) {
+      return { intent: 'frustration', needs_human: true };
     }
 
     const ap = collected.address_parts || {};
