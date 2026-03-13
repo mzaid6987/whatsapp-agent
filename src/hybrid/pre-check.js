@@ -952,7 +952,7 @@ function preCheck(message, currentState, collected, state) {
     const isUrduPhrase = /^(g\s+brother|ji\s+sir|ji\s+madam|g\s+sir|easily|easyli|dono\s+sath|required\s+me|final\s+price|last\s+price|ok\s+sir|ok\s+done|yes\s+ok|tobha\s+h|bata\s+diya?|kuch\s+gunjaish?)\s*$/i.test(l) ||
       /\b(chahiy[ae]|milj[aie]|milengy|miljiengy|ayenge|jayenge|hojaye|hojayen|krwao|mangwao|bhejdo|deliver|delivery|receive)\b/i.test(l) ||
       // "Pictures bijwado", "photo bhejo", "images dikhao" = request, NOT name
-      /\b(pictures?|photos?|pics?|images?|videos?|tasveer|tasv[ei]+r)\s*(bij[vw]a|bhej|dikha|send|bhj|bhjwa|bjwa)/i.test(l) ||
+      /\b(pictures?|photos?|pics?|images?|videos?|tasveer|tasv[ei]+r)\s*(bij[vw]a(d[oae])?|bhej[oae]?|dikha[oae]?|send|bhj|bhjwa(d[oae])?|bjwa(d[oae])?)/i.test(l) ||
       // "City mein hai" = location statement, NOT name (e.g., "Karachi mein hai")
       /\b(mein|me|mai|m)\s+(hai|he|h|hun|hoon|rehte?|rahte?|se)\b/i.test(l);
     // English non-name words — pronouns, verbs, adjectives that are NEVER Pakistani names
