@@ -798,9 +798,9 @@ function preCheck(message, currentState, collected, state) {
     const isQuestionWord = /\b(kab|kya|kitna|kitne|kitni|kitny|quality|price|rate|order|delivery|kaise|kaisy|kesy|product|hai|he|ha|hy|nahi|nhi|cancel|complaint|return|salam|hello|hi|hey|aoa|discount|offer|sasta|mehenga|exchange|refund|cod|cash|free|payment|chahiye|chahie|chahiya|chahya|chaiya|mangta|mangwa|bhejo|video|photo|picture|link|website|trimmer|cutter|remover|nebulizer|duster|spray|massager|board|milega|melega|milta|milti|mein|sabzi|beef|chicken|mutton|gosht|qeema|keema|meat|bnata|banta|hota|bnta|mujhe|mujhy|mjhe|yah|yeh|ye|lena|dena|karna|krna|dono|sath|saath|mil|milengy|miljiengy|miljaenge|miljayenge|ayenge|aenge|ajaenge|ajayenge|pehle|phle|zaroor|zaror|required|need|needed|want|wanted|interested|send|please|urgent|available|necessary)\b/i.test(l);
     // Single-letter "B" at end = "bhi" (also) in WhatsApp Urdu — NOT a name initial
     const endsWithBhi = /\s+b\s*$/i.test(l.trim());
-    const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm|ha+n|hn|hanji|hnji)\s*[.!]?\s*$/i.test(l) ||
+    const isCommonNonName = /^(ok+|okay|acha+|theek|thik|hmm+|hm+|g|k|jee?|ji|yes|yup|yep|yeah|no|nahi|nhi|done|cancel|sahi|bilkul|confirm|ha+n?|hn|hanji|hnji)\s*[.!]?\s*$/i.test(l) ||
       /^h+n\s*(g+|ji|jee|bhai|sir|madam)\s*[.!]?\s*$/i.test(l) ||
-      /^(g+|ji|jee)\s*(h+n|ha+n|sir|bhai|madam)\s*[.!]?\s*$/i.test(l);
+      /^(g+|ji|jee)\s*(h+n|ha+n?|sir|bhai|madam)\s*[.!]?\s*$/i.test(l);
     // Common conversational phrases that are NOT names — "ok wait", "no thanks", "let me think" etc.
     const isConversationalPhrase = /\b(wait|ruk[oa]?|soch|think|later|baad|bad|abhi\s*nahi|pehle|phle|already|thanks|shukriya|thank\s*you)\b/i.test(l) ||
       /^(ok\s+wait|no\s+thanks?|not\s+now|let\s+me|hold\s+on|one\s+min|ek\s+min)\b/i.test(l);

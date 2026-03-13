@@ -374,6 +374,8 @@ function extractHouse(msg) {
     const m = msg.match(re);
     if (m) {
       let val = m[1].trim();
+      // Don't capture phone numbers as house numbers (10-11 digits starting with 03)
+      if (/^0?3\d{8,9}$/.test(val.replace(/[-\s]/g, ''))) continue;
       // Don't match street/block/sector prefixes as house numbers (but allow "ST-8/1" style plot numbers)
       if (/^(st|blk?|sec|ph)\d/i.test(val) && !/[-\/]/.test(val)) continue;
       // Don't extract "number X" when preceded by gali/street/block/sector/lane/phase

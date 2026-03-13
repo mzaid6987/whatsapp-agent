@@ -1080,8 +1080,11 @@ async function handleMessage(message, phone, storeName, apiKey, options = {}) {
     // Full address submission — customer sending complete address with block/phase/flat details
     const isFullAddress = l.length > 20 && /\b(flat|block|phase|sector|floor|road|street|gali|colony|town|mohall[ae]h?|near|masjid|school|hospital|chowk)\b/i.test(l) &&
       (/\b(no|number|#)\b/i.test(l) || /\d/.test(l));
-    const flexYes = /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|okay|done|theek|thek|thik|thk|tik|hn|hm+|g+|acha|accha|achha|bhej\s*d[oae]|bhejd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|kr\s*d[oae]|kard[oae]|krd[oae])\b/i.test(l) && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
-    const flexNo = /\b(nahi+|nhi*|nh|no+|galat|nope|na+h|mat|cancel)\b/i.test(l) && !isConditionalNah && !isAddressCorrection && !isFullAddress;
+    // Urdu script yes/no — اوکے (okei), ہاں (haan), جی (ji), ٹھیک (theek), بالکل (bilkul)
+    const urduYes = /[\u0627][\u0648][\u06a9][\u06d2]|[\u06c1][\u0627][\u06ba\u0646]|[\u062c][\u06cc]|[\u0679][\u06be][\u06cc][\u06a9]|[\u0628][\u0627][\u0644][\u06a9][\u0644]/.test(message);
+    const urduNo = /[\u0646][\u06c1][\u06cc\u0627][\u06ba\u0646]?|[\u063a][\u0644][\u0637]/.test(message);
+    const flexYes = (urduYes || /\b(ha+n|ji+|je+|yes+|yup|shi|sahi|sa[ih]i?|bilkul|confirm|ik|ok+|okay|done|theek|thek|thik|thk|tik|hn|hm+|g+|acha|accha|achha|bhej\s*d[oae]|bhejd[oae]|bhejwa\s*d[oae]|bhijwa\s*d[oae]|kr\s*d[oae]|kard[oae]|krd[oae])\b/i.test(l)) && !urduNo && !/\b(nahi|nhi|no|galat|nope|na+h)\b/i.test(l);
+    const flexNo = (urduNo || /\b(nahi+|nhi*|nh|no+|galat|nope|na+h|mat|cancel)\b/i.test(l)) && !urduYes && !isConditionalNah && !isAddressCorrection && !isFullAddress;
 
     if (flexYes) {
       state.address_confirming = false;
@@ -3596,7 +3599,8 @@ function handlePreCheck(pre, message, state, storeName, phone) {
       // Quick guard: reject if Urdu connector/verb words present
       const piNameWords = piName.split(/\s+/);
       const piHasConnector = piNameWords.length >= 2 && /\b(ke|ki|ka|ko|ne|se|mein|par|pe|wala|wali|wale|bhi|toh?|hai|he|aur|ya|tha|thi|the|gaya|gayi|raha|rahi|hoga|hogi|bataya|diya|likha|wana|nahi|nhi|pata)\b/i.test(piName.toLowerCase());
-      if (piName && !piHasConnector) {
+      const piIsGibberish = /(.)\1{2,}/i.test(piName) || piNameWords.some(w => w.length > 1 && new Set(w.toLowerCase()).size === 1);
+      if (piName && !piHasConnector && !piIsGibberish) {
         state.collected.name = piName;
       }
       const nextField2 = askNextField(state, storeName);
