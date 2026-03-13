@@ -2570,7 +2570,7 @@ const CITY_ALIASES = {
   'sailkot': 'sialkot', 'sialkot': 'sialkot',
   'jehlum': 'jhelum', 'jahlum': 'jhelum', 'jehlam': 'jhelum',
   'shekhupura': 'sheikhupura', 'sheikhpura': 'sheikhupura', 'shekipura': 'sheikhupura',
-  'abbotabad': 'abbottabad', 'abbattabad': 'abbottabad', 'abbottbad': 'abbottabad',
+  'abbotabad': 'abbottabad', 'abbattabad': 'abbottabad', 'abbottbad': 'abbottabad', 'abotabad': 'abbottabad', 'abotodab': 'abbottabad', 'abottabad': 'abbottabad', 'abtabad': 'abbottabad',
   'nowshehra': 'nowshera', 'naushehra': 'nowshera', 'noshehra': 'nowshera', 'noshera': 'nowshera',
   'kamoki': 'gujranwala', 'kamonki': 'gujranwala', // kamoke tehsil
   'bahwalpur': 'bahawalpur', 'bhawalpur': 'bahawalpur', 'bahawapur': 'bahawalpur',
