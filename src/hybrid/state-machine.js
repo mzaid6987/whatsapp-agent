@@ -614,7 +614,11 @@ function handleTemplateState(message, state, storeName, preIntent) {
         return { reply: `${state.collected.name || ''} ${honorific}, aapka parcel dispatch ho chuka hai — ab cancel nahi ho sakta. Delivery ke waqt rider se mil jayega. Shukriya!`.trim(), state: 'CANCEL_AFTER_CONFIRM' };
       }
       // "No one" / "none" / "no one ok" / "koi bhi nahi" = upsell rejection (both flexNo+flexYes can be true here)
-      const isNoneReject = /\b(no\s*one|none|no\s*thanks?|koi\s*(bhi\s*)?n[ah]i?|kuch\s*n[ah]i?|not\s*interested|need\s*not|not?\s*more|don'?t\s*need|no\s*more|nahi?\s*chahiy[ae]|i'?m?\s*(good|ok|fine)|that'?s?\s*(all|it)|bas\s*itna|enough|sufficient)\b/i.test(l);
+      // Also catches "kuch bhi order nhi krna", "or kuch nhi chahiye", "in ma se kuch nhi"
+      const isNoneReject = /\b(no\s*one|none|no\s*thanks?|koi\s*(bhi\s*)?n[ah]i?|kuch\s*n[ah]i?|not\s*interested|need\s*not|not?\s*more|don'?t\s*need|no\s*more|nahi?\s*chahiy[ae]|i'?m?\s*(good|ok|fine)|that'?s?\s*(all|it)|bas\s*itna|enough|sufficient)\b/i.test(l) ||
+        /\b(kuch\s*bhi\s*(order\s*)?n[ah]i?\s*(kr|kar|karn[aie]|krn[aie]|chahiy[ae])?)\b/i.test(l) ||
+        /\b(or|aur)\s*(kuch|koi)\s*(bhi\s*)?n[ah]i?\b/i.test(l) ||
+        /\b(wohi|wahi|yehi|yahi|bs|bas)\s*(bhot|bahut|kaafi|enough)\b/i.test(l);
       if (isNoneReject) {
         if (state._pending_upsell) state._pending_upsell = null;
         return confirmOrder(state, storeName);

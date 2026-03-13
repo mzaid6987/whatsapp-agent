@@ -396,6 +396,8 @@ function extractHouse(msg) {
       if (matchIdx > 0) {
         const before = msg.substring(0, matchIdx).toLowerCase().trim();
         if (/\b(gali|galli|street|st|block|blk|sector|sec|phase|lane)\s*$/i.test(before)) continue;
+        // Don't extract unit numbers as house numbers — "latifabad 8 number" = Unit 8
+        if (/\b(latifabad|qasimabad)\s*$/i.test(before)) continue;
       }
       // Strip trailing Urdu verb suffixes: "9ha" → "9", "12hai" → "12", "5he" → "5"
       // These happen when customer writes "house 9 hai" without space → "9hai" captured
@@ -559,6 +561,25 @@ function extractArea(msg, city) {
     if (KNOWN_AREAS.includes(sector.toLowerCase())) return sector;
   }
 
+  // Hyderabad Latifabad/Qasimabad unit detection: "latifabad 8 number", "latifabad unit 8", "latifabad 8"
+  // In Hyderabad, these areas have numbered units (1-12). "X number" = "Unit X", NOT house number.
+  const unitAreaMatch = l.match(/\b(latifabad|qasimabad)\s+(?:unit\s*)?(\d{1,2})\s*(?:number|nmbr|no\.?|nmber|num)?\b/i);
+  if (unitAreaMatch) {
+    const areaName = unitAreaMatch[1].charAt(0).toUpperCase() + unitAreaMatch[1].slice(1);
+    const unitNum = unitAreaMatch[2];
+    const unitArea = areaName + ' Unit ' + unitNum;
+    if (KNOWN_AREAS.some(a => a.toLowerCase() === unitArea.toLowerCase())) return unitArea;
+    // Even if not in known areas, still valid for units 1-12
+    if (parseInt(unitNum) >= 1 && parseInt(unitNum) <= 12) return unitArea;
+  }
+  // Reverse: "8 number latifabad", "unit 8 latifabad"
+  const unitAreaRev = l.match(/\b(?:unit\s*)?(\d{1,2})\s*(?:number|nmbr|no\.?|nmber|num)?\s+(latifabad|qasimabad)\b/i);
+  if (unitAreaRev) {
+    const areaName = unitAreaRev[2].charAt(0).toUpperCase() + unitAreaRev[2].slice(1);
+    const unitNum = unitAreaRev[1];
+    if (parseInt(unitNum) >= 1 && parseInt(unitNum) <= 12) return areaName + ' Unit ' + unitNum;
+  }
+
   // City-specific matching: if city is known, check its areas first (more accurate)
   if (city) {
     const cityMatch = matchArea(l, city);
@@ -631,7 +652,7 @@ function extractLandmark(msg) {
   // "near X" / "X ke paas" / "X ke qareeb" / "X ke samne"
   const nearPatterns = [
     /(?:near|nazd[ei]k)\s+(.{3,40}?)(?:\.|,|$)/i,
-    /(.{3,40}?)\s+(?:ke?\s*(?:paas|pass|qareeb|samne|saamne))(?:\s|,|\.|$)/i,
+    /(.{3,40}?)\s+(?:ke?\s*(?:paas|pass|pas|ps|qareeb|samne|saamne))(?:\s|,|\.|$)/i,
   ];
 
   for (const re of nearPatterns) {
@@ -652,7 +673,7 @@ function extractLandmark(msg) {
   // e.g., "NADRA CENTRE", "Jinnah Hospital", "City School", "Al-Noor Masjid"
   const INSTITUTION_SUFFIXES = 'centre|center|hospital|school|college|university|academy|office|court|station|terminal|library|museum|cinema|theater|theatre|stadium|tower|building|clinic|pharmacy|darbar|masjid|mosque|church|mandir|temple|hotel|bank|plaza|mall|chowk';
   // Words that should NOT be treated as landmark names (area/common words)
-  const SKIP_LANDMARK_NAME = /^(the|my|this|that|our|your|its|main|new|old|big|small|city|dha|bahria|gulshan|gulberg|model|cantt|defence|north|south|east|west|colony|town|nagar|abad|pura|society|scheme|sector|block|phase|street|gali|mohalla|housing|villas|heights|enclave)$/i;
+  const SKIP_LANDMARK_NAME = /^(the|my|this|that|our|your|its|main|new|old|big|small|city|dha|bahria|gulshan|gulberg|model|cantt|defence|north|south|east|west|colony|town|nagar|abad|pura|society|scheme|sector|block|phase|street|gali|mohalla|housing|villas|heights|enclave|ke|ka|ki|ko|se|me|mein|pe|par|hai|he|ha|ho|hn|hain|hein|ap|aap|ek|do|ye|yeh|wo|woh|waha|yaha|or|aur|bs|bas|ji|gi|si|sa|hi|bhi|to|toh|na|ni|nhi|nahi|order|deliver|delivery|bhjwa|bhejwa|bhej|send|dena|rakh|krna|karna|kro|karo)$/i;
   // Find institution type words in the message, then check the word(s) before/after
   const institutionPat = new RegExp('\\b(' + INSTITUTION_SUFFIXES + ')\\b', 'gi');
   const words = msg.split(/\s+/);
