@@ -383,12 +383,14 @@ function preCheck(message, currentState, collected, state) {
   }
 
   // 1. COMPLAINT — highest priority, any state (but not if also trust question)
-  // RETURN/EXCHANGE REQUEST — "exchange karna hai", "wapas kardo", "return chahiye"
-  // In post-order states, these are actual requests needing human attention, NOT trust questions
-  const isReturnRequest = /\b(return|exchange|exchnage|exchang|replace|wapas|wapis|vapas|vapsi|refund)\s*(kr|kar|karo|kardo|krdo|krna|karna|chahiy[ae]|chaiy[ae]|krdein|kar\s*do|ho\s*sak|krwa|karwa|policy)\b/i.test(l) ||
+  // RETURN/EXCHANGE REQUEST — "exchange karna hai", "wapas kardo", "return chahiye", "exchange this product"
+  // These are actual requests needing human attention in ANY state, NOT trust questions
+  const isReturnRequest = /\b(return|exchange|exchnage|exchang|replace|wapas|wapis|vapas|vapsi|refund)\s*(kr|kar|karo|kardo|krdo|krna|karna|chahiy[ae]|chaiy[ae]|krdein|kar\s*do|ho\s*sak|krwa|karwa|policy|this|ye|yeh|is)\b/i.test(l) ||
     /\b(kr|kar|karo|kardo)\s*(return|exchange|replace|wapas|wapis|vapas|refund)\b/i.test(l) ||
-    /\b(product|order|parcel|cheez|chiz)\s*(return|exchange|replace|wapas)\b/i.test(l);
-  if (isReturnRequest && ['ORDER_CONFIRMED', 'IDLE', 'CANCEL_AFTER_CONFIRM'].includes(currentState)) {
+    /\b(product|order|parcel|cheez|chiz|item)\s*(return|exchange|replace|wapas)\b/i.test(l) ||
+    /\b(exchange|replace|return)\s*(this|ye|yeh|is)\s*(product|order|parcel|cheez|chiz|item)?\b/i.test(l) ||
+    /\b(faulty|defective)\s*(product|order|item|machine|trimmer|cutter)?\b/i.test(l);
+  if (isReturnRequest) {
     return { intent: 'complaint', needs_human: true };
   }
 
@@ -397,9 +399,9 @@ function preCheck(message, currentState, collected, state) {
   const trust = TRUST_WORDS.test(l);
   const isQualityQuestion = /\b(to\s*nahi|toh?\s*nahi|nahi\s*ho|nhi\s*ho|nahi\s*na|hogi|hoga|jayega|jayegi|sakti|sakta)\b/i.test(l) && complaint;
   // Strong complaint = clearly reporting an issue (past tense, active problem)
-  // "sending damage", "not work", "broken hai", "kharab mila", "charger issue" etc.
+  // "sending damage", "not work", "broken hai", "kharab mila", "charger issue", "faulty", "not proper working"
   // "receive" alone is NOT a complaint — "call receive kar lunga" is normal. Only "receive nhi/nahi" is complaint.
-  const strongComplaint = complaint && (/\b(sending|sent|mila|receive[d]?\s*(nahi|nhi|ni|nai)|not work|not fit|broken|damage[d]?\s*product|issue|problem|stopped|charger|band ho|chal nahi|chal nhi|chalt[ai]\s*(hi\s*)?(nahi|nhi|ni)|work\s*nahi|work\s*nhi|working\s*nahi|working\s*nhi|sahi\s*work|sahi\s*kam|sahi\s*nahi|hilta|missing|toota|tuta|kaam\s*ka\s*nahi|kaam\s*ka\s*nhi|kaat\s*nahi|kaat\s*nhi|kaat\s*saka|nuqsan|paise?\s*wapas|paisay?\s*wapas|ek\s*bhi\s*kaam|kisi\s*bhi?\s*kaam)\b/i.test(l) || isPastOrder);
+  const strongComplaint = complaint && (/\b(sending|sent|mila|receive[d]?\s*(nahi|nhi|ni|nai)|not\s*(proper\s*)?work|not fit|broken|damage[d]?\s*product|issue|problem|stopped|charger|band ho|chal nahi|chal nhi|chalt[ai]\s*(hi\s*)?(nahi|nhi|ni)|work\s*nahi|work\s*nhi|working\s*nahi|working\s*nhi|sahi\s*work|sahi\s*kam|sahi\s*nahi|hilta|missing|toota|tuta|kaam\s*ka\s*nahi|kaam\s*ka\s*nhi|kaat\s*nahi|kaat\s*nhi|kaat\s*saka|nuqsan|paise?\s*wapas|paisay?\s*wapas|ek\s*bhi\s*kaam|kisi\s*bhi?\s*kaam|faulty|defective|nahi?\s*chal|nhi\s*chal)\b/i.test(l) || isPastOrder);
   // Question tone: "kya fake hai?", "ye kharab to nahi?", ends with ? — asking, not reporting
   const isQuestionTone = complaint && !strongComplaint && (
     /[?؟]\s*$/.test(l) ||
