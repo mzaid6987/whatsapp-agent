@@ -85,7 +85,7 @@ const MALE_NAMES_ENDING_A = new Set([
   'hamza','musa','moosa','isa','eisa','mustafa','huzaifa','hudhaifa','osama','usama',
   'talha','yahya','zakaria','zakariya','zakariyya','ata','raza','mirza','agha',
   'maulana','shifa','taha','haseeba','mujtaba','murtaza','rida','mujahida',
-  'mustapha','kufa','safa','marwa','arfa','mushfiqua','uqba','muawiya','aqsa',
+  'murtuza','murtoza','mustapha','kufa','safa','marwa','arfa','mushfiqua','uqba','muawiya','aqsa',
   'eesa','moosa','hazifa','isa','hudaifa','khuzaima','owaisa','usaama',
   'dua','jumma','baba','chacha','mela','abba','nana','dada','mama',
   'zia','reza','nawaza','fida','ghulama','liaqua','baqa','raja','lala',
