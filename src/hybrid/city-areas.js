@@ -2784,6 +2784,12 @@ function matchArea(input, city) {
           const awIdx = inputWords.indexOf(aw);
           const nextWord = awIdx < inputWords.length - 1 ? inputWords[awIdx + 1] : '';
           if (/^(road|rd|highway|motorway)$/i.test(nextWord)) continue;
+          // Skip if input has a DIFFERENT qualifier than the area name
+          // e.g., input="barkat town" but area="barkat market" — "town" ≠ "market" → skip
+          const QUALIFIERS = new Set(['town','market','colony','garden','park','society','scheme','housing','nagar','abad','pura','bazar','bazaar','chowk','mohalla','mohallah','heights','enclave','view']);
+          const areaQualifier = areaWords.find(w => QUALIFIERS.has(w));
+          const inputQualifier = inputWords.find(w => QUALIFIERS.has(w));
+          if (areaQualifier && inputQualifier && areaQualifier !== inputQualifier) continue;
           return area.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
         }
       }

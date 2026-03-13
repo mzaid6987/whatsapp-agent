@@ -1092,7 +1092,7 @@ function preCheck(message, currentState, collected, state) {
       return null; // Let AI handle the question
     }
     // Guard: Skip order intent phrases — "order krna hai", "confirm kardo", "haan bhejo" etc.
-    const isOrderIntent = /\b(order\s*kr|confirm\s*kr|confirm\s*kar|bhej\s*do|bhejo|mangwa\s*do|laga\s*do|place\s*order)\b/i.test(l) ||
+    const isOrderIntent = /\b(order\s*kr\w*|confirm\s*kr\w*|confirm\s*kar\w*|bhej\s*do|bhejo|mangwa\s*do|laga\s*do|place\s*order)\b/i.test(l) ||
       /^(haan|han|ji|g|yes|ok|done|theek|confirm)\s*[.!]?\s*$/i.test(l);
     if (isOrderIntent && msg.trim().split(/\s+/).length <= 5) {
       return null; // Let AI handle as order intent, not address
@@ -1110,6 +1110,12 @@ function preCheck(message, currentState, collected, state) {
     const city = collected.city || null;
     const parts = {};
     let foundAny = false;
+
+    // Guard: Skip explanatory text — "city ka naam hai/hy", "yehi area hai", "bas city name hy"
+    // These explain what was already said, not new address info
+    const isExplanatory = /\b(city|sheher|shehr)\s*(ka|ki|ke)\s*(e\s+)?(naam|name)\s*(h[ae]i?|hy|he)\b/i.test(l) ||
+      /\b(yehi?|yahi?|bas|sirf)\s*(city|area|naam|name)\s*(h[ae]i?|hy|he)\b/i.test(l);
+    if (isExplanatory) return null;
 
     // Run all extractors on the raw message
     const detectedArea = extractArea(msg, city) || (city ? matchArea(l, city) : null);

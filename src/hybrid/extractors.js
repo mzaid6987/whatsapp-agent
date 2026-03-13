@@ -358,10 +358,10 @@ function hasAddressKeywords(msg) {
 function extractHouse(msg) {
   const l = msg.toLowerCase();
   const patterns = [
-    // "Flat # B 306", "Flat # 12", "House # A-5", "Plot # ST-8/1"
-    /(?:house|ghar|flat|apartment|apt|plot|makan)\s*#\s*([A-Za-z]{0,3}[\s\-\/]*\d+(?:[-\/]\w+)*)/i,
-    // "Flat No. B306", "House number 45A", standard keyword + number
-    /(?:house|ghar|flat|apartment|apt|plot|makan)\s*(?:no\.?|number|nmbr)?\s*(\d+[a-z]?(?:[-\/]\d+)?)/i,
+    // "Flat # B 306", "Flat # 12", "House # A-5", "Plot # ST-8/1", "Villa # 638"
+    /(?:house|ghar|flat|apartment|apt|plot|makan|villa)\s*#\s*([A-Za-z]{0,3}[\s\-\/]*\d+(?:[-\/]\w+)*)/i,
+    // "Flat No. B306", "House number 45A", "Villa 638", standard keyword + number
+    /(?:house|ghar|flat|apartment|apt|plot|makan|villa)\s*(?:no\.?|number|nmbr)?\s*(\d+[a-z]?(?:[-\/]\d+)?)/i,
     // "No. 45", "# 12", "Number 8"
     /(?:no\.?|number|nmbr|#)\s*(\d+[a-z]?)\s*(?:house|ghar|flat|makan)?/i,
     // Letter-number combo like "R68", "E-45", "B/13", "2-C" (common Pakistan house numbers)
@@ -414,6 +414,7 @@ function extractStreet(msg) {
     /(?:block|blk)\s*([a-z0-9]{1,3})/i,
     /(?:sector|sec)\s*([a-z]?[-]?\d+[a-z]?)/i,
     /(?:phase)\s*(\d+[a-z]?)/i,
+    /(?:precinct)\s*(\d+[a-z]?)/i,
     /(?:lane)\s*(?:no\.?|number|nmbr|#)?\s*(\d+)/i,
     // "ranje road", "GT road", "Mall road", "Pindi road" — named roads
     /\b([a-z]{2,20}\s+road)\b/i,
