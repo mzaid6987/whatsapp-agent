@@ -529,6 +529,7 @@ function detectRuralAddress(msg) {
 
 function extractArea(msg, city) {
   const l = msg.toLowerCase();
+  const foundAreas = [];
 
   // Islamabad-style sector detection: "10/I", "I-10", "i10", "F/8", "g9" etc.
   const isbCompact = msg.match(/(\d{1,2})\s*[\/\\]\s*([a-zA-Z])/);
@@ -551,38 +552,60 @@ function extractArea(msg, city) {
   // City-specific matching: if city is known, check its areas first (more accurate)
   if (city) {
     const cityMatch = matchArea(l, city);
-    if (cityMatch) return cityMatch;
+    if (cityMatch) foundAreas.push(cityMatch);
   }
 
   // Check known area names (global — all cities, word-boundary match)
-  for (const area of KNOWN_AREAS) {
-    if (new RegExp('\\b' + area.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(l)) {
-      return area.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  if (foundAreas.length === 0) {
+    for (const area of KNOWN_AREAS) {
+      if (new RegExp('\\b' + area.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(l)) {
+        foundAreas.push(area.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
+        break; // One known area is enough
+      }
     }
   }
 
   // Generic chak pattern (any chak number, not just hardcoded ones)
-  const chakMatch = l.match(/\b(chak\s*(?:no\.?\s*|number\s*)?\d+[\s/-]?[a-z]{0,3})\b/i);
-  if (chakMatch) return chakMatch[1].split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  if (foundAreas.length === 0) {
+    const chakMatch = l.match(/\b(chak\s*(?:no\.?\s*|number\s*)?\d+[\s/-]?[a-z]{0,3})\b/i);
+    if (chakMatch) foundAreas.push(chakMatch[1].split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
+  }
 
   // Generic patterns: X colony, X town, X nagar, X abad, etc.
+  // ALWAYS check these even if known area found — captures sub-areas like "Akhter Colony" alongside "DHA"
   const genericPatterns = [
     /([a-z\s]{2,25})\s*(?:colony|town|nagar|abad|pura|gunj|society|scheme|housing|villas|heights|enclave|residencia|residency)/i,
     /(?:colony|town|nagar|abad|pura|gunj|society|scheme)\s+([a-z\s]{2,25})/i,
   ];
   for (const re of genericPatterns) {
     const m = msg.match(re);
-    if (m) return m[0].trim();
+    if (m) {
+      const genericArea = m[0].trim();
+      // Don't add if duplicate or subset of already-found area
+      const isDuplicate = foundAreas.some(a =>
+        a.toLowerCase() === genericArea.toLowerCase() ||
+        a.toLowerCase().includes(genericArea.toLowerCase()) ||
+        genericArea.toLowerCase().includes(a.toLowerCase())
+      );
+      if (!isDuplicate) {
+        foundAreas.push(genericArea);
+      }
+      break;
+    }
   }
 
   // "gulshan e johar" style — multi-word with "e" connector
-  const eStyle = msg.match(/([a-z]+\s+e\s+[a-z]+)/i);
-  if (eStyle) {
-    const matched = eStyle[1].trim();
-    return matched.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  if (foundAreas.length === 0) {
+    const eStyle = msg.match(/([a-z]+\s+e\s+[a-z]+)/i);
+    if (eStyle) {
+      foundAreas.push(eStyle[1].trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
+    }
   }
 
-  return null;
+  if (foundAreas.length === 0) return null;
+  if (foundAreas.length === 1) return foundAreas[0];
+  // Combine multiple areas: sub-area first, then main area (e.g., "Akhter Colony, Dha")
+  return foundAreas.join(', ');
 }
 
 // Landmark extraction + classification
@@ -612,6 +635,44 @@ function extractLandmark(msg) {
       // ALWAYS return a string — classifyLandmark returns metadata object, extract .text
       const classified = classifyLandmark(raw);
       return classified ? classified.text : raw;
+    }
+  }
+
+  // Standalone named institutional landmarks WITHOUT "near" prefix
+  // e.g., "NADRA CENTRE", "Jinnah Hospital", "City School", "Al-Noor Masjid"
+  const INSTITUTION_SUFFIXES = 'centre|center|hospital|school|college|university|academy|office|court|station|terminal|library|museum|cinema|theater|theatre|stadium|tower|building|clinic|pharmacy|darbar|masjid|mosque|church|mandir|temple|hotel|bank|plaza|mall|chowk';
+  // Words that should NOT be treated as landmark names (area/common words)
+  const SKIP_LANDMARK_NAME = /^(the|my|this|that|our|your|its|main|new|old|big|small|city|dha|bahria|gulshan|gulberg|model|cantt|defence|north|south|east|west|colony|town|nagar|abad|pura|society|scheme|sector|block|phase|street|gali|mohalla|housing|villas|heights|enclave)$/i;
+  // Find institution type words in the message, then check the word(s) before/after
+  const institutionPat = new RegExp('\\b(' + INSTITUTION_SUFFIXES + ')\\b', 'gi');
+  const words = msg.split(/\s+/);
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i].replace(/[.,!?]/g, '');
+    if (!institutionPat.test(w)) { institutionPat.lastIndex = 0; continue; }
+    institutionPat.lastIndex = 0;
+    // Check word(s) BEFORE: "NADRA CENTRE", "Al Noor Masjid", "Jinnah Hospital"
+    if (i > 0) {
+      const prev1 = words[i - 1].replace(/[.,!?]/g, '');
+      const prev2 = i > 1 ? words[i - 2].replace(/[.,!?]/g, '') : null;
+      const isValidName = (n) => n && n.length >= 2 && /^[A-Za-z]/.test(n) && !SKIP_LANDMARK_NAME.test(n);
+      if (prev2 && isValidName(prev2) && isValidName(prev1)) {
+        return (prev2 + ' ' + prev1 + ' ' + w).trim();
+      }
+      if (isValidName(prev1)) {
+        return (prev1 + ' ' + w).trim();
+      }
+    }
+    // Check word(s) AFTER: "Hospital Jinnah", "Masjid Al-Noor"
+    if (i < words.length - 1) {
+      const next1 = words[i + 1].replace(/[.,!?]/g, '');
+      const next2 = i < words.length - 2 ? words[i + 2].replace(/[.,!?]/g, '') : null;
+      const isValidName = (n) => n && n.length >= 2 && /^[A-Za-z]/.test(n) && !SKIP_LANDMARK_NAME.test(n);
+      if (isValidName(next1)) {
+        if (next2 && isValidName(next2)) {
+          return (w + ' ' + next1 + ' ' + next2).trim();
+        }
+        return (w + ' ' + next1).trim();
+      }
     }
   }
 
