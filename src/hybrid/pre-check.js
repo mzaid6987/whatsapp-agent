@@ -776,12 +776,21 @@ function preCheck(message, currentState, collected, state) {
       // Make sure it's not a common word
       const isCommon = /^(delivery|order|product|price|rate|quality|time|sukkur|lahore|karachi|islamabad|local|number|phone|yaar|bhai|kab|kya|kitna|nahi|haan|mera|mra|hai|he|aap|tum|tera|apka)$/i.test(rawName);
       if (!isCommon && rawName.length >= 2) {
-        const name = rawName.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-        // Also try to extract city from same message
-        const cityInMsg = extractCity(msg);
-        const extracted = { name };
-        if (cityInMsg) extracted.city = cityInMsg;
-        return { intent: 'name_given', extracted };
+        // Check if message also has address/phone info — if so, let bulk_info_given handle it (section 7d)
+        const hasAddressInfo = /\b(addre(?:ss|es|s|e)|adre(?:ss|es|s|e)?|adrees|mohall?ah?|colony|society|town|sector|phase|block|gali|street|near|nazd[ei]k|ke\s*paas|house|flat|plot|office)\b/i.test(msg) ||
+          /\b[A-Z][\s-]?\d{1,4}\b/.test(msg); // house/plot numbers like "R 227", "H-5"
+        const hasPhoneInfo = extractPhone(msg) !== null;
+        if (hasAddressInfo || hasPhoneInfo) {
+          // Don't return early — let bulk_info_given extract name + address + phone together
+          // Fall through to section 7d
+        } else {
+          const name = rawName.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+          // Also try to extract city from same message
+          const cityInMsg = extractCity(msg);
+          const extracted = { name };
+          if (cityInMsg) extracted.city = cityInMsg;
+          return { intent: 'name_given', extracted };
+        }
       }
     }
   }
@@ -1606,12 +1615,21 @@ function preCheck(message, currentState, collected, state) {
           const isNotName = /^(Assalam|Salam|Hello|Address|Office|House|Phone|Mobile|Mere|Mera)$/i.test(candidate.split(/\s+/)[0]);
           if (!isNotName && candidate.length >= 3) extracted.name = candidate;
         }
-        // Reverse: "mera naam X hai" / "mera naam hai X"
+        // Reverse: "mera naam X hai" / "mera naam hai X" / "naam hai X" (without mera)
         if (!extracted.name) {
           const nameReverse = msg.match(/\b(?:mera|meri)\s+(?:naam|name)\s+(?:hai\s+|he\s+|h\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})(?:\s+(?:hai|he|h))?\b/i);
           if (nameReverse) {
             const candidate = nameReverse[1].trim();
             const isNotName = /^(Hai|He|Address|Phone|Mobile|Number|Ye|Yeh)$/i.test(candidate.split(/\s+/)[0]);
+            if (!isNotName && candidate.length >= 3) extracted.name = candidate;
+          }
+        }
+        // "naam hai X" / "name hai X" without "mera" (common in voice transcriptions)
+        if (!extracted.name) {
+          const naamHai = msg.match(/\b(?:naam|name)\s+(?:hai|he|h|is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b/i);
+          if (naamHai) {
+            const candidate = naamHai[1].trim();
+            const isNotName = /^(Hai|He|Address|Phone|Mobile|Number|Ye|Yeh|Delivery|Order|Product)$/i.test(candidate.split(/\s+/)[0]);
             if (!isNotName && candidate.length >= 3) extracted.name = candidate;
           }
         }

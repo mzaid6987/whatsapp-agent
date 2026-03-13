@@ -311,6 +311,29 @@ function handleTemplateState(message, state, storeName, preIntent) {
           }
         }
       }
+      // Full address given in ORDER_SUMMARY — customer providing/correcting full address
+      // Must come BEFORE yes/no check because "address nahi daala" contains "nahi" → triggers isNo
+      // Detect: message has extractable house + area/landmark content
+      {
+        const { extractHouse: _exH, extractArea: _exA, extractStreet: _exS, extractLandmark: _exL, buildAddressString: _buildAS } = require('./extractors');
+        const detH = _exH(message);
+        const detA = _exA(message, state.collected.city);
+        const detS = _exS(message);
+        const detL = _exL(message);
+        const partsFound = [detH, detA, detS, detL].filter(Boolean).length;
+        // At least 2 parts detected (e.g., house + area, or area + landmark) = full address correction
+        if (partsFound >= 2) {
+          if (!state.collected.address_parts) state.collected.address_parts = { area: null, street: null, house: null, landmark: null };
+          if (detH) state.collected.address_parts.house = detH;
+          if (detA) state.collected.address_parts.area = detA;
+          if (detS) state.collected.address_parts.street = detS;
+          if (detL) state.collected.address_parts.landmark = detL;
+          const addrStrFull = _buildAS(state.collected.address_parts, state.collected.city);
+          state.collected.address = state.collected.city ? addrStrFull + ', ' + state.collected.city : addrStrFull;
+          const smResultFull = buildOrderSummary(state, storeName);
+          return { reply: `Address update ho gaya ✅\n\n` + smResultFull.reply, state: 'ORDER_SUMMARY' };
+        }
+      }
       if (yes) {
         // Save order to DB IMMEDIATELY so it's never lost (even if customer doesn't reply to upsell)
         const items = (state.products || []).length ? state.products : [state.product];
