@@ -837,10 +837,18 @@ function handleTemplateState(message, state, storeName, preIntent) {
         const honorific = getHonorific(state.collected.name);
         return { reply: `${honorific === 'sir' ? 'Sir' : 'Madam'}, yeh already discounted price pe hai. COD hai — paisa delivery ke waqt dena hai, koi advance nahi. ${vars.delivery_time} mein delivery ho jaegi.`, state: 'ORDER_CONFIRMED' };
       }
-      // Upsell/product catalog request — "dikhaden", "dikhao", "aur kya hai", "aur products"
+      // Upsell/product catalog request — "dikhaden", "dikhao", "aur kya hai", "aur products", "aur chahiye", "75% off wale"
       const isShowProductsReq = /\b(dikha\s*d[eao]n?|dikha\s*do|dikha\s*ye|dikha\s*in|dikhaden|dikhado|dikhaye|dikhain|dikhao|dikao|dekhao|dekha\s*d[eao]n?)\b/i.test(l) ||
         /\b(aur|or)\s*(kiy?a|kya|products?|cheez[ea]?[ns]?)\s*(h[ae]i?|he|hain|hein)?\b/i.test(l) ||
-        /\b(products?|cheez[ea]?[ns]?)\s*(dikha|dikhao|dikhaden|batao|btao)\b/i.test(l);
+        /\b(products?|cheez[ea]?[ns]?)\s*(dikha|dikhao|dikhaden|batao|btao)\b/i.test(l) ||
+        /\b(aur|or)\s*(chahiy[ae]|chaiy[ae]|mangta|order|lena|manga)\b/i.test(l) ||
+        /\b(75%?|discount|off)\s*(wale?|wali|products?|cheez)\b/i.test(l) ||
+        /\b(products?|list|catalog)\s*(show|dikha|dikhao|batao|btao)\b/i.test(l);
+      // Rebuild upsell_candidates if missing — customer may ask after going through upsell
+      if (isShowProductsReq && (!state.upsell_candidates || !state.upsell_candidates.length)) {
+        const orderedIds = ((state.products || []).length ? state.products : (state.product ? [state.product] : [])).map(p => p.id);
+        state.upsell_candidates = PRODUCTS.filter(p => !orderedIds.includes(p.id));
+      }
       if (isShowProductsReq && state.upsell_candidates && state.upsell_candidates.length > 0) {
         state._thanked = false;
         state.current = 'UPSELL_SHOW';

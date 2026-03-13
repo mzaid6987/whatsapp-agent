@@ -1112,9 +1112,11 @@ function preCheck(message, currentState, collected, state) {
     const detectedArea = extractArea(msg, city) || (city ? matchArea(l, city) : null);
     const detectedStreet = extractStreet(msg);
     const detectedHouse = extractHouse(msg);
-    // Negation filter — "colony ni h", "block nahi hai", "street ni h" = customer saying it doesn't exist
+    // Negation filter — "colony ni h", "block nahi hai", "street ni h", "na koi block hai" = customer saying it doesn't exist
     const isNegation = /\b(colony|block|sector|street|gali|galli|mohall[ae]h?|area|ilaq[ae])\s+(ni|nhi|nahi?|nai)\s*(h[ae]i?|he?|hota|hoti)?\s*$/i.test(l) ||
-      /\b(koi|kio)\s+(colony|block|sector|street|gali|galli|mohall[ae]h?)\s+(ni|nhi|nahi?|nai)\b/i.test(l);
+      /\b(koi|kio)\s+(colony|block|sector|street|gali|galli|mohall[ae]h?)\s+(ni|nhi|nahi?|nai)\b/i.test(l) ||
+      // "na koi block hai na koi street number hai na house number" — negation BEFORE address word
+      /\b(na|nah?i|nhi)\s+(koi|kio)\s+(colony|block|sector|street|strreet|gali|galli|mohall[ae]h?|house|area|number)\b/i.test(l);
     const detectedLandmark = isNegation ? null : extractLandmark(msg);
 
     // "nahi pata" / "number nahi" / "pata nahi" for current step → set nahi_pata
@@ -1126,10 +1128,11 @@ function preCheck(message, currentState, collected, state) {
       /\b(area|ilaq[ae]|muhall[ae]|colony|sector|block|street|gali|galli)\s+(ni|nhi|nahi?|nai)\s*(h[ae]i?|he?)?\s*$/i.test(l);
 
     // Fill only MISSING parts (don't overwrite existing)
+    // Skip ALL detection if customer is negating — "na koi block hai na koi street" = don't extract any address parts
     // Skip area detection if customer is saying "I don't know my area"
-    if (!ap.area && detectedArea && !isDontKnowArea) { parts.area = detectedArea; foundAny = true; }
-    if (!ap.street && detectedStreet) { parts.street = detectedStreet; foundAny = true; }
-    if (!ap.house && detectedHouse) { parts.house = detectedHouse; foundAny = true; }
+    if (!ap.area && detectedArea && !isDontKnowArea && !isNegation) { parts.area = detectedArea; foundAny = true; }
+    if (!ap.street && detectedStreet && !isNegation) { parts.street = detectedStreet; foundAny = true; }
+    if (!ap.house && detectedHouse && !isNegation) { parts.house = detectedHouse; foundAny = true; }
     if (!ap.landmark && detectedLandmark) { parts.landmark = detectedLandmark; foundAny = true; }
 
     // When area is extracted from message, check if remaining text contains landmark keywords
@@ -1151,8 +1154,15 @@ function preCheck(message, currentState, collected, state) {
     }
 
     // Handle refusal for current missing field
-    if (isNegation && !foundAny) {
-      // "colony ni h" / "block nahi hai" — mark current missing field as nahi_pata
+    // BULK refusal: "na koi block hai na koi street number hai na house number" — negate ALL mentioned fields
+    const isBulkRefusal = isNegation && (l.match(/\b(na|nahi?|nhi)\s+(koi|kio)/gi) || []).length >= 2;
+    if (isBulkRefusal && !foundAny) {
+      // Mark all missing fields as nahi_pata at once
+      if (!ap.street && !parts.street) { parts.street = 'nahi_pata'; foundAny = true; }
+      if (!ap.house && !parts.house) { parts.house = 'nahi_pata'; foundAny = true; }
+      if (!ap.landmark && !parts.landmark) { parts.landmark = 'nahi_pata'; foundAny = true; }
+    } else if (isNegation && !foundAny) {
+      // Single negation — "colony ni h" / "block nahi hai" — mark current missing field
       if (!ap.area) { parts.area = 'nahi_pata'; foundAny = true; }
       else if (ap.area && !ap.street) { parts.street = 'nahi_pata'; foundAny = true; }
       else if (ap.area && ap.street && !ap.house) { parts.house = 'nahi_pata'; foundAny = true; }
