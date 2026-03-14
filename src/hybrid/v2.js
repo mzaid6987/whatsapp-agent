@@ -78,7 +78,7 @@ async function callAI(systemPrompt, messages, apiKey) {
     // Fallback: extract JSON from response
     const match = rawText.match(/\{[\s\S]*\}/);
     if (match) try { parsed = JSON.parse(match[0]); } catch { /* fall through */ }
-    if (!parsed) parsed = { reply: rawText.replace(/[{}"]/g, '').trim() || 'Ji batayein? 😊' };
+    if (!parsed) parsed = { reply: rawText.replace(/[{}"]/g, '').trim(), _parse_failed: true };
   }
 
   return {
@@ -166,6 +166,7 @@ function validateState(aiState, state) {
   if (!aiState || !VALID_STATES.includes(aiState)) return state.current;
 
   const collected = state.collected;
+  const prev = state.current;
 
   // Guardrail: can't go to ORDER_SUMMARY without all required fields
   if (aiState === 'ORDER_SUMMARY' || aiState === 'ORDER_CONFIRMED' || aiState === 'UPSELL_HOOK') {
@@ -174,9 +175,24 @@ function validateState(aiState, state) {
       if (!collected.product) return 'PRODUCT_INQUIRY';
       if (!collected.name) return 'COLLECT_NAME';
       if (!collected.phone) return 'COLLECT_PHONE';
+      if (!collected.delivery_phone) return 'COLLECT_DELIVERY_PHONE';
       if (!collected.city) return 'COLLECT_CITY';
       if (!collected.address) return 'COLLECT_ADDRESS';
     }
+  }
+
+  // Guardrail: UPSELL_SHOW only from UPSELL_HOOK (not from random states)
+  if (aiState === 'UPSELL_SHOW' && prev !== 'UPSELL_HOOK' && prev !== 'UPSELL_SHOW') {
+    return prev; // stay in current state
+  }
+
+  // Guardrail: can't jump to ORDER_CONFIRMED without going through ORDER_SUMMARY
+  if (aiState === 'ORDER_CONFIRMED' && prev !== 'ORDER_SUMMARY' && prev !== 'UPSELL_HOOK' && prev !== 'UPSELL_SHOW' && prev !== 'ORDER_CONFIRMED') {
+    // If all fields present, allow ORDER_SUMMARY first
+    if (collected.product && collected.name && collected.phone && collected.city && collected.address) {
+      return 'ORDER_SUMMARY';
+    }
+    return prev;
   }
 
   return aiState;
@@ -277,6 +293,7 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     honorific,
     upsellCandidates,
     codeDetectedProduct,
+    senderPhone: phone,
   });
 
   // Add user message to history
@@ -292,13 +309,34 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
   }
 
   const aiResponse = aiResult.parsed;
-  let reply = String(aiResponse.reply || 'Ji batayein? 😊').trim();
+  let reply = String(aiResponse.reply || '').trim();
   const aiExtracted = aiResponse.extracted || {};
   let aiNextState = aiResponse.next_state || state.current;
+
+  // State-aware fallback if AI returned empty/garbage reply
+  if (!reply || reply.length < 3 || aiResult.parsed._parse_failed) {
+    reply = getStateFallback(state.current, state.collected, honorific);
+  }
 
   // Code-side product override (if AI missed but code detected)
   if (codeDetectedProduct && !aiExtracted.product) {
     aiExtracted.product = codeDetectedProduct.short;
+  }
+
+  // Code-side: "yahi number/same/WhatsApp wala" → use sender phone
+  if (state.current === 'COLLECT_PHONE' && !state.collected.phone && !aiExtracted.phone) {
+    const lmsg = message.toLowerCase().replace(/[\s\-]/g, '');
+    if (/yahi|yehi|same|whatsapp|isi|isipe|yehwala|yahiwala/.test(lmsg) && phone && phone !== 'unknown') {
+      aiExtracted.phone = phone;
+    }
+  }
+
+  // Code-side: auto-fill delivery_phone from context
+  if (state.current === 'COLLECT_DELIVERY_PHONE' && !state.collected.delivery_phone && !aiExtracted.delivery_phone) {
+    const lmsg = message.toLowerCase().trim();
+    if (/^(haan|ha+n|jee|ji|g|ok|theek|hm+|same|yahi|yehi|isi)$/i.test(lmsg) || /same|yahi|yehi|isipe/.test(lmsg.replace(/\s/g, ''))) {
+      aiExtracted.delivery_phone = 'same';
+    }
   }
 
   // Validate AI's extracted data
@@ -350,11 +388,27 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
   // Quality check on reply
   reply = reply.replace(/```[\s\S]*?```/g, '').trim();
   if (reply.startsWith('{') || reply.startsWith('[')) {
-    // AI accidentally returned JSON as reply
-    reply = aiResponse.reply_text || `Ji ${honorific}, batayein kaise madad karun? 😊`;
+    reply = getStateFallback(state.current, state.collected, honorific);
   }
-  if (!reply || reply.length < 2) {
-    reply = `Ji ${honorific}, batayein kaise madad karun? 😊`;
+  if (!reply || reply.length < 3) {
+    reply = getStateFallback(state.current, state.collected, honorific);
+  }
+
+  // Banned words filter — code-side enforcement
+  const BANNED_WORDS = ['premium', 'high-quality', 'ultra', 'top-notch', 'superior', 'excellent', 'nureva', 'thenureva', 'kripya', 'dhanyavaad', 'namaste'];
+  const replyLower = reply.toLowerCase();
+  for (const word of BANNED_WORDS) {
+    if (replyLower.includes(word)) {
+      reply = reply.replace(new RegExp(word, 'gi'), '').replace(/\s{2,}/g, ' ').trim();
+    }
+  }
+  // Replace "best" only when used as adjective
+  reply = reply.replace(/\b(best)\b/gi, 'achi').trim();
+
+  // Duplicate reply prevention — don't send same message as last bot message
+  const lastBotMsg = state.messages.filter(m => m.role === 'assistant').slice(-1)[0];
+  if (lastBotMsg && lastBotMsg.content === reply && reply.length > 15) {
+    reply = getStateFallback(state.current, state.collected, honorific);
   }
 
   // Add AI reply to history
@@ -409,6 +463,43 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
 }
 
 // ============= HELPERS =============
+
+// State-aware fallback — never returns generic "Ji batayein"
+function getStateFallback(currentState, collected, honorific) {
+  const h = honorific || 'sir';
+  switch (currentState) {
+    case 'IDLE':
+    case 'GREETING':
+      return `Assalam-o-Alaikum ${h}! Kya aap kisi product ke baare mein janna chahte hain? 😊`;
+    case 'PRODUCT_INQUIRY':
+    case 'PRODUCT_SELECTION':
+      if (collected.product) {
+        const p = PRODUCTS.find(pr => pr.short === collected.product);
+        return `${collected.product} ki price Rs.${p ? fmtPrice(p.price) : '?'} hai. Kya aap order karna chahenge? 😊`;
+      }
+      return `Hamare paas kaafi products hain — aap konsa dekhna chahenge? 😊`;
+    case 'COLLECT_NAME':
+      return `${h}, apna naam bata dein taake order process kar sakein? 😊`;
+    case 'COLLECT_PHONE':
+      return `${collected.name || h}, apna phone number bata dein (03XX format)? 📱`;
+    case 'COLLECT_DELIVERY_PHONE':
+      return `Rider ${collected.phone || 'aapke number'} pe call karega. Yeh theek hai ya koi aur number dein? 📞`;
+    case 'COLLECT_CITY':
+      return `Delivery konsi city mein karni hai? 🚚`;
+    case 'COLLECT_ADDRESS':
+      return `Apna poora delivery address bhej dein — ghar/shop number, mohalla/area 📍`;
+    case 'ORDER_SUMMARY':
+      return `Sab theek hai to "haan" bol dein, order confirm ho jayega ✅`;
+    case 'HAGGLING':
+      return `Yeh price already discounted hai. COD hai, free delivery hai, aur 7 din exchange bhi hai 😊`;
+    case 'ORDER_CONFIRMED':
+      return `Aapka order confirm ho chuka hai! Delivery 3-5 din mein hogi 📦`;
+    case 'COMPLAINT':
+      return `Aap 03701337838 pe message karein, masla resolve ho jayega 🙏`;
+    default:
+      return `${h}, main aapki kaise madad kar sakti hun? 😊`;
+  }
+}
 
 function saveOrder(state, storeName, dbConv, dbCustomer) {
   try {
