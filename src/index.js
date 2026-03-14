@@ -2056,11 +2056,13 @@ app.get('/api/orders', requireAuth, (req, res) => {
         c.message_count,
         c.ai_tokens_used,
         c.address_incomplete,
+        cust.phone as wa_phone,
         (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.source = 'template') as template_count,
         (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.source IN ('ai','gpt-4o-mini','gpt-4o')) as ai_count,
         (SELECT GROUP_CONCAT(DISTINCT m.source) FROM messages m WHERE m.conversation_id = o.conversation_id AND m.direction = 'outgoing') as sources_used
       FROM orders o
       LEFT JOIN conversations c ON c.id = o.conversation_id
+      LEFT JOIN customers cust ON cust.id = o.customer_id
       ORDER BY o.created_at DESC LIMIT 200
     `).all();
     // Batch AI cost calculation — one query for all conversation IDs

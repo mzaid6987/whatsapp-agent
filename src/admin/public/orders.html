@@ -15,6 +15,9 @@
     .order-header:hover { background: #f7f7f7; }
     .order-id { font-weight: 700; font-size: 14px; color: #1a1a1a; }
     .order-customer { font-size: 14px; color: #333; flex: 1; min-width: 120px; }
+    .wa-badge { font-size: 11px; }
+    .wa-phone-link { color: #25D366; text-decoration: none; font-weight: 600; background: #f0fdf4; padding: 1px 6px; border-radius: 4px; }
+    .wa-phone-link:hover { background: #dcfce7; text-decoration: underline; }
     .order-total { font-weight: 700; font-size: 15px; color: #1a1a1a; white-space: nowrap; }
     .order-total small { font-weight: 400; color: #999; font-size: 11px; }
     .order-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -209,15 +212,17 @@
         const phones = o.delivery_phone && o.delivery_phone !== o.customer_phone
           ? `<a href="tel:${o.customer_phone}" class="phone-link">${o.customer_phone}</a> / <a href="tel:${o.delivery_phone}" class="phone-link">${o.delivery_phone}</a>`
           : `<a href="tel:${o.customer_phone}" class="phone-link">${o.customer_phone}</a>`;
+        const waPhone = o.wa_phone || '';
+        const waLink = waPhone && o.conversation_id ? `<a href="/admin/#chat-${o.conversation_id}" class="wa-phone-link" onclick="event.stopPropagation()" title="Open chat">${waPhone}</a>` : '';
 
         return `
-        <div class="order-card status-${o.status}" data-status="${o.status}" data-source="${o.source}" data-text="${(o.order_id + ' ' + o.customer_name + ' ' + o.customer_city + ' ' + products).toLowerCase()}">
+        <div class="order-card status-${o.status}" data-status="${o.status}" data-source="${o.source}" data-text="${(o.order_id + ' ' + o.customer_name + ' ' + o.customer_city + ' ' + products + ' ' + waPhone).toLowerCase()}">
           <div class="order-header" onclick="toggleOrder(${idx})">
             <div>
               <span class="order-id">${o.order_id}</span>
               <span class="order-time">${fmtTime(o.created_at)}</span>
             </div>
-            <span class="order-customer">${o.customer_name} — ${o.customer_city}</span>
+            <span class="order-customer">${o.customer_name} — ${o.customer_city}${waLink ? ' <span class="wa-badge">' + waLink + '</span>' : ''}</span>
             <div class="order-meta">
               ${o.has_upsell ? '<span class="order-badge badge-upsell">UPSELL</span>' : ''}
               ${o.address_incomplete ? '<span class="order-badge badge-addr-incomplete">ADDR INCOMPLETE</span>' : ''}
@@ -233,6 +238,7 @@
                 <h4>Customer</h4>
                 <p><strong>${o.customer_name}</strong><br>
                 ${phones}<br>
+                ${waPhone && waPhone !== o.customer_phone ? `<span style="color:#25D366;font-size:12px">WA: <a href="/admin/#chat-${o.conversation_id}" style="color:#25D366">${waPhone}</a></span><br>` : ''}
                 ${o.customer_city}</p>
               </div>
               <div class="detail-box">

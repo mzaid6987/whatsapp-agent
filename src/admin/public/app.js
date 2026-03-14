@@ -158,6 +158,16 @@ async function loadChats() {
   }
 
   renderChatList(conversations);
+
+  // Deep link: open specific chat from hash (#chat-123)
+  const hash = window.location.hash;
+  if (hash && hash.startsWith('#chat-')) {
+    const chatId = parseInt(hash.replace('#chat-', ''));
+    if (chatId) {
+      setTimeout(() => openChat(chatId), 300);
+      history.replaceState(null, '', window.location.pathname);
+    }
+  }
 }
 
 function renderChatList(convos) {
