@@ -374,6 +374,15 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     }
   }
 
+  // Code-side: if delivery_phone missing but bot asked "rider isi number pe call karega" and customer said ok/yes
+  if (!state.collected.delivery_phone && !aiExtracted.delivery_phone && state.collected.phone) {
+    const lmsg = message.toLowerCase().trim();
+    const lastBot = state.messages.filter(m => m.role === 'assistant').slice(-1)[0];
+    if (lastBot && /rider.*number.*call/i.test(lastBot.content || '') && /^(ok|haan|ha+n|jee|ji|g|theek|yes)$/i.test(lmsg)) {
+      aiExtracted.delivery_phone = 'same';
+    }
+  }
+
   // Validate AI's extracted data
   const validated = validateExtracted(aiExtracted, state);
 
@@ -544,6 +553,13 @@ function getStateFallback(currentState, collected, honorific) {
       return `Sab theek hai to "haan" bol dein, order confirm ho jayega ✅`;
     case 'HAGGLING':
       return `Yeh price already discounted hai. COD hai, free delivery hai, aur 7 din exchange bhi hai 😊`;
+    case 'UPSELL_HOOK':
+      return `${collected.name || h}, discount products dekhna chahein ge? Sath delivery free hogi 🚚`;
+    case 'UPSELL_SHOW': {
+      const upsellList = PRODUCTS.filter(p => p.short !== collected.product).slice(0, 4)
+        .map((p, i) => `${i+1}. ${p.name} — Rs.${fmtPrice(Math.max(499, p.price - 500))}`).join('\n');
+      return `Yeh hain discount products:\n${upsellList}\nKoi pasand aaye to number ya naam bata dein 😊`;
+    }
     case 'ORDER_CONFIRMED':
       return `Aapka order confirm ho chuka hai! Delivery 3-5 din mein hogi 📦`;
     case 'COMPLAINT':
