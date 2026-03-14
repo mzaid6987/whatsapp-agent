@@ -638,8 +638,10 @@ async function webhookHandler(req, res) {
     // Determine bot version: existing conversation keeps its version, new ones use default setting
     let botVersion = 'v1';
     try {
-      if (convo && convo.bot_version) {
-        botVersion = convo.bot_version;
+      const cust = customerModel.findByPhone(fromPhone);
+      const existingConvo = cust ? conversationModel.findActive(cust.id) : null;
+      if (existingConvo && existingConvo.bot_version) {
+        botVersion = existingConvo.bot_version;
       } else {
         botVersion = settingsModel.get('bot_version_default', 'v1');
       }
