@@ -1695,16 +1695,20 @@ app.post('/api/conversations/:id/send-media', requireAuth, express.raw({ type: '
     if (type === 'audio' && ext === '.webm') {
       try {
         const { execSync } = require('child_process');
+        const ffmpegPath = require('ffmpeg-static');
         const oggFilename = mediaFilename.replace('.webm', '.ogg');
         const oggPath = path.join(CHAT_MEDIA_DIR, oggFilename);
-        execSync(`ffmpeg -i "${filePath}" -c:a libopus -b:a 64k "${oggPath}" -y`, { timeout: 15000 });
+        execSync(`"${ffmpegPath}" -i "${filePath}" -c:a libopus -b:a 64k "${oggPath}" -y`, { timeout: 15000 });
         try { fs.unlinkSync(filePath); } catch (e) {} // remove webm
         mediaFilename = oggFilename;
         filePath = oggPath;
+        ext = '.ogg';
         console.log(`[MEDIA] Converted webm → ogg: ${oggFilename}`);
       } catch (ffErr) {
-        // ffmpeg not available — try serving webm directly (WhatsApp may accept it)
-        console.warn(`[MEDIA] ffmpeg conversion failed (${ffErr.message}) — sending webm as-is`);
+        console.error(`[MEDIA] ffmpeg conversion failed: ${ffErr.message}`);
+        // webm audio won't be delivered by WhatsApp — abort
+        try { fs.unlinkSync(filePath); } catch (e) {}
+        return res.status(500).json({ error: 'Audio conversion failed — ffmpeg error' });
       }
     }
 
