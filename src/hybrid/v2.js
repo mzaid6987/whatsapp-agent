@@ -451,6 +451,18 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     reply = getStateFallback(state.current, state.collected, honorific);
   }
 
+  // Price/discount dodge killer — if in COLLECT_NAME and customer asked about price/discount, ensure reply includes price
+  if (state.current === 'COLLECT_NAME' && state.collected.product) {
+    const priceDodge = /\b(price|rate|kitne|kitni|kya\s*rate|discount|kam|less|kum|final\s*rate|kitna)\b/i.test(message);
+    const replyHasPrice = /Rs\.?\s*\d|price|rate|kitne/i.test(reply);
+    if (priceDodge && !replyHasPrice) {
+      const p = PRODUCTS.find(pr => pr.short === state.collected.product);
+      if (p) {
+        reply = `${state.collected.product} ki price Rs.${fmtPrice(p.price)} hai, COD hai aur delivery FREE hai 😊 ${honorific}, apna naam bata dein?`;
+      }
+    }
+  }
+
   // Banned words filter — code-side enforcement
   const BANNED_WORDS = ['premium', 'high-quality', 'ultra', 'top-notch', 'superior', 'excellent', 'nureva', 'thenureva', 'kripya', 'dhanyavaad', 'namaste'];
   const replyLower = reply.toLowerCase();
@@ -541,8 +553,11 @@ function getStateFallback(currentState, collected, honorific) {
         return `${collected.product} ki price Rs.${p ? fmtPrice(p.price) : '?'} hai. Kya aap order karna chahenge? 😊`;
       }
       return `Hamare paas kaafi products hain — aap konsa dekhna chahenge? 😊`;
-    case 'COLLECT_NAME':
+    case 'COLLECT_NAME': {
+      const p = collected.product ? PRODUCTS.find(pr => pr.short === collected.product) : null;
+      if (p) return `${collected.product} ki price Rs.${fmtPrice(p.price)} hai, COD hai aur delivery FREE hai. ${h}, apna naam bata dein? 😊`;
       return `${h}, apna naam bata dein taake order process kar sakein? 😊`;
+    }
     case 'COLLECT_PHONE':
       return `${collected.name || h}, apna phone number bata dein (03XX format)? 📱`;
     case 'COLLECT_DELIVERY_PHONE':
