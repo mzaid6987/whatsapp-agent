@@ -866,8 +866,9 @@ app.patch('/api/conversations/:id/collected', requireAuth, (req, res) => {
     if (!conv) return res.status(404).json({ error: 'Not found' });
     const collected = JSON.parse(conv.collected_json || '{}');
     const updates = req.body;
-    // Merge updates into collected
+    // Merge updates into collected (skip internal _fields)
     for (const [key, val] of Object.entries(updates)) {
+      if (key.startsWith('_')) continue; // _state, _bot_version etc. handled separately
       if (key === 'address_parts' && typeof val === 'object') {
         collected.address_parts = { ...collected.address_parts, ...val };
       } else {
