@@ -19,10 +19,17 @@ function create(customerId, storeName = 'nureva') {
   // Deactivate old conversations
   getDb().prepare('UPDATE conversations SET is_active = 0 WHERE customer_id = ? AND is_active = 1').run(customerId);
 
+  // Use bot_version from settings default
+  let botVer = 'v1';
+  try {
+    const settingsModel = require('./settings');
+    botVer = settingsModel.get('bot_version_default', 'v1');
+  } catch (e) {}
+
   const result = getDb().prepare(`
-    INSERT INTO conversations (customer_id, store_name, state, collected_json, last_message_at)
-    VALUES (?, ?, 'IDLE', '{}', datetime('now','localtime'))
-  `).run(customerId, storeName);
+    INSERT INTO conversations (customer_id, store_name, state, collected_json, bot_version, last_message_at)
+    VALUES (?, ?, 'IDLE', '{}', ?, datetime('now','localtime'))
+  `).run(customerId, storeName, botVer);
   return findById(result.lastInsertRowid);
 }
 
