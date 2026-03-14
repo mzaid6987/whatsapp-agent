@@ -1444,11 +1444,17 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
       return res.status(500).json({ error: 'WhatsApp credentials not configured' });
     }
 
-    // Send via WhatsApp
+    // Send via WhatsApp (with retry)
     const intlPhone = toInternational(customer.phone);
-    const sendResult = await sendMessage(intlPhone, text.trim(), phoneNumberId, accessToken);
+    let sendResult = await sendMessage(intlPhone, text.trim(), phoneNumberId, accessToken);
     if (!sendResult.success) {
-      return res.status(500).json({ error: 'Failed to send: ' + sendResult.error });
+      console.error(`[Admin Reply] Send failed to ${customer.phone}: ${sendResult.error} — retrying in 3s...`);
+      await new Promise(r => setTimeout(r, 3000));
+      sendResult = await sendMessage(intlPhone, text.trim(), phoneNumberId, accessToken);
+      if (!sendResult.success) {
+        return res.status(500).json({ error: 'Failed to send (after retry): ' + sendResult.error });
+      }
+      console.log(`[Admin Reply] Retry succeeded for ${customer.phone}`);
     }
 
     // Mark customer's last message as read in WhatsApp (blue ticks)

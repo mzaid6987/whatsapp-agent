@@ -913,6 +913,7 @@ body:has(.chats-container) {
 .msg-ticks.sent { color: #8696A0; }
 .msg-ticks.delivered { color: #8696A0; }
 .msg-ticks.read { color: #53BDEB; }
+.msg-ticks.failed { color: #FF3B30; font-weight: bold; }
 
 /* Chat Input */
 .chat-input-area {

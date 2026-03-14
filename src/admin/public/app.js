@@ -1293,6 +1293,14 @@ function connectWebSocket() {
           bubble.appendChild(tick);
         }
       }
+      if (data.type === 'send_failed') {
+        // Show alert for failed message delivery
+        const alertDiv = document.createElement('div');
+        alertDiv.style.cssText = 'position:fixed;top:10px;right:10px;background:#FF3B30;color:white;padding:12px 20px;border-radius:8px;z-index:9999;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);';
+        alertDiv.innerHTML = '&#10007; Message send FAILED to ' + (data.phone || '?') + '<br><small>' + (data.error || '') + '</small>';
+        document.body.appendChild(alertDiv);
+        setTimeout(() => alertDiv.remove(), 10000);
+      }
     };
     ws.onclose = () => { _wsAlive = false; setTimeout(connectWebSocket, 5000); };
     ws.onerror = () => { _wsAlive = false; };
@@ -1408,6 +1416,9 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
   `;
   const tickHtml = isOut ? (() => {
     const st = m.wa_status || 'sent';
+    // Check if send failed (stored in debug_json)
+    const dbg = m.debug_json ? (typeof m.debug_json === 'string' ? JSON.parse(m.debug_json) : m.debug_json) : null;
+    if (dbg && dbg.send_failed) return '<span class="msg-ticks failed" title="Send Failed: ' + (dbg.error || 'Unknown') + '">&#10007;</span>';
     if (st === 'read') return '<span class="msg-ticks read" title="Read">&#10003;&#10003;</span>';
     if (st === 'delivered') return '<span class="msg-ticks delivered" title="Delivered">&#10003;&#10003;</span>';
     return '<span class="msg-ticks sent" title="Sent">&#10003;</span>';

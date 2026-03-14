@@ -729,12 +729,24 @@ async function webhookHandler(req, res) {
 
     // Send reply back to WhatsApp (skip complaint — handled by delayed sequence)
     if (result.reply && !result._media && !result._complaint_audio) {
-      const sendResult = await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
+      let sendResult = await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
+
+      // Retry once after 3s if failed
+      if (!sendResult.success) {
+        console.error(`[WA] Send failed to ${fromPhone}: ${sendResult.error} — retrying in 3s...`);
+        await new Promise(r => setTimeout(r, 3000));
+        sendResult = await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
+        if (sendResult.success) {
+          console.log(`[WA] Retry succeeded for ${fromPhone}`);
+        } else {
+          console.error(`[WA] Retry also failed for ${fromPhone}: ${sendResult.error}`);
+        }
+      }
+
       if (sendResult.success) {
         console.log(`[WA] → ${fromPhone}: "${result.reply.substring(0, 80)}..."`);
 
         // Mark as read (blue ticks) only when bot replies AND not a complaint/human-assigned
-        // Complaints stay unread so customer sees admin hasn't read yet
         if (!result.needs_human) {
           markAsRead(messageId, phoneNumberId, accessToken);
         }
@@ -750,7 +762,19 @@ async function webhookHandler(req, res) {
           } catch (e) { /* non-critical */ }
         }
       } else {
-        console.error(`[WA] Send failed to ${fromPhone}:`, sendResult.error);
+        console.error(`[WA] FINAL send failed to ${fromPhone}:`, sendResult.error);
+        // Mark message as failed in DB so admin can see (store error in debug_json)
+        if (result.db_conversation_id) {
+          try {
+            const { getDb } = require('../db');
+            getDb().prepare(`
+              UPDATE messages SET debug_json = json_object('send_failed', 1, 'error', ?)
+              WHERE id = (SELECT id FROM messages WHERE conversation_id = ? AND direction = 'outgoing' ORDER BY created_at DESC LIMIT 1)
+            `).run(sendResult.error || 'Unknown error', result.db_conversation_id);
+          } catch (e) { /* non-critical */ }
+        }
+        // Alert admin dashboard
+        _broadcast({ type: 'send_failed', conversation_id: result.db_conversation_id, phone: fromPhone, error: sendResult.error });
       }
     }
 
