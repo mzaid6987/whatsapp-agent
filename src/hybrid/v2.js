@@ -418,9 +418,9 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     }
   }
 
-  // Order creation — when AI moves to ORDER_CONFIRMED or UPSELL_HOOK
+  // Order creation — when AI moves to ORDER_CONFIRMED or UPSELL from ORDER_SUMMARY
   let orderSaved = false;
-  if ((newState === 'ORDER_CONFIRMED' || newState === 'UPSELL_HOOK') && prevState === 'ORDER_SUMMARY') {
+  if ((newState === 'ORDER_CONFIRMED' || newState === 'UPSELL_HOOK' || newState === 'UPSELL_SHOW') && prevState === 'ORDER_SUMMARY') {
     orderSaved = saveOrder(state, storeName, dbConv, dbCustomer);
   }
 
