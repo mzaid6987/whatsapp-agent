@@ -192,6 +192,7 @@ async function initDb() {
   try { db.exec('ALTER TABLE conversations ADD COLUMN gift_card_flag INTEGER DEFAULT 0'); } catch (e) {}
   try { db.exec('ALTER TABLE conversations ADD COLUMN voice_msg_flag INTEGER DEFAULT 0'); } catch (e) {}
   try { db.exec('ALTER TABLE conversations ADD COLUMN address_incomplete INTEGER DEFAULT 0'); } catch (e) {}
+  try { db.exec('ALTER TABLE orders ADD COLUMN data_downloaded INTEGER DEFAULT 0'); } catch (e) {}
 
   console.log('[DB] SQLite (sql.js) initialized at', DB_PATH);
   return db;

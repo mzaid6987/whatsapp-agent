@@ -789,6 +789,25 @@ app.patch('/api/orders/:id', requireAuth, (req, res) => {
   }
 });
 
+// Mark orders as data downloaded
+app.post('/api/orders/mark-downloaded', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    const { order_ids } = req.body; // array of order IDs
+    if (order_ids && order_ids.length) {
+      const placeholders = order_ids.map(() => '?').join(',');
+      const result = db.prepare(`UPDATE orders SET data_downloaded = 1, updated_at = datetime('now','localtime') WHERE id IN (${placeholders})`).run(...order_ids);
+      res.json({ ok: true, marked: result.changes });
+    } else {
+      // Mark ALL confirmed orders as downloaded
+      const result = db.prepare("UPDATE orders SET data_downloaded = 1, updated_at = datetime('now','localtime') WHERE status = 'confirmed' AND data_downloaded = 0").run();
+      res.json({ ok: true, marked: result.changes });
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Create order from admin (manual order taking)
 app.post('/api/orders/create', requireAuth, (req, res) => {
   try {

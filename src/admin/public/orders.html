@@ -27,6 +27,7 @@
     .badge-upsell { background: #fefcbf; color: #975a16; font-size: 10px; }
     .badge-source { background: #e2e8f0; color: #4a5568; font-size: 10px; }
     .badge-addr-incomplete { background: #fed7d7; color: #e53e3e; font-size: 10px; }
+    .badge-downloaded { background: #c6f6d5; color: #276749; font-size: 10px; }
     .order-time { font-size: 11px; color: #999; white-space: nowrap; }
     .order-details { display: none; padding: 0 16px 16px; border-top: 1px solid #f0f0f0; }
     .order-details.open { display: block; }
@@ -220,6 +221,7 @@
             <div class="order-meta">
               ${o.has_upsell ? '<span class="order-badge badge-upsell">UPSELL</span>' : ''}
               ${o.address_incomplete ? '<span class="order-badge badge-addr-incomplete">ADDR INCOMPLETE</span>' : ''}
+              ${o.data_downloaded ? '<span class="order-badge badge-downloaded">DATA DOWNLOADED</span>' : ''}
               <span class="order-badge badge-source">${o.source === 'bot' ? 'Bot' : 'Human'}</span>
               <span class="order-badge ${badgeClass}">${statusText}</span>
             </div>
