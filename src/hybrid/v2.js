@@ -169,12 +169,13 @@ function validateState(aiState, state) {
 
   // Guardrail: can't go to ORDER_SUMMARY without all required fields
   if (aiState === 'ORDER_SUMMARY' || aiState === 'ORDER_CONFIRMED' || aiState === 'UPSELL_HOOK') {
-    if (!collected.product || !collected.name || !collected.phone || !collected.city) {
+    if (!collected.product || !collected.name || !collected.phone || !collected.city || !collected.address) {
       // Find first missing field
       if (!collected.product) return 'PRODUCT_INQUIRY';
       if (!collected.name) return 'COLLECT_NAME';
       if (!collected.phone) return 'COLLECT_PHONE';
       if (!collected.city) return 'COLLECT_CITY';
+      if (!collected.address) return 'COLLECT_ADDRESS';
     }
   }
 
@@ -412,7 +413,12 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
 function saveOrder(state, storeName, dbConv, dbCustomer) {
   try {
     const db = getDb();
-    const product = state.product;
+    let product = state.product;
+    // Fallback: if product obj is null but collected has product name, find it
+    if (!product && state.collected.product) {
+      product = detectProduct(state.collected.product);
+      if (product) state.product = product;
+    }
     if (!product || !dbConv || !dbCustomer) return false;
 
     const items = [{ name: product.name, price: product.price, quantity: 1 }];

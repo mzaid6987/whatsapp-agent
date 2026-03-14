@@ -1,0 +1,916 @@
+
+=== CHAT #81 - 89 msgs - state: COLLECT_ADDRESS - name: Diya Gaya Hai.] ===
+USER: Aslamoalikum
+BOT [PATH2_PRE_CHECK | GREETING->GREETING | intent:greeting_salam]: Walaikum Assalam sir! 😊 Khush aamdeed. Kisi cheez ki talash hai ya trending products dikhau?
+USER: 2 in 1facial hair remover chahy
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_inquiry]: [📎 1 video sent: Facial Hair Remover]
+2-in-1 Facial Hair Remover and Eyebrow Trimmer ki price Rs.1,399 hai 🏷️ Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye aur Precision eyebrow trimmer head included, USB rechargeable, compact design. Order karna hai?
+USER []: [Image: Yeh gift voucher "Cutting Board" ke saath match karta hai.]
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_inquiry]: [📎 1 video sent: Cutting Board]
+Stainless Steel Cutting Board Large Size ki price Rs.1,799 hai 🏷️ Food grade stainless steel — 39cm x 48cm large size aur Non-porous hai bacteria nahi lagta, scratch-proof, easy to clean — paani se dho lo bas. Order karna hai?
+USER []: [Image: Yeh product "Facial Hair Remover - pink/rose gold small device" se milta hai.]
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_inquiry]: [📎 1 video sent: Facial Hair Remover]
+2-in-1 Facial Hair Remover and Eyebrow Trimmer ki price Rs.1,399 hai 🏷️ Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye aur Precision eyebrow trimmer head included, USB rechargeable, compact design. Order karna hai?
+USER: Yeah chahy
+BOT [PATH3_AI_TO_TEMPLATE | PRODUCT_INQUIRY->COLLECT_NAME]: Ji sir! 😊 Apna naam bata dein?
+USER []: [Image: Yeh image "Facial Hair Remover" ka hai, kyunki order details mein 2 in 1 Facial Hair Remover likha hai.]
+BOT [PATH2_PRE_CHECK | COLLECT_NAME->COLLECT_NAME | intent:acknowledgment]: Ji sir! 😊 Apna naam bata dein?
+USER: Uper jo dress hai usi py bjna
+BOT [PATH3_AI | COLLECT_NAME->COLLECT_NAME]: Yeh humse related nahi hai. Agar koi product chahiye to bataiye.
+USER: 2-in-1 Facial Hair Remover and Eyebrow Trimmer ki price Rs.1,399 hai 🏷️ Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye aur Precision eyebrow trimmer head included, USB rechargeable, compact design. Order karna hai?
+BOT [PATH2_PRE_CHECK | COLLECT_NAME->COLLECT_NAME | intent:acknowledgment]: Zaroor sir! 😊 Apna naam bata dein?
+USER: Yeah oder krna hai
+BOT [PATH3_AI | COLLECT_NAME->COLLECT_NAME]: Kya aapki delivery kis city mein karni hai?
+USER: Adeel hasan
+BOT [PATH2_PRE_CHECK | COLLECT_PHONE->COLLECT_PHONE | intent:name_given]: Adeel Hasan sir, phone number bata dein? 📱
+USER: Fath pur makki fabric main Bazar
+BOT [PATH3_AI | COLLECT_PHONE->COLLECT_PHONE]: Fath pur makki fabric ki delivery kis city mein karni hai?
+USER: Distc layyah
+BOT [PATH3_AI | COLLECT_PHONE->COLLECT_PHONE]: Adeel Hasan sir, apna phone number bata dein taake delivery ko arrange kar sakein. 😊
+USER: 03043904788
+BOT [PATH2_PRE_CHECK | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE | intent:phone_given]: Rider aapko isi number (03043904788) pe call karega 📞 Call receive kar lein ge?
+USER: G
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:same_phone]: Layyah mein konsa area hai? 📍 Jaise DG Khan Road, Railway Road, Grain Market, Civil Lines, Main Bazaar
+USER: Makki fabric main Bazar fath pur
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Aapka area hai Main Bazaar, ab block ya gali ka naam bata dein?
+USER: Yeah dress hai
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Aapka area hai Main Bazaar. Ab block ya gali ka naam bata dein?
+USER: Main Bazar m makki fabric ky name sy cloth shop hai wahan dilver krna
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Shop ka naam hai "Makki Fabric". Ab block ya gali ka naam bata dein?
+USER: Main Bazar just likh dy ajga
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Aapka area Main Bazaar hai. Ab block ya gali ka naam bata dein?
+USER []: [Image: Ye image Facial Hair Remover ka hai, jo pink/rose gold chhota device hai.]
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:product_with_order]: Facial Hair Remover — Rs.1,399. Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye.
+Main Bazaar mein block aur gali/street number bata dein? 🏘️
+USER: Same dress
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Aapne facial hair remover ki taraf toh indicate kiya hai, lekin dress se related koi detail nahi di. Kya aap dress ka naam ya size bata sakte hain? 👗
+USER: haan
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Aapki confirmation ke liye shukriya! Lekin kya aap dress ka naam ya size bata sakte hain? 👗
+USER: Dress ni chahy
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Acha, dress nahi chahiye. Koi aur product chahiye ya kis cheez ki madad chahiye? 😊
+USER: Just hair remover chahy
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:product_with_order]: Facial Hair Remover — Rs.1,399. Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye.
+Main Bazaar mein block aur gali/street number bata dein? 🏘️
+USER: Thanks
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Koi baat nahi! Aap address details de dein, main madad karne ko tayar hun. 😊
+USER: No thanks
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Theek hai, agar kuch aur chahiye ho to bataiye! 😊
+USER: Ni just hair remover chahy
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:product_with_order]: Facial Hair Remover — Rs.1,399. Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye.
+Main Bazaar mein konsa block hai aur gali/street number? 🏘️
+USER: haan
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Block aur gali/street number bata dein, phir aage badhte hain! 😊
+USER: Bta to hai makki fabric main Bazar fath pur
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Block aur gali number bata dein, phir aage badhte hain! 😊
+USER: Block aur gali ni bus yeahi address hai
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Yeh address sahi hai? Block Aur, Main Bazaar, near Makki Fabric, Layyah ✅
+USER: Makki fabric main Bazar fath yeah write krny
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Yeh address sahi hai? Block Aur, Main Bazaar, near Makki Fabric, Layyah ✅
+USER: Layyah distc hai
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Aapka address: Block Aur, Main Bazaar, near Makki Fabric, Layyah. Sahi hai? ✅
+USER: City fath pur hai
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Aapka address: Block Aur, Main Bazaar, near Makki Fabric, Layyah. Sahi hai? ✅
+USER: Jaisy esm address likha hai same wasy bjy
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_enough]: 📍 Aapka address: Block Aur, Main Bazaar, near Makki Fabric, Layyah. Sahi hai? ✅
+USER []: [Image: Yeh image "Facial Hair Remover" ka hai, kyun ke us par item ka naam diya gaya hai.]
+BOT [PATH2_PRE_CHECK | ORDER_SUMMARY->ORDER_SUMMARY | intent:product_with_order]: Facial Hair Remover — Rs.1,399. Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye.
+📋 Order details:
+- Facial Hair Remover: Rs.1,399
+🚚 Delivery: FREE
+💰 Total: Rs.1,399
+
+Naam: Diya Gaya Hai.]
+Phone: 03043904788
+City: Layyah
+Address: Block Aur, Main Bazaar, near Makki Fabric, La
+USER: Ni
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: Kya change karna hai madam? Naam, phone, address ya product?
+USER: City' fath pur
+BOT [PATH1_TEMPLATE_STATE | COLLECT_CITY->COLLECT_CITY]: City bata dein?
+USER: Address makki fabric main Bazar fath pur
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:city_given]: 📍 Aapka address: Block Aur, Main Bazaar, near Makki Fabric, Lahore. Sahi hai? ✅
+USER: Rhny dy ap
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Yeh address sahi hai? Block Aur, Fath Pur, near Makki Fabric, Lahore ✅
+USER: Ni ap rhnydo
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Yeh address sahi hai? Block Aur, Fath Pur, near Makki Fabric, Lahore ✅
+USER: Lahore khtm krdu
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Aapka address: Block Aur, Fath Pur, near Makki Fabric, Lahore. Sahi hai? ✅
+USER: Apko jo pic bji uder sy dkhy write kro
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Yeh address sahi hai? Block Aur, Fath Pur, near Makki Fabric, Lahore ✅
+USER: Sorry 😔😞😔
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Yeh address sahi hai? Block Aur, Fath Pur, near Makki Fabric, Lahore ✅
+USER: No
+BOT: Diya Gaya Hai.] madam, Lahore mein konsa area hai? 📍 Jaise DHA/Defence, Gulberg, Johar Town, Model Town, Bahria Town
+USER: Rhny dy ap
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Koi masla nahi madam, aapka address complete karne mein madad kar raha hun. Block aur street ka naam bata dein?
+BOT: sorry madam, hm apny business me AI technology bhi integrate kar rahy hen, AI bot ne ap ko kafi tng kea, I am really sorry for that, ap ka gift card avail ho jayga
+
+=== CHAT #736 - 76 msgs - state: ORDER_CONFIRMED - name: Wana Likha Watha ===
+USER: I want to order "4 in 1 Electric Vegetable Cutter | Rechargeable"
+https://thezenora.shop/product/4-in-1-electric-vegetable-cutter?gad_source=2&gad_campaignid=23591388713&gclid=CjwKCAjwyMnNBhBNEiwA-Kcgu2gE2IvE7O-LGUPe1os0WyL8icYaC1eUIMq15rGGI7MJEdBokRBXLBoCuyUQAvD_BwE
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_selected]: Electric Vegetable Cutter 4-in-1 Rs.2,099 ki hai 🏷️ One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein aur Self-cleaning function hai, USB rechargeable, 4 blades included. Order karna hai sir?
+USER: G
+BOT [PATH2_PRE_CHECK | COLLECT_NAME->COLLECT_NAME | intent:yes]: Ji sir! 😊 Apna naam bata dein?
+USER: How to order
+BOT [PATH3_AI | COLLECT_NAME->COLLECT_NAME]: Order karne ke liye aapko bas apna naam aur phone number dena hoga, phir main aapka order place kar dungi. 😊 Apna naam bata dein?
+USER: Payment cash krogi Mein
+BOT [PATH3_AI_EMPTY_FALLBACK]: Ji sir! 😊 Apna naam bata dein?
+USER: Kitne days mein Hoga order
+BOT [PATH2_PRE_CHECK | COLLECT_NAME->COLLECT_NAME | intent:order_intent]: null Zaroor sir! 😊 Apna naam bata dein?
+USER: Mujahid Hussain name
+BOT [PATH2_PRE_CHECK | COLLECT_PHONE->COLLECT_PHONE | intent:name_given]: Mujahid Hussain sir, apna phone number bata dein? 📱
+USER: 03162430965
+BOT [PATH2_PRE_CHECK | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE | intent:phone_given]: Delivery ke waqt rider 03162430965 pe call karega 📞 Receive kar lein ge ya koi aur number dein?
+USER: g receive krogi
+BOT [PATH2_PRE_CHECK | COLLECT_CITY->COLLECT_CITY | intent:same_phone]: City/tehsil bata dein — delivery kahan karni hai? 🚚
+USER: Kab tak mileage parcel
+BOT [PATH2_PRE_CHECK | COLLECT_CITY->COLLECT_CITY | intent:delivery_time_question]: Karachi/Lahore/Islamabad: 2-3 din. Baqi cities: 3-6 din 🚚 Rider call karega delivery se pehle. Mujahid Hussain sir, delivery konsi city mein karni hai? 🚚
+USER: Karachi se ho mein
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:city_given]: Karachi mein konsa area hai? 📍 Jaise Gulshan-e-Iqbal, DHA/Defence, North Nazimabad, Nazimabad, Clifton
+USER: [📎 location]
+BOT: Location receive hui lekin hum address text mein lete hain — apna area, gali aur ghar number type kar dein please 📍
+USER: north karachi 5b1 house no r:173
+BOT [PATH2_PRE_CHECK | ORDER_SUMMARY->ORDER_SUMMARY | intent:address_part_extracted]: 📋 Order details:
+- Electric Vegetable Cutter 4-in-1: Rs.2,099
+🚚 Delivery: FREE
+💰 Total: Rs.2,099
+
+Naam: Mujahid Hussain
+Phone: 03162430965
+City: Karachi
+Address: North Karachi, Karachi
+Delivery: 2-3 din
+
+Sab theek hai to haan bol dein, order laga deta hun ✅
+USER: North karachi 5b1
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: North North Karachi update ho gaya ✅
+
+📋 Order details:
+- Electric Vegetable Cutter 4-in-1: Rs.2,099
+🚚 Delivery: FREE
+💰 Total: Rs.2,099
+
+Naam: Mujahid Hussain
+Phone: 03162430965
+City: Karachi
+Address: North North Karachi, Karachi
+Delivery: 2-3 din
+
+Sab theek hai to haan bol dein, order laga deta h
+USER: ok Done
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Mujahid Hussain sir, order save ho gaya ✅ Waise 75% tak discount wale products hain abhi — dikhadu aapko? Sath mein aa jayein ge, delivery free rahegi 🚚
+USER: Dikhai
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: [📎 7 videos sent: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Facial Hair Remover, Knee Sleeve, Duster Kit]
+Yeh dekhen 👇
+
+1. T9 Trimmer — Rs.899
+2. Blackhead Remover — Rs.1,299
+3. Cutting Board — Rs.1,299
+4. Oil Spray — Rs.899
+5. Ear Wax Kit — Rs.499
+6. Facial Hair Remover — Rs.899
+7.
+USER: Kia price hai
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: Trimmer ki price m
+Kia ha
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: trimmer
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: T9 Vintage Professional Trimmer — Rs.899 🏷️ Metal body trimmer hai — 3 guide combs aati hain different lengths ke liye aur Sharp T-blade hai clean lines ke liye, quiet motor, USB rechargeable. Add karna hai order mein? 😊
+USER: Ka pocha hai price Kia hai
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: Krde
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: Ye bhi order
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: delivery free hana
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: Trimmer
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: T9 Vintage Professional Trimmer — Rs.899 🏷️ Metal body trimmer hai — 3 guide combs aati hain different lengths ke liye aur Sharp T-blade hai clean lines ke liye, quiet motor, USB rechargeable. Add karna hai order mein? 😊
+USER: 899 wala
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: Yes
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: Done! T9 Trimmer bhi add ho gaya.
+
+🎉 Order confirm ho gaya! Order ID: NRV-WA-63402
+- Electric Vegetable Cutter 4-in-1: Rs.2,099
+- T9 Vintage Professional Trimmer: Rs.899
+💰 Total: Rs.2,998 | 🚚 Delivery: FREE
+Mujahid Hussain | 03162430965
+📍 North North Karachi, Karachi — 2-3 din
+Paisa delivery ke 
+USER: ..
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: Aapka order already confirm hai sir ✅ Kuch aur chahiye to bata dein!
+USER: 2 order Hana mere
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: Aapka order already confirm hai sir ✅ Kuch aur chahiye to bata dein!
+USER: Ek trimmer or ek vegetable cutter
+BOT [PATH1_TEMPLATE_STATE | PRODUCT_INQUIRY->PRODUCT_INQUIRY]: Electric Vegetable Cutter 4-in-1 Rs.2,099 ki hai 🏷️ One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein aur Self-cleaning function hai, USB rechargeable, 4 blades included. Order karna hai sir?
+USER: I say delivery free hana
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:delivery_charge_question]: Mujahid Hussain sir, delivery bilkul FREE hai — koi charges nahi. Cash on Delivery (COD) hai, paisa delivery ke waqt dena hai. Order karna hai?
+USER: Wana Likha watha
+BOT [PATH2_PRE_CHECK | ORDER_SUMMARY->ORDER_SUMMARY | intent:name_in_product_inquiry]: 📋 Order details:
+- Electric Vegetable Cutter 4-in-1: Rs.2,099
+- T9 Vintage Professional Trimmer: Rs.899
+🚚 Delivery: FREE
+💰 Total: Rs.2,998
+
+Naam: Wana Likha Watha
+Phone: 03162430965
+City: Karachi
+Address: North North Karachi, Karachi
+Delivery: 2-3 din
+
+Sab theek hai to haan bol dein, order laga d
+USER: Done
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Shukriya Wana Likha Watha madam! ✅ Order note ho gaya. Waise 75% tak discount wale products bhi hain jo kaafi log mangwa rahe hain — dikhadu? Sath mein aa jayega aur delivery bhi free rahegi 🚚
+USER: No thnks
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: 🎉 Order confirm ho gaya! Order ID: NRV-WA-33796
+- Electric Vegetable Cutter 4-in-1: Rs.2,099
+- T9 Vintage Professional Trimmer: Rs.899
+💰 Total: Rs.2,998 | 🚚 Delivery: FREE
+Wana Likha Watha | 03162430965
+📍 North North Karachi, Karachi — 2-3 din
+Paisa delivery ke waqt dena hai. Shukriya madam! 😊
+BOT: sir apky ghar ky qareeb mai koi masjid koi madarsa wagera hai or apki street no kia hai ?
+USER: g Masjid hai
+USER: near Al hameed boldena
+BOT: name bata dyn
+USER: [📎 location]
+USER: Ye check kre pata chl jaiga apko
+BOT: street no bhi bata dyn
+BOT: hamary pass darasal location open nh ho parai ha is waja sa apsa puch rahy ha
+USER: Ok
+BOT: street no bhi bata dyn
+USER: Mein batati hon sir
+BOT: ok
+
+=== CHAT #309 - 68 msgs - state: COLLECT_PHONE - name: Hashim Naam ===
+USER: I want to order "4 in 1 Electric Vegetable Cutter | Rechargeable"
+https://thezenora.shop/product/4-in-1-electric-vegetable-cutter?gad_source=2&gad_campaignid=23396306387&gclid=CjwKCAjwpcTNBhA5EiwAdO1S9ovRPzjye5GA45Rjt1iLMUSlYqtp4kEHZkGGRPlDE3TYu0sSnBYGkRoC4AQQAvD_BwE Hello assalamu alaikum
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_selected]: Ji sir, Electric Vegetable Cutter 4-in-1 Rs.2,099 ki hai 🏷️ One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein, Self-cleaning function hai, USB rechargeable, 4 blades included. Order karna hai?
+USER: Bhaiya kitne kaatne wala
+BOT []: Vegetable Cutter Rs.2,099 mein hai. Order karna hai sir? 😊
+USER []: haan ji nahi, order karna chahiye. Delivery kab? Address naam hai aur mobile number hai.
+BOT [PATH2_PRE_CHECK | COLLECT_NAME->COLLECT_NAME | intent:order_intent]: Ji sir! 😊 Apna naam bata dein?
+USER: Bhai mujhe voice Karke Bata de mujhe padhna Nahin aata
+BOT [PATH3_AI | COLLECT_NAME->COLLECT_NAME]: Ji, main AI Customer Support Agent hun 🤖. Apna naam bata dein taake aage barh sakein.
+USER: Why voice Karke bataen
+BOT [PATH3_AI | COLLECT_NAME->COLLECT_NAME]: Mujhe afsos hai, lekin main sirf text mein hi madad kar sakta hun. Apna naam bata dein taake main aapki madad kar sakun.
+USER: I want to order "2 in 1 Facial Hair Remover & Eyebrow Trimmer | Rechargeable"
+https://thezenora.shop/product/2-in-1-facial-hair-remover-eyebrow-trimmer
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_selected]: [📎 1 video sent: Facial Hair Remover]
+2-in-1 Facial Hair Remover and Eyebrow Trimmer ki price Rs.1,399 hai 🏷️ Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye aur Precision eyebrow trimmer head included, USB rechargeable, compact design. Order karna hai?
+USER: I am a change in Nepal capital
+BOT [PATH3_AI | PRODUCT_INQUIRY->PRODUCT_INQUIRY]: Delivery kis city mein karni hai?
+USER: Bhai yah donon chijen kitni Hogi
+BOT [PATH3_AI | PRODUCT_INQUIRY->PRODUCT_SELECTION]: 2-in-1 Facial Hair Remover and Eyebrow Trimmer ki price Rs.1,399 hai. Aur agar aap T9 Vintage Professional Trimmer bhi lene ka soch rahe hain, uski price bhi Rs.1,399 hai. Kya aap order karna chahte hain? 😊
+USER []: haan ji nahi order karna chahiye delivery kitne ka hai price sasta mehenga theek hai bhej do confirm 16 17 18 20 30 40 50 lahore karachi
+BOT [PATH2_PRE_CHECK | PRODUCT_SELECTION->PRODUCT_SELECTION | intent:quality_question]: sir, quality bilkul achi hai 👍 Daily customers order kar rahe hain aur satisfied hain. Plus delivery pe pehle check karein, phir paisa dein. 7 din exchange guarantee bhi hai.
+BOT: [🎤 Trust Voice Note]
+USER []: Please buy your voice for Keep Daddy.
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Mujhe samajh nahi aaya, kya aap thoda aur clarify kar sakte hain? 😊
+USER []: Acha to ab phir aap batayen ke yeh dono cheezein kitne ki ho jayengi.
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Mujhe samajh nahi aaya, aap kaun si dono cheezein keh rahe hain? Thoda aur detail mein bata sakte hain? 😊
+USER []: Assalamu Alaikum, آپ یہ مجھے voice card دیں۔
+BOT [PATH2_PRE_CHECK | PRODUCT_SELECTION->PRODUCT_SELECTION | intent:greeting_in_selection]: Walaikum Assalam sir! 😊 Khush aamdeed. Kisi cheez ki talash hai ya trending products dikhau? Konsa product pasand aaya sir?
+USER: Abhi aapke pass aur क्या-क्या hota hai please mujhe video banakar bhej sakti
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Mujhe video bhejne ki sahoolat nahi hai, lekin yeh hain hamare products: 
+1. T9 Vintage Professional Trimmer — Rs.1,399 
+2. 5-in-1 Blackhead Remover — Rs.1,799 
+3. Stainless Steel Cutting Board Large Size — Rs.1,799 
+4. 2 in 1 Glass Oil Spray Dispenser — Rs.1,399 
+5. Ear Wax Cleaning Kit — Rs.599 
+6
+USER: Prasad paise bhi bataiye
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Maine prices pehle hi mention kiye hain, lekin yeh dobaara dekh lein: 1. T9 Vintage Professional Trimmer — Rs.1,399 2. 5-in-1 Blackhead Remover — Rs.1,799 3. Stainless Steel Cutting Board Large Size — Rs.1,799 4. 2 in 1 Glass Oil Spray Dispenser — Rs.1,399 5. Ear Wax Cleaning Kit — Rs.599 6. Electri
+USER: Please abhi mujhe video mat bhejna
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Ji, main video nahi bhej sakta. Aapko kisi product ki jaanakari chahiye? 😊
+USER: Abhi maine aapko yah bola tha ki ine chijon ki video banakar
+BOT [PATH2_PRE_CHECK | PRODUCT_SELECTION->PRODUCT_SELECTION | intent:media_request]: [📎 1 video sent: Facial Hair Remover]
+Yeh rahi Facial Hair Remover ki video 😊 Order karna hai?
+USER []: haan ji nahi order karna chahiye delivery kitne ka hai price sasta mehenga theek hai bhej do confirm 16 17 18 20 30 40 50
+BOT [PATH2_PRE_CHECK | PRODUCT_SELECTION->PRODUCT_SELECTION | intent:quality_question]: sir, quality ki fikar mat karein 😊 Customers satisfied hain. COD hai, pehle check karein phir payment. 7 din exchange guarantee.
+BOT: [🎤 Trust Voice Note]
+USER: Abhi Maine aapse yah poochha tha ki yah donon chijen kitnon mein a jaenge kitne paise lag jaenge ab yah Bata de
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Aapne aur kya chahiye? Pehle samjha do, phir bagaira karte hain! 😄
+USER: Zara voice Karthi
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Ji, main AI Customer Support Agent hun 🤖
+USER: Yah Maine ek Hi order karvana jisse aapane khol kar packing dikhaiye kitne ki aaegi
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Aap koi specific product bataiye jo aap order karna chahte hain. Yeh hain hamare products: 1. T9 Vintage Professional Trimmer — Rs.1,399 2. 5-in-1 Blackhead Remover — Rs.1,799 3. Stainless Steel Cutting Board Large Size — Rs.1,799 4. 2 in 1 Glass Oil Spray Dispenser — Rs.1,399 5. Ear Wax Cleaning Ki
+USER: Please aap mujhe voice Karke Bata dena
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Mujhe afsos hai, lekin main sirf text mein madad kar sakta hun. Kya aap koi product select karna chahte hain? 😊
+USER: [Image: Yeh image spice jars ka set hai jismein "Elachi" aur "Haldi" likha hai.]
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Mujhe aisi image ke baare mein koi info nahi hai. Kya aap hamare products mein se koi select karna chahenge? Yeh hain hamare products: 1. T9 Vintage Professional Trimmer — Rs.1,399 2. 5-in-1 Blackhead Remover — Rs.1,799 3. Stainless Steel Cutting Board Large Size — Rs.1,799 4. 2 in 1 Glass Oil Spray
+USER: Please are Shizuka
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Kya aap koi product select karna chahte hain? 😊
+USER: Maine yah do chijen order karvani hai kya yah kitne ki a jaenge
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Aap kis product ka order karna chahte hain? Hamare paas kuch options hain. 😊 Upload ki gayi image se mujhe exact product samajh nahi aaya.
+USER: Maine yah donon chijen leni hai is per kitne din lag jaenge
+BOT [PATH2_PRE_CHECK | PRODUCT_SELECTION->PRODUCT_SELECTION | intent:delivery_time_question]: Karachi/Lahore/Islamabad: 2-3 din. Baqi cities: 3-6 din 🚚 Rider call karega delivery se pehle.
+USER: To ine donon chijon ki price kitni hai
+BOT [PATH3_AI | PRODUCT_SELECTION->PRODUCT_SELECTION]: Aap pehle yeh bataiye ke aap kis do products ki baat kar rahe hain? Hamare paas kaafi options hain! 😊
+USER: Main yah donon contact ki baat kar rahi hun ki jor se maine abhi bheje
+BOT [PATH3_AI_TO_TEMPLATE | PRODUCT_SELECTION->COLLECT_NAME]: Bilkul sir! ✅
+
+📦 2-in-1 Facial Hair Remover and Eyebrow Trimmer
+💰 Rs.1,399
+
+Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye. Precision eyebrow trimmer head included, USB rechargeable, compact design.
+
+Apna naam bata dein?
+USER: Qasim
+BOT [PATH2_PRE_CHECK | COLLECT_PHONE->COLLECT_PHONE | intent:name_given]: Qasim sir, phone number bata dein? 📱
+USER: Hashim Naam
+BOT [PATH3_AI | COLLECT_PHONE->COLLECT_PHONE]: Naam theek kar diya gaya hai. ✏️ Apna phone number bata dein?
+USER: Ji yah theek naam hai kasim main aapko phone number bhej rahi hun aap usmein contact kar lijiyega to aap ine donon ke paise bhi Bata do final kitne lagenge
+BOT [PATH2_PRE_CHECK | COLLECT_PHONE->COLLECT_PHONE | intent:quality_question]: sir, quality bilkul achi hai 👍 Daily customers order kar rahe hain aur satisfied hain. Plus delivery pe pehle check karein, phir paisa dein. 7 din exchange guarantee bhi hai. Hashim Naam sir, apna phone number bata dein? 📱
+BOT: [🎤 Trust Voice Note]
+USER: 033 aap mujhe ek hi voice bheji ja rahi hai please aap voice se dekhna mujhe bhi aur voice kar de to Urdu mein please aap likh denge
+BOT [PATH0C_VOICE_MSG_REQUEST | COLLECT_PHONE->undefined]: Okay thora sabr karein please, me ap ko voice message karti hu 🎤
+USER: Okay abhi
+USER: Please aap Jo kuchh likh rahi hai aap Urdu mein likh Dena Urdu mein sahi tarah samajh bhi a sake
+USER: To please aap ine donon ki price bhi to Bata Dena main order karungi yah donon chijen lekin aap ine donon ki price bhi Bata de ki final kitni hai charging kitni hai
+
+=== CHAT #133 - 57 msgs - state: ORDER_CONFIRMED - name: Easyli ===
+USER: I want to order "4 in 1 Electric Vegetable Cutter | Rechargeable"
+https://thezenora.shop/product/4-in-1-electric-vegetable-cutter?gad_source=2&gad_campaignid=23591388713&gclid=CjwKCAjwpcTNBhA5EiwAdO1S9koTuJFPq7HDHBUszLRdVXs8Evt-bybp_-YldX93vGEXSj2uNsWimRoC1awQAvD_BwE
+USER: Assalamu Alaikum, yeh jo machine aap dikha rahe hain electric trimmer hai, yeh mujhe khareedni hai. Toh aap mujhe is ke baare mein bata sakte hain, is ki kya process hogi jo karna padega?
+USER: I want to order "4 in 1 Electric Vegetable Cutter | Rechargeable"
+https://thezenora.shop/product/4-in-1-electric-vegetable-cutter?gad_source=2&gad_campaignid=23591388713&gclid=CjwKCAjwpcTNBhA5EiwAdO1S9koTuJFPq7HDHBUszLRdVXs8Evt-bybp_-YldX93vGEXSj2uNsWimRoC1awQAvD_BwE
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_selected]: Ji sir, Electric Vegetable Cutter 4-in-1 Rs.2,099 ki hai 🏷️ One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein, Self-cleaning function hai, USB rechargeable, 4 blades included. Order karna hai?
+BOT: Ji sir, Electric Vegetable Cutter 4-in-1 Rs.2,099 ki hai 🏷️ One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein, Self-cleaning function hai, USB rechargeable, 4 blades included. Order karna hai?
+USER: Ok kis trha delever ho sakta hy
+BOT [PATH2_PRE_CHECK | COLLECT_NAME->COLLECT_NAME | intent:yes]: Ji sir! 😊 Apna naam bata dein?
+USER: Easyli
+BOT [PATH2_PRE_CHECK | COLLECT_PHONE->COLLECT_PHONE | intent:name_given]: Easyli sir, apna phone number bata dein? 📱
+USER: Amjad qureshi
+BOT [PATH3_AI | COLLECT_PHONE->COLLECT_PHONE]: Acha, Aapka naam Amjad Qureshi hai. Apna phone number bata dein? 📱
+USER: Ok
+BOT [PATH2_PRE_CHECK | COLLECT_PHONE->COLLECT_PHONE | intent:acknowledgment]: Easyli sir, phone number bata dein? 📱
+USER: 03132283676
+BOT [PATH2_PRE_CHECK | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE | intent:phone_given]: Rider aapko isi number (03132283676) pe call karega 📞 Call receive kar lein ge?
+USER: 10 bjy tk
+BOT [PATH3_AI_TO_TEMPLATE | COLLECT_DELIVERY_PHONE->COLLECT_CITY]: City/tehsil bata dein — delivery kahan karni hai? 🚚
+USER: Karachi , Allah wali per
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:city_given]: Easyli sir, Karachi mein konsa area hai? 📍 Jaise Gulshan-e-Iqbal, DHA/Defence, North Nazimabad, Nazimabad, Clifton
+USER: Main stop
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_part_extracted]: Main stop mein block aur gali/street number bata dein? 🏘️
+USER: Gali number to nhi pata
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_part_extracted]: House number ya flat number? 🏠
+USER: Usuf goat Allah wali
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Yeh address sahi hai? Main stop, near Usuf goat Allah wali, Karachi. Agar courier ko kuch puchna ho to aapko call kar lein ge ✅
+USER: Ok wt 5 mint bs
+BOT: 📋 Order details:
+- Vegetable Cutter: Rs.2,099
+🚚 Delivery: FREE
+💰 Total: Rs.2,099
+
+Naam: Easyli
+Phone: 03132283676
+City: Karachi
+Address: Main stop, near Usuf goat Allah wali, Karachi
+Delivery: 2-3 din
+
+Sab theek hai to haan bol dein, order laga deta hun ✅
+USER: Ok to Hy magr electric cutter to theek hoga na
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Easyli sir, order save ho gaya ✅ Waise 75% tak discount wale products hain abhi — dikhadu aapko? Sath mein aa jayein ge, delivery free rahegi 🚚
+USER: Whtssap per
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Dekhna chahein ge?
+USER: P
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Dekhna chahein ge?
+USER: G
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Yeh dekhen 👇
+
+1. T9 Trimmer — Rs.899
+2. Blackhead Remover — Rs.1,299
+3. Cutting Board — Rs.1,299
+4. Oil Spray — Rs.899
+5. Ear Wax Kit — Rs.499
+6. Facial Hair Remover — Rs.899
+7. Nebulizer — Rs.1,199
+8. Knee Sleeve — Rs.999
+9. Duster Kit — Rs.750
+10. EMS Massager — Rs.599
+
+In mein se konsa product b
+USER: Han dekha dain
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: [📎 7 videos sent: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Facial Hair Remover, Knee Sleeve, Duster Kit]
+Yeh dekhen 👇
+
+1. T9 Trimmer — Rs.899
+2. Blackhead Remover — Rs.1,299
+3. Cutting Board — Rs.1,299
+4. Oil Spray — Rs.899
+5. Ear Wax Kit — Rs.499
+6. Facial Hair Remover — Rs.899
+7.
+USER: Rokye to
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: Nhi fill waqat ye abhi Baki badd main
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: 🎉 Order confirm ho gaya! Order ID: NRV-WA-59840
+- Vegetable Cutter: Rs.2,099
+💰 Total: Rs.2,099 | 🚚 Delivery: FREE
+Easyli | 03132283676
+📍 Main stop, near Usuf goat Allah wali, Karachi — 2-3 din
+Paisa delivery ke waqt dena hai. Shukriya sir! 😊
+USER: Ok g shukyra
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: Aapka order already confirm hai sir ✅ Kuch aur chahiye to bata dein!
+BOT: acha sir yousuf goth me parcel kaha pe dena he ap ke ghar ke pas koi masjid, school, shop ya kiryana shop he jo mahsoor ho ?
+USER: Pakiza bakery
+USER: Famous Hy wahy left hand ki trf
+BOT: okay sir
+BOT: vaha rider a kr call keyga to receive krlejia ga
+USER: Parcal kb tk delever hoga
+USER: Ok time Kiya hoga bata sakty Hain ap
+BOT: inshaAllah 3-4 din me delivery ho jaygi
+USER: Ok thank u apny time nhi btya kis time tk q k main job per hota hon
+USER: Mery Liye asani ho jay gi malum kr k
+BOT: gi sir din ke time pe he delivery hoti he, koi fix time nahi hota courier valo ka
+BOT: lekin delivery valy call krdete he delivery se pehle
+USER: Ok phr aisa nhi hoskta h k godra akr day dain q k main din main wahin hota hon
+USER: Chalain koi masla nhi main manege karlonga
+
+=== CHAT #350 - 68 msgs - state: ORDER_CONFIRMED - name: Muhammad ===
+USER: I want to order "4 in 1 Electric Vegetable Cutter | Rechargeable"
+https://thezenora.shop/product/4-in-1-electric-vegetable-cutter?gad_source=2&gad_campaignid=23396306387&gclid=CjwKCAjwyMnNBhBNEiwA-Kcguy0S2nJshFb0PGtopvs1-Q7IwzBMIazwdzuooKdOeCyd8CxX7zY7uxoC8eYQAvD_BwE
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_selected]: Electric Vegetable Cutter 4-in-1 Rs.2,099 ki hai 🏷️ One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein aur Self-cleaning function hai, USB rechargeable, 4 blades included. Order karna hai sir?
+USER: I want to order "2 in 1 Facial Hair Remover & Eyebrow Trimmer | Rechargeable"
+https://thezenora.shop/product/2-in-1-facial-hair-remover-eyebrow-trimmer
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_selected]: [📎 1 video sent: Facial Hair Remover]
+2-in-1 Facial Hair Remover and Eyebrow Trimmer ki price Rs.1,399 hai 🏷️ Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye aur Precision eyebrow trimmer head included, USB rechargeable, compact design. Order karna hai?
+USER: Order done 👍
+BOT [PATH2_PRE_CHECK | COLLECT_NAME->COLLECT_NAME | intent:yes]: Ji sir! 😊 Apna naam bata dein?
+USER: Muhammad
+BOT [PATH2_PRE_CHECK | COLLECT_PHONE->COLLECT_PHONE | intent:name_given]: Muhammad sir, phone number bata dein? 📱
+USER: Phone number 03010877232
+BOT [PATH2_PRE_CHECK | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE | intent:phone_given]: Rider aapko isi number (03010877232) pe call karega 📞 Call receive kar lein ge?
+USER: ??
+BOT [PATH3_AI | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE]: Aap isi number ko use karna chahte hain? Kya haan? 😊
+USER: Location pata ha aap KO
+BOT [PATH3_AI_EMPTY_FALLBACK]: Rider aapko isi number (03010877232) pe call karega 📞 Call receive kar lein ge?
+USER: Ma location send Kar don
+BOT [PATH3_AI | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE]: Kya aap yeh location de sakte hain?
+USER: Location.pakistan/Lahore barkat town shabara Mugall park street no 2 Bahtti house
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_in_phone_state]: Barkat Market mein block aur gali/street number bata dein? 🏘️
+USER: Barkat market Nahin barkat town shahdara Lahore
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Shukriya, aap ne location clear kar diya. Ab Block aur Gali number bata dein? 😊
+USER: Gali number 2
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_part_extracted]: Rider ke liye reference — qareeb koi landmark/mashoor jagah (masjid, hospital, school ya market) ka naam bata dein 📍
+USER: Nahar ke baen taraf mughal parak Gali number 2
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Yeh address sahi hai? House 2, Gali number 2, Barkat Town, near Mughal Park, Lahore. Agar courier ko kuch puchna ho to aapko call kar lein ge ✅
+USER: Government teaching hospital shahdara Lahore
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Yeh address sahi hai? Gali number 2, Barkat Town, near Government Teaching Hospital Shahdara, Mughal Park, Lahore. Agar courier ko kuch puchna ho to aapko call kar lein ge ✅
+USER: Kab tak pahunch jaega date aur din bata de
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:delivery_time_question]: Delivery 2-3 din hogi Lahore ke liye 🚚 Rider aapko call karega. 📍 Yeh address sahi hai? Gali number 2, Barkat Town, near Government Teaching Hospital Shahdara, Mughal Park, Lahore. Agar courier ko kuch puchna ho to aapko call kar lein ge ✅
+USER: Government hospital se thoda sa aage hai
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Yeh address sahi hai? Barkat Town, near Government Teaching Hospital Shahdara, Mughal Park, Lahore. Agar courier ko kuch puchna ho to aapko call kar lein ge ✅
+USER: Okay
+BOT: 📋 Order details:
+- 2-in-1 Facial Hair Remover and Eyebrow Trimmer: Rs.1,399
+🚚 Delivery: FREE
+💰 Total: Rs.1,399
+
+Naam: Muhammad
+Phone: 03010877232
+City: Lahore
+Address: Barkat Town, near Government Teaching Hospital Shahdara, Mughal Park, Lahore
+Delivery: 2-3 din
+
+Sab theek hai to haan bol dein, o
+USER: Ge
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: Sab theek hai to haan bol dein, order laga deta hun. Kuch change karna ho to bata dein.
+USER: Aapke pass RC car Hoti hai remote control
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: Sab theek hai to haan bol dein, order laga deta hun. Kuch change karna ho to bata dein.
+USER: Laga de
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Shukriya Muhammad sir! ✅ Order note ho gaya. Waise 75% tak discount wale products bhi hain jo kaafi log mangwa rahe hain — dikhadu? Sath mein aa jayega aur delivery bhi free rahegi 🚚
+USER: Aapke pass RC cars hai to uski tasvir send kar sakte ho
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Dekhna chahein ge?
+USER: Remote control RC cars
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Dekhna chahein ge?
+USER: Ge
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Dekhna chahein ge?
+USER: Dekha den
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: [📎 7 videos sent: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Vegetable Cutter, Knee Sleeve, Duster Kit]
+Yeh dekhen 👇
+
+1. T9 Trimmer — Rs.899
+2. Blackhead Remover — Rs.1,299
+3. Cutting Board — Rs.1,299
+4. Oil Spray — Rs.899
+5. Ear Wax Kit — Rs.499
+6. Vegetable Cutter — Rs.1,599
+7. Neb
+USER: I want to order "4 in 1 Electric Vegetable Cutter | Rechargeable"
+https://thezenora.shop/product/4-in-1-electric-vegetable-cutter?gad_source=2&gad_campaignid=23396306387&gclid=CjwKCAjwyMnNBhBNEiwA-Kcguy0S2nJshFb0PGtopvs1-Q7IwzBMIazwdzuooKdOeCyd8CxX7zY7uxoC8eYQAvD_BwE
+BOT [PATH0D_WEB_REFERRAL_INTERCEPT | COMPLAINT->PRODUCT_INQUIRY]: Ji sir, Electric Vegetable Cutter 4-in-1 Rs.2,099 ki hai 🏷️ One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein, Self-cleaning function hai, USB rechargeable, 4 blades included. Order karna hai?
+USER: bhi uska  sath Don karte Hain
+BOT [PATH3_AI_TO_TEMPLATE | PRODUCT_INQUIRY->ORDER_SUMMARY]: 📋 Order details:
+- Electric Vegetable Cutter 4-in-1: Rs.2,099
+🚚 Delivery: FREE
+💰 Total: Rs.2,099
+
+Naam: Muhammad
+Phone: 03010877232
+City: Lahore
+Address: Barkat Town, near Government Teaching Hospital Shahdara, Mughal Park, Lahore
+Delivery: 2-3 din
+
+Sab theek hai to haan bol dein, order laga deta
+USER: Use location per bhej dijiyega
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: Sab theek hai to haan bol dein, order laga deta hun. Kuch change karna ho to bata dein.
+USER: Donon chijon Ka Karke banaa dena vah upar jo aapko pahle diya tha
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: Sab theek hai to haan bol dein, order laga deta hun. Kuch change karna ho to bata dein.
+USER []: Hello bhai, uske saath hai aapka facial hair remover aur ye saath ka trimmer dono ka udhar bana den, ussi location pe aana hai. Theek hai, zara bana den iska.
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Muhammad sir, order save ho gaya ✅ Waise 75% tak discount wale products hain abhi — dikhadu aapko? Sath mein aa jayein ge, delivery free rahegi 🚚
+USER []: Dono ka bhi la banake na toha bhi pho jassi, page ni bhi naaya bhi upas bhi jassi banake bhi de. Bilo sara dubh jassi kawata, bhai sand karda dono cheezon ka.
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Dekhna chahein ge?
+USER []: Doh cheezain pohnchengi docs application pe.
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Dekhna chahein ge?
+USER []: Jhor Lahore
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Dekhna chahein ge?
+USER []: Kitne din tak pohanch jayenge, dono kaise aayenge, na pata de.
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Ji sir, Lahore mein estimated 2-3 din lagein ge 🚚 Rider delivery se pehle call karega.
+
+Waise discount products dekhna chahein ge?
+USER []: aapna bas dono order na done karte hain, dono facial hair remover session aur yeh vegetable cutter tu hai, yeh karte hain dono.
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: [📎 7 videos sent: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Facial Hair Remover, Knee Sleeve, Duster Kit]
+Yeh dekhen 👇
+
+1. T9 Trimmer — Rs.899
+2. Blackhead Remover — Rs.1,299
+3. Cutting Board — Rs.1,299
+4. Oil Spray — Rs.899
+5. Ear Wax Kit — Rs.499
+6. Facial Hair Remover — Rs.899
+7.
+USER: 2 Order done 👍
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+
+=== CHAT #238 - 55 msgs - state: ORDER_CONFIRMED - name: Ji Sir ===
+USER: I want to order "4 in 1 Electric Vegetable Cutter | Rechargeable"
+https://thezenora.shop/product/4-in-1-electric-vegetable-cutter?gad_source=2&gad_campaignid=23396306387&gclid=CjwKCAjwpcTNBhA5EiwAdO1S9okLnWn1lSCIBLC_OyYx2hJCXVNAu4Wuum8i2YmN7tACux3OscOpZhoCUUAQAvD_BwE
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_selected]: Electric Vegetable Cutter 4-in-1 Rs.2,099 ki hai 🏷️ One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein aur Self-cleaning function hai, USB rechargeable, 4 blades included. Order karna hai sir?
+USER: Electric Vegetable Cutter 4-in-1 Rs.2,099 ki hai 🏷️ One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein aur Self-cleaning function hai, USB rechargeable, 4 blades included. Order karna hai sir?
+BOT [PATH2_PRE_CHECK | COLLECT_NAME->COLLECT_NAME | intent:order_intent]: Bilkul sir! 😊 Apna naam bata dein?
+USER: Asif
+BOT [PATH2_PRE_CHECK | COLLECT_PHONE->COLLECT_PHONE | intent:name_given]: Asif sir, phone number bata dein? 📱
+USER: 03129756107
+BOT [PATH2_PRE_CHECK | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE | intent:phone_given]: Delivery ke waqt rider 03129756107 pe call karega 📞 Receive kar lein ge ya koi aur number dein?
+USER: Yehi number hai
+BOT [PATH2_PRE_CHECK | COLLECT_CITY->COLLECT_CITY | intent:same_phone]: Asif sir, konsi city ya tehsil mein delivery chahiye? 🚚
+USER: Karachi
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:city_given]: Karachi mein konsa area hai? 📍 Jaise Gulshan-e-Iqbal, DHA/Defence, North Nazimabad, Nazimabad, Clifton
+USER: New Karachi Kali market
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_part_extracted]: New Karachi mein konsa block hai aur gali/street number? 🏘️
+USER: 5g
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_part_extracted]: New Karachi mein block aur gali/street number bata dein? 🏘️
+USER: 88/28
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Aapka house number kya hai? 😊
+USER: 88/28
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Aapka landmark kya hai? Qareeb koi mashoor jagah ka naam bata dein — masjid, school, bank, petrol pump ya dukaan? 🕌
+USER: Mohammedi Jama masjid
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_part_extracted]: 📍 Aapka address: House 88/28, 5g, New Karachi, near Mohammedi Jama masjid, Karachi. Sahi hai? Agar delivery company ko address mein koi issue ho to isi number pe call karein ge ✅
+USER: Gi ok
+BOT: 📋 Order details:
+- Electric Vegetable Cutter 4-in-1: Rs.2,099
+🚚 Delivery: FREE
+💰 Total: Rs.2,099
+
+Naam: Asif
+Phone: 03129756107
+City: Karachi
+Address: House 88/28, 5g, New Karachi, near Mohammedi Jama masjid, Karachi
+Delivery: 2-3 din
+
+Sab theek hai to haan bol dein, order laga deta hun ✅
+USER: Delivery to feri haina
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: Karachi mein 2-3 din mein delivery ho jaegi sir 🚚 Rider call karega delivery se pehle.
+
+Order place kar dun? Haan bolen ya kuch change karna ho to bata dein.
+USER: Delivery to feri haina
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: Karachi mein 2-3 din mein delivery ho jaegi sir 🚚 Rider call karega delivery se pehle.
+
+Order place kar dun? Haan bolen ya kuch change karna ho to bata dein.
+USER: Delivery to feeri haona
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: Ji sir, Karachi mein estimated 2-3 din lagein ge 🚚 Rider delivery se pehle call karega.
+
+Order place kar dun? Haan bolen ya kuch change karna ho to bata dein.
+USER: Haan
+BOT: g sir delivery free he blkl
+USER: Ok
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Asif sir, order save ho gaya ✅ Waise 75% tak discount wale products hain abhi — dikhadu aapko? Sath mein aa jayein ge, delivery free rahegi 🚚
+USER: Girl dikhaden
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: Aapka order already confirm hai sir ✅ Kuch aur chahiye to bata dein!
+USER: Ji dikhaden
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: Aapka order already confirm hai sir ✅ Kuch aur chahiye to bata dein!
+USER: Aur Kia hai
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: Aapka order already confirm hai sir ✅ Kuch aur chahiye to bata dein!
+USER: No
+USER: I want to order "Stainless Steel Cutting Board Large Size (39cm by 48cm)"
+https://thezenora.shop/product/stainless-steel-cutting-board-large-size
+BOT [PATH0D_WEB_REFERRAL_INTERCEPT | COMPLAINT->PRODUCT_INQUIRY]: Stainless Steel Cutting Board Large Size Rs.1,799 ki hai 🏷️ Food grade stainless steel — 39cm x 48cm large size aur Non-porous hai bacteria nahi lagta, scratch-proof, easy to clean — paani se dho lo bas. Order karna hai sir?
+USER: Ji sir
+BOT [PATH2_PRE_CHECK | ORDER_SUMMARY->ORDER_SUMMARY | intent:name_in_product_inquiry]: 📋 Order details:
+- Stainless Steel Cutting Board Large Size: Rs.1,799
+🚚 Delivery: FREE
+💰 Total: Rs.1,799
+
+Naam: Ji Sir
+Phone: 03129756107
+City: Karachi
+Address: House 88/28, 5g, New Karachi, near Mohammedi Jama masjid, Karachi
+Delivery: 2-3 din
+
+Sab theek hai to haan bol dein, order laga deta hun
+USER: Haan
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Ji Sir sir, order save ho gaya ✅ Waise 75% tak discount wale products hain abhi — dikhadu aapko? Sath mein aa jayein ge, delivery free rahegi 🚚
+BOT: acha sir ap ki 2 chezen ho gai ab
+USER: No
+BOT: ap ko steel sheet nai chahea?
+USER: Ji no
+BOT: okay
+BOT: wese agar ap steel sheet bhi sath me mungwalete to delivery bhi free ho jati and steel sheet ap ko 1799 ke bjay 1300 ki prti
+USER: Nahi sir
+BOT: okay
+
+=== CHAT #280 - 55 msgs - state: COMPLAINT - name: Bataya Tha Faisal ===
+USER: I want to order "2 in 1 Facial Hair Remover & Eyebrow Trimmer | Rechargeable"
+https://thealvora.shop/product/2-in-1-facial-hair-remover-eyebrow-trimmer?gad_source=2&gad_campaignid=23625566111&gclid=CjwKCAjwpcTNBhA5EiwAdO1S9nDtHZIkpJZ-WBh2ToVovppw_A1j_TexjlJuPLigqH6W18Xnnx2vxRoCdNAQAvD_BwE
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_selected]: [📎 1 video sent: Facial Hair Remover]
+2-in-1 Facial Hair Remover and Eyebrow Trimmer Rs.1,399 ki hai 🏷️ Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye aur Precision eyebrow trimmer head included, USB rechargeable, compact design. Order karna hai sir?
+BOT: [🎤 Voice Follow-up Sent]
+USER: Kaab kab pahunchega Mera order
+BOT [PATH3_AI | PRODUCT_INQUIRY->PRODUCT_INQUIRY]: Delivery 2-4 din mein hoti hai, lekin location par depend karta hai. Kya aap order place karna chahte hain? 😊📦
+USER: दो-चार din se pahle order kiya tha lekin der ho gai abhi tak Aaya Nahin
+BOT [PATH2_PRE_CHECK | IDLE->IDLE | intent:post_delivery]: sir, order mil gaya — bohat acha! Agar product ke baare mein koi sawal ho to poochein 😊
+USER: Call Karen call per baat karte hain kaise aapko kaise pahunchana hai aur kaise humne dena hai aapko please jaldi order pahunchayen
+BOT [PATH3_AI_EMPTY_FALLBACK]: Kuch aur puchna ho to batayein sir 😊 Products dekhne hain ya order karna hai?
+USER: Order Karne hain
+BOT [PATH3_AI_TO_TEMPLATE | IDLE->COLLECT_NAME]: Bilkul sir! 😊 Apna naam bata dein?
+USER: Pahle naam bataya to tha Faisal
+BOT [PATH3_AI_TO_TEMPLATE | COLLECT_NAME->COLLECT_PHONE]: Bataya Tha Faisal sir, phone number bata dein? 📱
+USER: 0310 1414512
+BOT [PATH2_PRE_CHECK | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE | intent:phone_given]: Delivery ke waqt rider 03101414512 pe call karega 📞 Receive kar lein ge ya koi aur number dein?
+USER: Receive kar lenge
+BOT [PATH2_PRE_CHECK | COLLECT_CITY->COLLECT_CITY | intent:same_phone]: Bataya Tha Faisal sir, konsi city ya tehsil mein delivery chahiye? 🚚
+USER: Muzaffargarh wahidur Rahman doctor clinic Shah wala mohalla
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:city_given]: Shah Faisal Colony mein block aur gali/street number bata dein? 🏘️
+USER: Is number per phone Karen jo aapko diya hai abhi FIR aapko sari detail bata denge
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Yeh address sahi hai? Shah Faisal Colony, near Wahidur Rahman Doctor Clinic, Muzaffargarh. Agar courier ko kuch puchna ho to aapko call kar lein ge ✅
+USER: Nahin ham Nahin karenge Kisi number per call kijiega Jo hamen maine aapko Diya hai
+BOT: 📋 Order details:
+- 2-in-1 Facial Hair Remover and Eyebrow Trimmer: Rs.1,399
+🚚 Delivery: FREE
+💰 Total: Rs.1,399
+
+Naam: Bataya Tha Faisal
+Phone: 03101414512
+City: Muzaffargarh
+Address: Shah Faisal Colony, near Wahidur Rahman Doctor Clinic, Muzaffargarh
+Delivery: 4-6 din
+
+Sab theek hai to haan bol d
+USER: Jio dar laga de lekin jaldi pahunch Jana chahie
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Bataya Tha Faisal sir, order save ho gaya ✅ Waise 75% tak discount wale products hain abhi — dikhadu aapko? Sath mein aa jayein ge, delivery free rahegi 🚚
+USER: Bus Jo humne 1400 mein facial hair remover and ibros primer order karvaya tha aaj aaj mil sakta hai aur vahi chahie hamen aur please jaldi agar kuchh aur puchna ho to is number per call kijiega Jo humne aapko Diya hai
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Dekhna chahein ge?
+USER: Dikha de lekin kaise idhar dekhenge
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: [📎 7 videos sent: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Vegetable Cutter, Knee Sleeve, Duster Kit]
+Yeh dekhen 👇
+
+1. T9 Trimmer — Rs.899
+2. Blackhead Remover — Rs.1,299
+3. Cutting Board — Rs.1,299
+4. Oil Spray — Rs.899
+5. Ear Wax Kit — Rs.499
+6. Vegetable Cutter — Rs.1,599
+7. Neb
+USER: Blackhead remover chahiye hamen jo pahle ke bad dusra hai vahi chahie please jaldi bhijwa de
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: Chhote mass action ke sath jodema section ke sath pada hua hai hair removal removal and eyebrow driver vahi chahie
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Facial Hair Remover to aap already order kar chuke hain sir! In mein se koi aur add karna hai?
+USER: Vahi to facial hair remover Maine order karvaya tha lekin main samjha ki abhi aap vahi facial hair remover ka kah rahe hain pahle Jo order karvaya tha vahi chahie yah Jo video hai yah fijul hai aur kuchh Nahin chahie vahi hai removal order chahie please yah delete kar de mujhe aur Nahin chahie vahi 
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Facial Hair Remover to aap already order kar chuke hain sir! In mein se koi aur add karna hai?
+USER: Vahi facial hair remover chahie mujhe jo maine pahle order karvaya tha inmein se kuchh Nahin chahie lekin vah kab tak pahunchega please jaldi pahuncha den
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Facial Hair Remover to aap already order kar chuke hain sir! In mein se koi aur add karna hai?
+USER: Nahin Nahin bilkul Nahin karne sorry
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: Pahle aapko bataya tha na
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: Blackhead hair removal chahiye pehle bhi mangvaya tha vahi chahie dusra na bhej dijiyega please vah pahle wala chahie jo pahle mangvaya tha black head hair removal
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: Done! Blackhead Remover bhi add ho gaya.
+
+🎉 Order confirm ho gaya! Order ID: NRV-WA-59631
+- 2-in-1 Facial Hair Remover and Eyebrow Trimmer: Rs.1,399
+- 5-in-1 Blackhead Remover: Rs.1,299
+💰 Total: Rs.2,698 | 🚚 Delivery: FREE
+Bataya Tha Faisal | 03101414512
+📍 Shah Faisal Colony, near Wahidur Rahman
+USER: Black facial hair removal and eyebrow trimmer kya ek nahi hai black head hair removal Nahin chahie please mat bhejiyega bus vahi mujhe facial hair remover and I bro try mat chahie
+BOT [PATH1_TEMPLATE_STATE | PRODUCT_INQUIRY->PRODUCT_INQUIRY]: Ji sir, 2-in-1 Facial Hair Remover and Eyebrow Trimmer Rs.1,399 ki hai 🏷️ Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye, Precision eyebrow trimmer head included, USB rechargeable, compact design. Order karna hai?
+USER: Bilkul facial hair removal and eyebrow trimmer hi order karna hai aur kuchh nahin karna pahle bata chuki hun please dobara na batana pade vahi order kar de jaldi lekin
+BOT [PATH2_PRE_CHECK | ORDER_SUMMARY->ORDER_SUMMARY | intent:order_intent]: 📋 Order details:
+- 2-in-1 Facial Hair Remover and Eyebrow Trimmer: Rs.1,399
+- 5-in-1 Blackhead Remover: Rs.1,299
+🚚 Delivery: FREE
+💰 Total: Rs.2,698
+
+Naam: Bataya Tha Faisal
+Phone: 03101414512
+City: Muzaffargarh
+Address: Shah Faisal Colony, near Wahidur Rahman Doctor Clinic, Muzaffargarh
+Delivery:
+USER: Blackhead hair removal nahi order karwana please baat sune kuchh facial hair remover sirf ek order karvana hai
+BOT [PATH1_TEMPLATE_STATE | CANCEL_AFTER_CONFIRM->CANCEL_AFTER_CONFIRM]: Bataya Tha Faisal sir, aapka order abhi confirm nahi hua — cancel ho gaya hai. Agar baad mein order karna ho to hum yahan hain! 😊
+USER: Facial hair remover and eyebrow trimmer sirf ek chahie please bhej dena to the show mein
+USER: Tu nason mein 1400 mein yah lafz ko jo galat a rahe hain
+BOT: [🎤 Complaint Voice Note]
+BOT: sir, aap is number pe WhatsApp message bhej dein — 03701337838 🙏 InshaAllah aapka masla resolve ho jayega ✅
+USER: Bus mujhe hi facial hair removal and eyebrow try my chahie jaldi de de aur jo sawal puchna hai poochh le jaldi mujhe kahin jana hai please order kar den
+USER: Do facial hair removal and eyebrow driver pahle hamare pass a raha tha order kya aapko Nahin a sakta dobara please bhej dena
+
+=== CHAT #266 - 46 msgs - state: ORDER_CONFIRMED - name: Ok Not Required ===
+USER: I want to order "2 in 1 Facial Hair Remover & Eyebrow Trimmer | Rechargeable"
+https://thealvora.shop/product/2-in-1-facial-hair-remover-eyebrow-trimmer?gad_source=2&gad_campaignid=23625566111&gclid=CjwKCAjwpcTNBhA5EiwAdO1S9mpAw-LJ4TcBczkEIr9SojMDXmudTTtIaU1cflCh9Awdw3tS5eBT2xoCEFgQAvD_BwE
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_selected]: [📎 1 video sent: Facial Hair Remover]
+Ji sir, 2-in-1 Facial Hair Remover and Eyebrow Trimmer Rs.1,399 ki hai 🏷️ Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye, Precision eyebrow trimmer head included, USB rechargeable, compact design. Order karna hai?
+USER: Delivery time Kitna Hy?
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:delivery_time_question]: Karachi/Lahore/Islamabad: 2-3 din. Baqi cities: 3-6 din 🚚 Rider call karega delivery se pehle.
+USER: Ok
+BOT [PATH2_PRE_CHECK | COLLECT_NAME->COLLECT_NAME | intent:acknowledgment]: Ji sir! 😊 Apna naam bata dein?
+USER: LDA AVENUE PHASE 1 BLOCK J -R 1185  LAHORE
+BOT [PATH3_AI | COLLECT_NAME->COLLECT_NAME]: Delivery kis city mein karni hai?
+USER: .
+BOT [PATH3_AI | COLLECT_NAME->COLLECT_NAME]: Delivery kis city mein karni hai?
+USER: Bhai poora address bta dia hy
+BOT [PATH3_AI | COLLECT_NAME->COLLECT_NAME]: Address mil gaya, lekin abhi tak city ka naam nahi mila. Delivery kis city mein karni hai?
+USER: Address k last Mai likha hy
+BOT [PATH3_AI | COLLECT_NAME->COLLECT_NAME]: Kya aap address phir se share kar sakte hain takay main confirm kar saku? 😊
+USER: LDA AVENUE PHASE 1 BLOCK J -R 1185  LAHORE
+BOT [PATH3_AI | COLLECT_NAME->COLLECT_NAME]: Delivery Lahore mein karni hai. Apna phone number bata dein? 😊
+USER: 03007882152
+BOT [PATH2_PRE_CHECK | COLLECT_NAME->COLLECT_NAME | intent:phone_in_name_state]: Number mil gaya 👍 sir, apna naam bata dein?
+USER: Oper bta Chuka hn
+BOT [PATH3_AI | COLLECT_NAME->COLLECT_NAME]: Pichla data nahi mil raha, lekin koi masle ki baat nahi — dubara order le leta hun! Apna naam bata dein? 😊
+USER: Ok not required
+BOT [PATH2_PRE_CHECK | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE | intent:name_given]: Delivery ke waqt rider 03007882152 pe call karega 📞 Receive kar lein ge ya koi aur number dein?
+USER: Thanks
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:same_phone]: Lahore mein konsa area hai? 📍 Jaise DHA/Defence, Gulberg, Johar Town, Model Town, Bahria Town
+USER: Mjhy order nai krna
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_part_extracted]: House/plot number bata dein? 🏠
+USER: Nai bta rha
+BOT [PATH3_AI | COLLECT_ADDRESS->COLLECT_ADDRESS]: Koi masle ki baat nahi, ab landmark ka naam bata dein — masjid, school, bank, petrol pump ya dukaan? 🏢
+USER: Mai nI btaonga
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_part_extracted]: 📍 Aapka address: Block J, Mjhy order nai krna, near Mai nI btaonga, Lahore. Sahi hai? Agar delivery company ko address mein koi issue ho to isi number pe call karein ge ✅
+BOT: sorry sir auto response ja raha tha , mazrat ap ko zehmat hui, abhi hmari technology new he , ap ki order details dekh li hen
+BOT: inshaAllah 4-5 days me delivery ho jaygi, again sorry ap ko zehmat hui
+BOT: acha ap ka name missing he bs voh btaden baki inshaAllah aj ap ka parcel dispatch ho jayga
+USER: Wo b oper likha huwa hy
+USER: Sunday k baad delivery nai lnga.
+USER: Maximum Sunday tak deliver ho skta Hy to dispatch kryega.
+Allow to open ka option rakhyega.
+BOT: acha mere pas sari chat load nahi ho rahi , agar ap sirf name btadenge to acha ho jayga baki details to note krli he
+BOT: lahore me delivery to us se pehle he ho jaygi inshaAllah
+BOT: yes hamary sb parcels  ke oper allow to open likha hua hota he
+USER: Agar open na krney dia gya ya Sunday k baad delivery hui to accept nai hoga.
+USER: haan
+USER: Syed Gulzar Shah
+USER: LDA AVENUE PHASE 1 BLOCK J -R 1185  LAHORE
+USER: Rider any se pehly call zaroor krey.
+Ho skta Hy namaz k agar Aya to ise wait krna parega.
+BOT: rider jb ap ke pas parcel lekr ay to ap usy bol dena ke parcel ke oepr name ke agay allow to open likha he to allow krny de , asal me yh riders jldi me hoty hen to khol kar check krwany me nkhry krty hen , ap unhy force krenge to krwa denge , han rider call kar leta hota he postex se ayga ap ke pas
+USER: Ok
+
+=== CHAT #183 - 44 msgs - state: COLLECT_DELIVERY_PHONE - name: A Jjj Jjjjj ===
+USER: I want to order "Mini Pain Relief EMS Butterfly Massager"
+https://theelvora.store/product/mini-pain-relief-ems-butterfly-massager?gad_source=SQQAvD_BwE
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_selected]: Mini Pain Relief EMS Butterfly Massager ki price Rs.1,099 hai 🏷️ EMS technology se muscles ko direct stimulation milti hai — dard mein fori rahat aur Compact butterfly design, multiple intensity levels, portable — kahin bhi use karo. Order karna hai?
+USER: Hello
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:greeting_casual]: Ji sir! 😊 Batayein kaise help karun? EMS Massager Rs.1,099 — order karna hai?
+USER: Sir
+BOT []: EMS Massager Rs.1,099 mein hai. Order karna hai sir? 😊
+USER: A Jjj Jjjjj
+BOT [PATH2_PRE_CHECK | COLLECT_PHONE->COLLECT_PHONE | intent:name_in_product_inquiry]: A Jjj Jjjjj sir, A Jjj Jjjjj sir, phone number bata dein? 📱
+USER: Jj
+BOT [PATH3_AI | COLLECT_PHONE->COLLECT_PHONE]: A Jjj Jjjjj sir, phone number bata dein? 📱
+USER: Delivray kab puhnchi ga Sir
+BOT [PATH3_AI | COLLECT_PHONE->COLLECT_PHONE]: Delivery kis city mein karni hai? 😊
+USER: Quetta
+BOT [PATH3_AI | COLLECT_PHONE->COLLECT_PHONE]: Hamari taraf se Quetta mein delivery usually 3-5 din lagte hain. Aur koi madad chahiye?
+USER: 1 chahayyay
+BOT [PATH3_AI | COLLECT_PHONE->COLLECT_PHONE]: A Jjj Jjjjj sir, phone number bata dein?
+USER: A cheez
+BOT [PATH3_AI | COLLECT_PHONE->COLLECT_PHONE]: Hamari taraf se koi specific cheez chahiye toh please bataein, main madad kar sakti hun! 😊
+USER: 03188032040
+BOT [PATH2_PRE_CHECK | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE | intent:phone_given]: Delivery ke waqt rider 03188032040 pe call karega 📞 Receive kar lein ge ya koi aur number dein?
+USER: Assalamu Alaikum, sir. Yeh yeh cheez nahi hai jo phir sir yeh cheezen dabata hai. Yeh kisne ka hai? 1100 ka hai aur yeh A1 cheez hai na. Jj
+BOT: ap apna name bhi btaden
+USER: A number hay
+BOT [PATH3_AI | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE]: Kya yeh number aap delivery ke liye use karna chahte hain ya koi aur number dein?
+USER: Amir ali
+BOT [PATH3_AI | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE]: Kya yeh aapka naya number hai ya delivery ke liye use nahi karna hai?
+USER: Jj
+BOT [PATH3_AI | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE]: Kya aap delivery ke liye yehi number use karna chahte hain ya alag number dena hai?
+USER: Sir voice karo
+BOT [PATH0C_VOICE_MSG_REQUEST | COLLECT_DELIVERY_PHONE->undefined]: Okay thora sabr karein please, me ap ko voice message karti hu 🎤
+USER: Ok
+USER: saare cheez ki bara detail bhejo, ek cutter bhi bhejo
+USER: Photho bajo sir garentay hay is ka
+USER: Accha cheez hay ya nahi bro
+USER: Vioce laro sir
+USER: Karo
+USER: Hello
+USER: Sir
+USER: [Image: Yeh image kisi parcel ya label ki nahi hai, yeh T9 Trimmer ka istamal karte hue dikhai de rahi hai.]
+USER: Sir a wala hay
+USER: A b chhayay
+USER: Jawab do sir
+USER: He
+USER: Hello Sir
+
+=== CHAT #579 - 52 msgs - state: ORDER_CONFIRMED - name: Uzma Bibi ===
+USER: I want to order "4 in 1 Electric Vegetable Cutter | Rechargeable"
+https://thezenora.shop/product/4-in-1-electric-vegetable-cutter?gad_source=2&gad_campaignid=23591388713&gclid=CjwKCAjwyMnNBhBNEiwA-Kcgu24MOJp9uGc9bt1vp3r0X_5kzPPZT0ijJf-Bxk4itZFUqpuUUbJzRBoCy3kQAvD_BwE
+BOT [PATH2_PRE_CHECK | PRODUCT_INQUIRY->PRODUCT_INQUIRY | intent:product_selected]: Electric Vegetable Cutter 4-in-1 Rs.2,099 ki hai 🏷️ One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein aur Self-cleaning function hai, USB rechargeable, 4 blades included. Order karna hai sir?
+USER: G
+BOT [PATH2_PRE_CHECK | COLLECT_NAME->COLLECT_NAME | intent:yes]: Ji sir! 😊 Apna naam bata dein?
+USER: Uzma bibi
+BOT [PATH2_PRE_CHECK | COLLECT_PHONE->COLLECT_PHONE | intent:name_given]: Uzma Bibi madam, phone number bata dein? 📱
+USER: 0348 4021250
+BOT [PATH2_PRE_CHECK | COLLECT_DELIVERY_PHONE->COLLECT_DELIVERY_PHONE | intent:phone_given]: Rider aapko isi number (03484021250) pe call karega 📞 Call receive kar lein ge?
+USER: G
+BOT [PATH2_PRE_CHECK | COLLECT_CITY->COLLECT_CITY | intent:same_phone]: City/tehsil bata dein — delivery kahan karni hai? 🚚
+USER: Jamia Masjid Bukhari Shah Faisal gate Gujrat
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:city_given]: Shah Farid Colony mein konsa block hai aur gali/street number? 🏘️
+USER: 1 min me ap ko pura adress send krti ho
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_part_extracted]: Shah Farid Colony mein konsa block hai aur gali/street number? 🏘️
+USER: Colony ni h
+BOT [PATH2_PRE_CHECK | COLLECT_ADDRESS->COLLECT_ADDRESS | intent:address_part_extracted]: Shah Farid Colony mein block aur gali/street number bata dein? 🏘️
+USER: Jamia Masjid Bukhari Shah Faisal gate Gujrat near Mathai mahal
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Aapka address: Shah Farid Colony, near Jamia Masjid Bukhari, Colony ni h, Gujrat. Sahi hai? Agar delivery company ko address mein koi issue ho to isi number pe call karein ge ✅
+USER: Street numbr ni h
+BOT [PATH3_AI_ADDRESS_CONFIRM | COLLECT_ADDRESS->undefined]: 📍 Aapka address: Shah Farid Colony, near Jamia Masjid Bukhari, Colony ni h, Gujrat. Sahi hai? Agar delivery company ko address mein koi issue ho to isi number pe call karein ge ✅
+USER: G thek h
+BOT: 📋 Order details:
+- Electric Vegetable Cutter 4-in-1: Rs.2,099
+🚚 Delivery: FREE
+💰 Total: Rs.2,099
+
+Naam: Uzma Bibi
+Phone: 03484021250
+City: Gujrat
+Address: Shah Farid Colony, near Jamia Masjid Bukhari, Colony ni h, Gujrat
+Delivery: 3-4 din
+
+Sab theek hai to haan bol dein, order laga deta hun ✅
+USER: Ye adress ni sai jo ap ne send kiy h
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: Order place kar dun? Haan bolen ya kuch change karna ho to bata dein.
+USER: Jo abi adress send kro gi wo h
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: Sab theek hai to haan bol dein, order laga deta hun. Kuch change karna ho to bata dein.
+USER: Jamia Masjid Bukhari Shah Faisal gate Gujrat Near Mathai Mahal
+BOT [PATH1_TEMPLATE_STATE | ORDER_SUMMARY->ORDER_SUMMARY]: Sab theek hai to haan bol dein, order laga deta hun. Kuch change karna ho to bata dein.
+USER: Ye sai adress h
+BOT [PATH1_TEMPLATE_STATE | UPSELL_HOOK->UPSELL_HOOK]: Uzma Bibi madam, order save ho gaya ✅ Waise 75% tak discount wale products hain abhi — dikhadu aapko? Sath mein aa jayein ge, delivery free rahegi 🚚
+USER: G dekha dy
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: [📎 7 videos sent: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Facial Hair Remover, Knee Sleeve, Duster Kit]
+Yeh dekhen 👇
+
+1. T9 Trimmer — Rs.899
+2. Blackhead Remover — Rs.1,299
+3. Cutting Board — Rs.1,299
+4. Oil Spray — Rs.899
+5. Ear Wax Kit — Rs.499
+6. Facial Hair Remover — Rs.899
+7.
+USER: Jo sub phly send kiy h bus 1 hi order h jis ki price 2000 h shyad
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Konsa pasand aaya? Number ya naam bata dein.
+USER: 4 in 1 Electric Vegetable Cutter
+BOT [PATH1_TEMPLATE_STATE | UPSELL_SHOW->UPSELL_SHOW]: Vegetable Cutter to aap already order kar chuke hain madam! In mein se koi aur add karna hai?
+USER: Ni
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: 🎉 Order confirm ho gaya! Order ID: NRV-WA-71130
+- Electric Vegetable Cutter 4-in-1: Rs.2,099
+💰 Total: Rs.2,099 | 🚚 Delivery: FREE
+Uzma Bibi | 03484021250
+📍 Shah Farid Colony, near Jamia Masjid Bukhari, Colony ni h, Gujrat — 3-4 din
+Paisa delivery ke waqt dena hai. Shukriya madam! 😊
+USER []: Assalamu Alaikum Shah Fareed Colony nahi hai sirf Jamia Masjid Bahari Shah Faisal Gate Gujrat yeh address hai. Upar aap ne address ghalat likha hua hai. Aap ko phir yeh mujhe khud nahi pata kahan ka address aap mein likha hua hai woh ghalat hai. Toh aap ko bara masla banega. Mera address hai Jamia M
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: Address update ho gaya ✅
+📍 Shah Farid Colony, near Jamia Masjid Bukhari, Colony ni h, Gujrat
+
+Shukriya! 3-4 din mein delivery ho jaegi.
+USER: Adress galt likha h ap ne
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: Aapka order already confirm hai madam ✅ Kuch aur chahiye to bata dein!
+USER: Mera adress hi ap ne sai ni likha
+BOT [PATH1_TEMPLATE_STATE | ORDER_CONFIRMED->ORDER_CONFIRMED]: Aapka order already confirm hai madam ✅ Kuch aur chahiye to bata dein!
+USER: Kuch ni chahiye
+BOT [PATH1_TEMPLATE_STATE | CANCEL_AFTER_CONFIRM->CANCEL_AFTER_CONFIRM]: Uzma Bibi madam, aapka parcel dispatch ho chuka hai — ab cancel nahi ho sakta. Delivery ke waqt rider se mil jayega. Shukriya!
+USER: Me ap ko bol rhi ho adress thek ni likha phly us ko sai kry
+USER: Jamia Masjid Bukhari Shah Faisal gate Gujrat near Mathai Mahal
+USER: Ye adress h
+BOT: Assalamu Alaikum Uzma Bibi madam, maafi chahti hun address ki wajah se pareshani hui. Address correct kar diya hai:
+
+Jamia Masjid Bukhari, Shah Faisal Gate, near Mathai Mahal, Gujrat
+
+Aapka order confirm hai, 3-4 din mein delivery ho jayegi. Shukriya!
+USER: Ok
+BOT: Uzma Bibi madam, aapka order confirmed hai. Address: Jamia Masjid Bukhari, Shah Faisal Gate, near Mathai Mahal, Gujrat. 3-5 din mein delivery ho jaegi, rider delivery se pehle call karega. Shukriya!

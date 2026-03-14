@@ -1,0 +1,310 @@
+
+=== CHAT #798 === Phone: 03129325362 | State: COLLECT_PHONE | Msgs: 6 | Name: Pictures Bijwado | Created: 2026-03-13 15:15:16
+USER [pre-check]: assalamo alaikum
+BOT [greeting_voice]: [🎤 Salam Voice Note]
+USER [ai]: Mujy timer chaheyw
+BOT [ai]: Hamare paas timer nahi hai. Lekin agar aap kisi aur product ke baare mein jaan na chahte hain, toh bataayen! 😊
+USER [pre-check]: Trimmer
+BOT [pre-check]: Hamare pas yeh milte hain:
+
+1. T9 Vintage Professional Trimmer — Rs.1,399
+2. 2-in-1 Facial Hair Remover and Eyebrow Trimmer — Rs.1,399
+
+In me se konsa pasand aaya sir? 😊
+USER [pre-check]: 2
+BOT [pre-check]: [📎 1 video sent: Facial Hair Remover]
+2-in-1 Facial Hair Remover and Eyebrow Trimmer ki price Rs.1,399 hai 🏷️ Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye aur Precision eyebrow trimmer head included, USB rechargeable, compact design. Order karna hai?
+USER [pre-check]: Pictures bijwado
+BOT [pre-check]: Pictures Bijwado sir, phone number bata dein? 📱
+
+=== CHAT #797 === Phone: 03220997158 | State: COLLECT_PHONE | Msgs: 5 | Name: Karachi mein hai | Created: 2026-03-13 15:10:13
+USER [pre-check]: I want to order "2 in 1 Facial Hair Remover & Eyebrow Trimmer | Rechargeable"
+https://thealvora.shop/product/2-in-1-facial-hair-remover-eyebrow-trimmer?gad_source=2&gad_campaignid=23625566111&gclid=CjwKCAjw687NBhB4EiwAQ645diW4MwSxt5JfWvxwvq1T-AIqb6Ppx0r4Zr3c1D3D4wuyZaxALMZkPRoCLuMQAvD_BwE
+BOT [pre-check]: [📎 1 video sent: Facial Hair Remover]
+2-in-1 Facial Hair Remover and Eyebrow Trimmer Rs.1,399 ki hai 🏷️ Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye aur Precision eyebrow trimmer head included, USB rechargeable, compact design. Order karna hai sir?
+USER [pre-check]: G
+BOT [pre-check]: Zaroor sir! 😊 Apna naam bata dein?
+USER [ai]: Hamen kitne ki milegi aur kahan se milegi yah bata do
+BOT [ai]: Facial Hair Remover ki price Rs.1,399 hai. Ye hamari shop se milegi, jo Rafah e Aam, Karachi mein hai 📍. Apna naam bata dein?
+USER [smart-fill]: Karachi mein hai 
+😳
+BOT [smart-fill]: Karachi mein hai sir, apna phone number bata dein? 📱
+USER [ai]: Ham Multan mein rehte hain
+BOT [ai]: Delivery kis city mein karni hai? Multan ya Karachi?
+
+=== CHAT #796 === Phone: 03008710281 | State: ORDER_CONFIRMED | Msgs: 10 | Name: Hassan | Created: 2026-03-13 15:08:01
+USER [pre-check]: I want to order "Mini Pain Relief EMS Butterfly Massager"
+https://theelvora.store/product/mini-pain-relief-ems-butterfly-massager?gad_source=2&gad_campaignid=23303308950&gclid=CjwKCAjwpcTNBhA5EiwAdO1S9t8EJao_T0jiA4lC_N5pwgxJpfC9D16_VFob9k5Cy9ErgufaJPSIfBoC-OUQAvD_BwE
+BOT [pre-check]: Mini Pain Relief EMS Butterfly Massager ki price Rs.1,099 hai 🏷️ EMS technology se muscles ko direct stimulation milti hai — dard mein fori rahat aur Compact butterfly design, multiple intensity levels, portable — kahin bhi use karo. Order karna hai?
+USER [pre-check]: Yes
+BOT [pre-check]: Bilkul sir! 😊 Apna naam bata dein?
+USER [pre-check]: Hassan
+BOT [pre-check]: Hassan sir, phone number bata dein? 📱
+USER [pre-check]: 03191234511
+BOT [pre-check]: Delivery ke waqt rider 03191234511 pe call karega 📞 Receive kar lein ge ya koi aur number dein?
+USER [pre-check]: G right
+BOT [pre-check]: City/tehsil bata dein — delivery kahan karni hai? 🚚
+USER [pre-check]: Kakul , Abbotabad
+BOT [pre-check]: Kakul mein block aur gali/street number bata dein? 🏘️
+USER [pre-check]: House 13 E, Street 6, PMA
+BOT [pre-check]: 📋 Order details:
+- Mini Pain Relief EMS Butterfly Massager: Rs.1,099
+🚚 Delivery: FREE
+💰 Total: Rs.1,099
+
+Naam: Hassan
+Phone: 03191234511
+City: Abbottabad
+Address: House 13, Street 6, Kakul, Abbottabad
+Delivery: 4-6 din
+
+Sab theek hai to haan bol dein, order laga deta hun ✅
+USER [template]: Haan
+BOT [template]: Shukriya Hassan sir! ✅ Order note ho gaya. Waise 75% tak discount wale products bhi hain jo kaafi log mangwa rahe hain — dikhadu? Sath mein aa jayega aur delivery bhi free rahegi 🚚
+USER [template]: G
+BOT [template]: [📎 8 videos sent: T9 Trimmer, Blackhead Remover, Cutting Board, Oil Spray, Vegetable Cutter, Facial Hair Remover, Knee Sleeve, Duster Kit]
+Yeh dekhen 👇
+
+1. T9 Trimmer — Rs.899
+2. Blackhead Remover — Rs.1,299
+3. Cutting Board — Rs.1,299
+4. Oil Spray — Rs.899
+5. Ear Wax Kit — Rs.499
+6. Vegetable Cutter — Rs.1,599
+7. Facial Hair Remover — Rs.899
+8. Nebulizer — Rs.1,199
+9. Knee Sleeve — Rs.999
+10. Duster Kit — Rs.750
+
+In mein se konsa product bhi order mein add kardu?
+USER [template]: Koi nahi
+BOT [template]: 🎉 Order confirm ho gaya! Order ID: NRV-WA-61093
+- Mini Pain Relief EMS Butterfly Massager: Rs.1,099
+💰 Total: Rs.1,099 | 🚚 Delivery: FREE
+Hassan | 03191234511
+📍 House 13, Street 6, Kakul, Abbottabad — 4-6 din
+Paisa delivery ke waqt dena hai. Shukriya sir! 😊
+
+=== CHAT #794 === Phone: 03161132651 | State: COMPLAINT | Msgs: 7 | Name: ? | Created: 2026-03-13 15:04:34
+USER [pre-check]: I want to order "4 in 1 Electric Vegetable Cutter | Rechargeable"
+https://thezenora.shop/product/4-in-1-electric-vegetable-cutter
+BOT [pre-check]: Electric Vegetable Cutter 4-in-1 ki price Rs.2,099 hai 🏷️ One button operation — sabzi, pyaaz, garlic, lehsun sab kaat ta hai seconds mein aur Self-cleaning function hai, USB rechargeable, 4 blades included. Order karna hai?
+USER [pre-check]: Assalamualaikum
+BOT [pre-check]: Walaikum Assalam sir! 😊 Khush aamdeed. Aap kis product ke baare mein information lena chahein ge? Vegetable Cutter Rs.2,099 — order karna hai?
+USER [template]: Hum ne ise karida hai but yeh kaam ni ker rha bilkul 4 5 ghente charge per bhi lga ke dhek Liya hai but still not working
+BOT [complaint_voice]: [🎤 Complaint Voice Note]
+BOT [complaint_text]: sir, aap is number pe WhatsApp message bhej dein — 03701337838 🙏 InshaAllah aapka masla resolve ho jayega ✅
+USER [whatsapp]: Ok I try Thanks
+USER [whatsapp]: Offline aa rha hai number
+
+=== CHAT #791 === Phone: 03354917754 | State: COMPLAINT | Msgs: 11 | Name: ? | Created: 2026-03-13 14:44:03
+USER [ai]: Hlo
+BOT [ai]: Ji sir! Kaise madad kar sakta hun? 😊
+USER [pre-check]: [Image: Yeh ek "Mini Massager" ka box hai.]
+BOT [pre-check]: Mini Pain Relief EMS Butterfly Massager ki price Rs.1,099 hai 🏷️ EMS technology se muscles ko direct stimulation milti hai — dard mein fori rahat aur Compact butterfly design, multiple intensity levels, portable — kahin bhi use karo. Order karna hai?
+USER [pre-check]: Can I return it?
+BOT [pre-check]: sir, paisa delivery ke waqt dena hai 💵 Parcel khol ke check kar sakte hain rider ke saamne — pehle check, phir payment ✅ 7 din exchange guarantee bhi hai 🚚
+BOT [trust_voice]: [🎤 Trust Voice Note]
+USER [pre-check]: I want to exchange it
+BOT [pre-check]: sir, paisa delivery ke waqt dena hai 💵 Parcel khol ke check kar sakte hain rider ke saamne — pehle check, phir payment ✅ 7 din exchange guarantee bhi hai 🚚
+BOT [trust_voice]: [🎤 Trust Voice Note]
+USER [pre-check]: Mujhy Issy wapis krwana ha
+BOT [pre-check]: sir, paisa delivery ke waqt dena hai 💵 Parcel khol ke check kar sakte hain rider ke saamne — pehle check, phir payment ✅ 7 din exchange guarantee bhi hai 🚚
+BOT [trust_voice]: [🎤 Trust Voice Note]
+USER [template]: Are you in your sense 🤬🤬
+BOT [complaint_voice]: [🎤 Complaint Voice Note]
+BOT [complaint_text]: sir, aap is number pe WhatsApp message bhej dein — 03701337838 🙏 InshaAllah aapka masla resolve ho jayega ✅
+
+=== CHAT #789 === Phone: 03046619159 | State: COMPLAINT | Msgs: 21 | Name: Imran Ali | Created: 2026-03-13 14:36:34
+USER [pre-check]: I want to order "T9 Vintage Professional Trimmer | Metal Body | USB Rechargeable"
+https://thealvora.shop/product/t9-vintage-professional-trimmer?gad_source=2&gad_campaignid=23625611921&gclid=CjwKCAjw687NBhB4EiwAQ645dowiN-JbutrvGPs1-39iudCTtRt6eUCMkaXBUXgIsrK5iI4SVACvJxoC4SYQAvD_BwE
+BOT [pre-check]: [📎 1 video sent: T9 Trimmer]
+Ji sir, T9 Vintage Professional Trimmer Rs.1,399 ki hai 🏷️ Metal body trimmer hai — 3 guide combs aati hain different lengths ke liye, Sharp T-blade hai clean lines ke liye, quiet motor, USB rechargeable. Order karna hai?
+USER [pre-check]: G Order Karna hai.
+BOT [pre-check]: Zaroor sir! 😊 Apna naam bata dein?
+USER [pre-check]: Imran Ali
+BOT [pre-check]: Imran Ali sir, apna phone number bata dein? 📱
+USER [pre-check]: 03107403599
+BOT [pre-check]: Delivery ke waqt rider 03107403599 pe call karega 📞 Receive kar lein ge ya koi aur number dein?
+USER [pre-check]: Price kya hai delivery charges kya hai.
+BOT [pre-check]: Imran Ali sir, T9 Vintage Professional Trimmer Rs.1,399 ki hai 🏷️ Metal body trimmer hai — 3 guide combs aati hain different lengths ke liye. Sharp T-blade hai clean lines ke liye, quiet motor, USB rechargeable. Aur delivery bilkul FREE hai — Cash on Delivery (COD) hai, paisa delivery ke waqt dena hai. Delivery ke waqt rider 03107403599 pe call karega 📞 Receive kar lein ge ya koi aur number dein?
+USER [pre-check]: Or order kab tak aa jaye ga
+BOT [pre-check]: Karachi/Lahore/Islamabad: 2-3 din. Baqi cities: 3-6 din 🚚 Rider call karega delivery se pehle. Delivery ke waqt rider 03107403599 pe call karega 📞 Receive kar lein ge ya koi aur number dein?
+USER [ai]: Fsd ka order hy Bhai
+BOT [ai]: Delivery Faisalabad ke liye 3-6 din lagega 🚚 Kya aap yehi number use karein ya naya number dein?
+USER [pre-check]: Yehi number use kr rha hoo bhai
+BOT [pre-check]: Imran Ali sir, Faisalabad mein konsa area hai? 📍 Jaise Peoples Colony, Madina Town, Gulberg, D-Ground, Sargodha Road
+USER [pre-check]: Samundri road
+BOT [pre-check]: 📋 Order details:
+- T9 Vintage Professional Trimmer: Rs.1,399
+🚚 Delivery: FREE
+💰 Total: Rs.1,399
+
+Naam: Imran Ali
+Phone: 03107403599
+City: Faisalabad
+Address: Samundri road, Faisalabad
+Delivery: 3-4 din
+
+Sab theek hai to haan bol dein, order laga deta hun ✅
+USER [template]: G done ✅ ha bhai
+BOT [template]: Shukriya Imran Ali sir! ✅ Order note ho gaya. Waise 75% tak discount wale products bhi hain jo kaafi log mangwa rahe hain — dikhadu? Sath mein aa jayega aur delivery bhi free rahegi 🚚
+USER [template]: G kya hai.
+BOT [template]: [📎 7 videos sent: Blackhead Remover, Cutting Board, Oil Spray, Vegetable Cutter, Facial Hair Remover, Knee Sleeve, Duster Kit]
+Yeh dekhen 👇
+
+1. Blackhead Remover — Rs.1,299
+2. Cutting Board — Rs.1,299
+3. Oil Spray — Rs.899
+4. Ear Wax Kit — Rs.499
+5. Vegetable Cutter — Rs.1,599
+6. Facial Hair Remover — Rs.899
+7. Nebulizer — Rs.1,199
+8. Knee Sleeve — Rs.999
+9. Duster Kit — Rs.750
+10. EMS Massager — Rs.599
+
+In mein se konsa product bhi order mein add kardu?
+USER [template]: Price kya hai.
+BOT [template]: Konsa pasand aaya? Number ya naam bata dein.
+USER [template]: Bhai 2 in 1 uperlip or plucking hair removal
+BOT [template]: Konsa pasand aaya? Number ya naam bata dein.
+USER [template]: Pink wala 2 in 1 Jo video me open kiya ap ne
+BOT [template]: Konsa pasand aaya? Number ya naam bata dein.
+USER [template]: Number 6. Facial hair removal
+BOT [template]: Konsa pasand aaya? Number ya naam bata dein.
+USER [template]: Bhai ap Pagal to ni hoo
+BOT [complaint_voice]: [🎤 Complaint Voice Note]
+USER [whatsapp]: Or kitni definition kr k btao
+BOT [complaint_text]: sir, aap is number pe WhatsApp message bhej dein — 03701337838 🙏 InshaAllah aapka masla resolve ho jayega ✅
+USER [whatsapp]: rehny do ap
+USER [whatsapp]: Bs Jo order diya pehly Wohi confirm kry
+
+=== CHAT #788 === Phone: 03276815582 | State: ORDER_CONFIRMED | Msgs: 14 | Name: Hadia | Created: 2026-03-13 14:28:55
+USER [pre-check]: I want to order "2 in 1 Facial Hair Remover & Eyebrow Trimmer | Rechargeabl-hair-remover-eyebrow-trimmer?gad_source=2&gad_campaignid=23595899464&gclid=CjwKCAjw687NBhB4EiwAQ645dkidKKDwbuRwnNs_wTx--DWNsubIuYw6dMMqq8-1Jmbhs84Njo70dhoCbm4QAvD_BwE
+BOT [pre-check]: Bilkul sir! ✅
+
+📦 2-in-1 Facial Hair Remover and Eyebrow Trimmer
+💰 Rs.1,399
+
+Gentle aur painless — chehre ke baal aur eyebrow trimming dono ke liye. Precision eyebrow trimmer head included, USB rechargeable, compact design.
+
+Apna naam bata dein?
+USER [pre-check]: Assalamualaikum
+BOT [pre-check]: Walaikum Assalam sir! 😊 Khush aamdeed. Aap kis product ke baare mein information lena chahein ge? Bilkul sir! 😊 Apna naam bata dein?
+USER [pre-check]: Hadia
+BOT [pre-check]: Hadia madam, phone number bata dein? 📱
+USER [ai]: Trimmer Lena h Ak
+BOT [ai]: Kya aap delivery kis city mein karni hai? 😊
+USER [pre-check]: Ok
+BOT [pre-check]: Hadia madam, apna phone number bata dein? 📱
+USER [pre-check]: 03241898848
+BOT [pre-check]: Rider aapko isi number (03241898848) pe call karega 📞 Call receive kar lein ge?
+USER [ai→template]: Multan m hi krni h
+BOT [ai→template]: Multan mein konsa area hai? 📍 Jaise Bosan Road, Cantt, Gulgasht Colony, Shah Rukn-e-Alam Colony, New Multan
+USER [ai→confirm]: Suraj miani Ayesha misjid k pas Zahid mob shop h udhr de de m le logo
+BOT [ai→confirm]: 📍 Yeh address sahi hai? Zahid Mob Shop, Suraj Miani, Multan. Agar courier ko kuch puchna ho to aapko call kar lein ge ✅
+USER [template]: G thk h
+BOT [template]: 📋 Order details:
+- 2-in-1 Facial Hair Remover and Eyebrow Trimmer: Rs.1,399
+🚚 Delivery: FREE
+💰 Total: Rs.1,399
+
+Naam: Hadia
+Phone: 03241898848
+City: Multan
+Address: Zahid Mob Shop, Suraj Miani, Multan
+Delivery: 3-4 din
+
+Sab theek hai to haan bol dein, order laga deta hun ✅
+USER [template]: G thk h
+BOT [template]: Shukriya Hadia madam! ✅ Order note ho gaya. Waise 75% tak discount wale products bhi hain jo kaafi log mangwa rahe hain — dikhadu? Sath mein aa jayega aur delivery bhi free rahegi 🚚
+USER [template]: Ni filhal to yehi chaye Kuch or Lena hua to InshaALLAH rpta krnu gi
+BOT [template]: 🎉 Order confirm ho gaya! Order ID: NRV-WA-24280
+- 2-in-1 Facial Hair Remover and Eyebrow Trimmer: Rs.1,399
+💰 Total: Rs.1,399 | 🚚 Delivery: FREE
+Hadia | 03241898848
+📍 Zahid Mob Shop, Suraj Miani, Multan — 3-4 din
+Paisa delivery ke waqt dena hai. Shukriya madam! 😊
+USER [template]: Jazak ALLAH
+BOT [template]: Aapka order already confirm hai madam ✅ Kuch aur chahiye to bata dein!
+USER [template]: Ni ni bs thnx
+BOT [template]: Aapka order already confirm hai madam ✅ Kuch aur chahiye to bata dein!
+USER [template]: Ni chaye bs yehi chaye Jo kaha h
+BOT [template]: Aapka order already confirm hai madam ✅ Kuch aur chahiye to bata dein!
+
+=== CHAT #784 === Phone: 03333597964 | State: IDLE | Msgs: 7 | Name: ? | Created: 2026-03-13 13:40:01
+USER [pre-check]: I want to order "T9 Vintage Professional Trimmer | Metal Body | USB Rechargeable"
+https://thealvora.shop/product/t9-vintage-professional-trimmer?gad_source=2&gad_campaignid=23625611921&gclid=CjwKCAjw687NBhB4EiwAQ645diJvAz8JxdKwYH790KXHZtrOUYqTxLKKPa0dAvHdSXiGT67pX9Ae3xoCjFEQAvD_BwE
+BOT [pre-check]: [📎 1 video sent: T9 Trimmer]
+Ji sir, T9 Vintage Professional Trimmer Rs.1,399 ki hai 🏷️ Metal body trimmer hai — 3 guide combs aati hain different lengths ke liye, Sharp T-blade hai clean lines ke liye, quiet motor, USB rechargeable. Order karna hai?
+USER [pre-check]: Assalamu Alaikum, T9 ki agar maujoodgi ho toh aadmi kis tareeqe se karna, maa ye shop pe bachat ke yahan bhi ye karna. Maa jaye block mein hai shop, block mein Alameen flat ke saamne. Dosta, iske price waghera kitna hai, isko bata do. Hai zara theek hai, ok, laf.
+BOT [pre-check]: Ji sir, quality zabardast hai 👍 Rozana orders aa rahe hain aur log khush hain. Aap delivery pe check kar sakte hain, 7 din exchange bhi hai.
+BOT [trust_voice]: [🎤 Trust Voice Note]
+USER [pre-check]: Yaari agar yeh mangwaani ho to kis tareeqe se aap karna mehna deliver karoge? Aapko inni kya aaj ki address waghaira bhejna padega? Yeh khali voice karte bhejne toh aa jayega nahi. Theek hai, jo bhi ho mujhe bataye phir aap.
+BOT [pre-check]: sir, quality ki fikar mat karein 😊 Customers satisfied hain. COD hai, pehle check karein phir payment. 7 din exchange guarantee.
+BOT [trust_voice]: [🎤 Trust Voice Note]
+USER [pre-check]: yaa yeh toh main do dafa aapke sun chuka hoon magar yeh iska bata do agar magawaani ho toh kis tariqe se deliver karoge abhi nahi uska toh aap jawab de nahi rahe ho abhi nahi
+BOT [pre-check]: sir, koi baat nahi — jab bhi chahein rabta kar lein! Hamari website bhi dekh sakte hain: https://theelvora.store/ 😊
+USER [template]: Janabi mujhe bhejein to dosra ye hai ke ye main address aap ko is par voice kar deta hoon bata deta hoon aap ko is hisaab se bhejein aap ne ye hai kehna main K Block North Nazimabad Shanghai Dry Cleaner SB14 mera mobile number yehi hai taake ye hai ke kab bhejengi taake is hisaab se phir aadmi woh karenge theek hai na
+BOT [template]: Okay thora sabr karein please, me ap ko voice message karti hu 🎤
+
+=== CHAT #782 === Phone: 03157434343 | State: ORDER_CONFIRMED | Msgs: 12 | Name: Gulzarburhan | Created: 2026-03-13 13:26:40
+USER [pre-check]: I want to order "T9 Vintage Professional Trimmer | Metal Body | USB Rechargeable"
+https://thealvora.shop/product/t9-vintage-professional-trimmer?gad_source=2&gad_campaignid=23625611921&gclid=CjwKCAjw687NBhB4EiwAQ645disYuHJMV55w599z7GsSKVz-fwD8faeDp7dTYyfb6UpSIBfT8aWcBRoCF-AQAvD_BwE
+BOT [pre-check]: [📎 1 video sent: T9 Trimmer]
+T9 Vintage Professional Trimmer ki price Rs.1,399 hai 🏷️ Metal body trimmer hai — 3 guide combs aati hain different lengths ke liye aur Sharp T-blade hai clean lines ke liye, quiet motor, USB rechargeable. Order karna hai?
+USER [pre-check]: Yes
+BOT [pre-check]: Zaroor sir! 😊 Apna naam bata dein?
+USER [pre-check]: Gulzarburhan
+BOT [pre-check]: Gulzarburhan sir, apna phone number bata dein? 📱
+USER [pre-check]: 03157434343
+BOT [pre-check]: Delivery ke waqt rider 03157434343 pe call karega 📞 Receive kar lein ge ya koi aur number dein?
+USER [ai→template]: Ma recieved kr lon ga
+BOT [ai→template]: City/tehsil bata dein — delivery kahan karni hai? 🚚
+USER [pre-check]: Bhimber Azad kashmir distic tehsil & post ofc bhimber azadkashmir
+BOT [pre-check]: Gulzarburhan sir, kashmir mein konsa shehar? Jaise Muzaffarabad, Mirpur, Rawalakot.
+USER [pre-check]: Bhimber city ka e name hy
+BOT [pre-check]: City E Name mein block aur gali/street number bata dein? 🏘️
+USER [ai]: Village bhotosial
+BOT [ai]: Aapka area 'Village Bhotosial' hai, ab block/gali number bata dein? 😊
+USER [pre-check]: O Bhai g village ma block Gali Kahan se aa gei
+BOT [pre-check]: 📋 Order details:
+- T9 Vintage Professional Trimmer: Rs.1,399
+🚚 Delivery: FREE
+💰 Total: Rs.1,399
+
+Naam: Gulzarburhan
+Phone: 03157434343
+City: Bhimber
+Address: Block gal, Village Bhotosial, Bhimber
+Delivery: 4-6 din
+
+Sab theek hai to haan bol dein, order laga deta hun ✅
+USER [template]: Haaaaaaan
+BOT [template]: Shukriya Gulzarburhan sir! ✅ Order note ho gaya. Waise 75% tak discount wale products bhi hain jo kaafi log mangwa rahe hain — dikhadu? Sath mein aa jayega aur delivery bhi free rahegi 🚚
+USER [template]: Bs itna e Kafi Hy next time dekha jay ga
+BOT [template]: Dekhna chahein ge?
+USER [template]: No nmaz time ho gya
+BOT [template]: 🎉 Order confirm ho gaya! Order ID: NRV-WA-95327
+- T9 Vintage Professional Trimmer: Rs.1,399
+💰 Total: Rs.1,399 | 🚚 Delivery: FREE
+Gulzarburhan | 03157434343
+📍 Block gal, Village Bhotosial, Bhimber — 4-6 din
+Paisa delivery ke waqt dena hai. Shukriya sir! 😊
+
+=== CHAT #781 === Phone: 03056937747 | State: PRODUCT_INQUIRY | Msgs: 6 | Name: ? | Created: 2026-03-13 13:11:10
+USER [pre-check]: I want to order "T9 Vintage Professional Trimmer | Metal Body | USB Rechargeable"
+https://thealvora.shop/product/t9-vintage-professional-trimmer?gad_source=2&gad_campaignid=23625611921&gclid=CjwKCAjw687NBhB4EiwAQ645dpvY09EObm5Ykx5PLLta3M33wPsszONrXRgTXfhHXnV1tvIJKvavlRoCniUQAvD_BwE
+BOT [pre-check]: [📎 1 video sent: T9 Trimmer]
+T9 Vintage Professional Trimmer Rs.1,399 ki hai 🏷️ Metal body trimmer hai — 3 guide combs aati hain different lengths ke liye aur Sharp T-blade hai clean lines ke liye, quiet motor, USB rechargeable. Order karna hai sir?
+USER [pre-check]: Assalamu Alaikum, saray shipping ka machine T9 Trimmer hai. Miya Chanu pichani hai, video par quality changi honi chahidi yaar. Miya Chanu pichani hai, Zilla Khaniyah, Tehsil Miya Chanu, Sada Colony, gali number 8, Sada Colony, gali number 8.
+BOT [pre-check]: sir, paisa delivery ke waqt dena hai 💵 Parcel khol ke check kar sakte hain rider ke saamne — pehle check, phir payment ✅ 7 din exchange guarantee bhi hai 🚚
+BOT [trust_voice]: [🎤 Trust Voice Note]
+USER [pre-check]: I want to order "T9 Vintage Professional Trimmer | Metal Body | USB Rechargeable"
+https://ruvenza.shop/product/t9-vintage-professional-trimmer?gad_source=2&gad_campaignid=23618219696&gclid=CjwKCAjw687NBhB4EiwAQ645doTahUGvOimpglU3ufmKMAYzSMz8h7kTG9OV5mfqDa8KIZE7LOQfDRoC9XcQAvD_BwE
+BOT [pre-check]: [📎 1 video sent: T9 Trimmer]
+T9 Vintage Professional Trimmer ki price Rs.1,399 hai 🏷️ Metal body trimmer hai — 3 guide combs aati hain different lengths ke liye aur Sharp T-blade hai clean lines ke liye, quiet motor, USB rechargeable. Order karna hai?
+USER [pre-check]: Assalamu Alaikum, meri kehne ka matlab yeh hai ke yeh parcel kitne din tak aaye ga, yeh rate iska kya hai 1399 rupey hai, ya 1939 rupey hai, ya 1400 rupey de? Matlab theek hai, yeh parcel khol ke check kar ke paisay dene. Yeh bhi dosto, sidhon koi koi by 8 aam vech rode par karde, shaad de si, is galla to darde hain.
+BOT [pre-check]: Ji sir, quality zabardast hai 👍 Rozana orders aa rahe hain aur log khush hain. Aap delivery pe check kar sakte hain, 7 din exchange bhi hai.
+BOT [trust_voice]: [🎤 Trust Voice Note]
