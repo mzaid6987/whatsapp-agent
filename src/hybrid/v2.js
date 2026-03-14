@@ -1,15 +1,13 @@
 /**
- * Bot V2 — Pure AI Handler
+ * Bot V2 — Full AI-Driven Handler
  *
- * Unlike V1 (template-based with AI fallback), V2 uses Claude AI for ALL responses.
- * Same state machine concept but AI drives transitions and generates all replies.
- * Same guardrails: human takeover, complaint routing, spam detection.
- *
- * Returns same format as V1's handleMessage() for drop-in compatibility.
+ * AI handles EVERYTHING: reply generation, state transitions, data extraction.
+ * Code only handles: validation (phone/city), order creation, media sending, DB ops.
+ * AI returns JSON: { reply, next_state, extracted: { name, phone, city, address, delivery_phone, product } }
  */
 const { buildV2SystemPrompt } = require('./v2-prompt');
 const { PRODUCTS, UPSELL_MAP, getHonorific, deliveryTime, fmtPrice } = require('./data');
-const { validatePhone, extractCity, extractPhone, detectProduct } = require('./extractors');
+const { validatePhone, extractCity, detectProduct } = require('./extractors');
 const { getDb } = require('../db');
 const customerModel = require('../db/models/customer');
 const conversationModel = require('../db/models/conversation');
@@ -31,13 +29,11 @@ function getOrCreateConvV2(phone) {
         product: null, name: null, phone: null,
         delivery_phone: null, city: null, address: null,
       },
-      product: null, // full product object
+      product: null,
       gender: null,
       haggle_round: 0,
       discount_percent: 0,
-      upsell_shown: false,
-      upsell_pending: null,
-      messages: [], // conversation history for AI context
+      messages: [],
       _db_conversation_id: null,
       _db_customer_id: null,
     };
@@ -49,10 +45,10 @@ function resetConvV2(phone) {
   delete v2Conversations[phone];
 }
 
-// ============= AI CALL =============
-async function callAI(systemPrompt, messages, storeName, apiKey) {
+// ============= AI CALL (JSON mode) =============
+async function callAI(systemPrompt, messages, apiKey) {
   const OpenAI = require('openai');
-  const { getActiveModel, getModelInfo } = require('../ai/claude');
+  const { getActiveModel } = require('../ai/claude');
 
   if (!apiKey) {
     const settingsModel = require('../db/models/settings');
@@ -62,227 +58,127 @@ async function callAI(systemPrompt, messages, storeName, apiKey) {
 
   const openai = new OpenAI({ apiKey });
   const activeModel = getActiveModel();
-
-  // Keep last 10 messages for context (5 exchanges)
-  const recentMessages = messages.slice(-10);
-
-  const openaiMessages = [
-    { role: 'system', content: systemPrompt },
-    ...recentMessages
-  ];
+  const recentMessages = messages.slice(-12);
 
   const response = await openai.chat.completions.create({
     model: activeModel,
-    max_tokens: 300,
-    messages: openaiMessages,
-    // No response_format — V2 returns plain text, not JSON
+    max_tokens: 500,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...recentMessages,
+    ],
+    response_format: { type: 'json_object' },
   });
 
-  const reply = response.choices[0]?.message?.content || '';
+  const rawText = response.choices[0]?.message?.content || '{}';
+  let parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch {
+    // Fallback: extract JSON from response
+    const match = rawText.match(/\{[\s\S]*\}/);
+    if (match) try { parsed = JSON.parse(match[0]); } catch { /* fall through */ }
+    if (!parsed) parsed = { reply: rawText.replace(/[{}"]/g, '').trim() || 'Ji batayein? 😊' };
+  }
 
   return {
-    reply,
+    parsed,
     tokens_in: response.usage?.prompt_tokens || 0,
     tokens_out: response.usage?.completion_tokens || 0,
   };
 }
 
-// ============= STATE TRANSITION LOGIC =============
-// After AI generates reply, we need to determine state transitions
-// based on what data was collected from customer's message
-function processMessage(state, message) {
-  const lm = message.toLowerCase().trim();
-  const currentState = state.current;
-  const collected = state.collected;
+// ============= VALIDATION LAYER =============
+// Code validates what AI extracted — AI can be wrong about phone format, city names
+function validateExtracted(aiExtracted, state) {
+  const validated = {};
 
-  // Gender detection from feminine verb forms
-  if (!state.gender) {
-    const isFeminine = /\b(btao\s*gi|batao\s*gi|krlun\s*gi|kar[uo]n\s*gi|deti\s*h[ou]n|lun\s*gi|kr[uo]n\s*gi|karti\s*h[ou]n|dekhon\s*gi|rakhon\s*gi|aaon\s*gi|jaon\s*gi)\b/i.test(lm);
-    if (isFeminine) state.gender = 'female';
-  }
-
-  // Extract data from message based on current state
-  const extracted = {};
-
-  // Always try to extract phone if not collected
-  if (!collected.phone) {
-    const phone = extractPhone(message);
-    if (phone) {
-      const validated = validatePhone(phone);
-      if (validated.valid) extracted.phone = validated.phone;
-    }
-  }
-
-  // Always try to extract city if not collected
-  if (!collected.city) {
-    const city = extractCity(message);
-    if (city) extracted.city = city;
-  }
-
-  // Product detection
-  if (!collected.product) {
-    const product = detectProduct(message);
+  // Product: match AI's product name against catalog
+  if (aiExtracted.product && !state.collected.product) {
+    const product = detectProduct(aiExtracted.product);
     if (product) {
-      extracted.product = product.short;
-      extracted.productObj = product;
+      validated.product = product.short;
+      validated._productObj = product;
     }
   }
 
-  // Smart-fill: customer sends all info at once
-  // Detect structured multi-line messages
-  const lines = message.split(/\n/).filter(l => l.trim());
-  if (lines.length >= 2) {
-    // Try to extract name from labeled format
-    for (const line of lines) {
-      const nameMatch = line.match(/^(?:name|naam)\s*[.::\-]\s*(.+)/i);
-      if (nameMatch && !collected.name) {
-        const name = nameMatch[1].trim();
-        if (name.length >= 2 && name.length <= 50 && /^[A-Za-z\s.]+$/.test(name)) {
-          extracted.name = name;
-        }
-      }
-      // City from labeled
-      const cityMatch = line.match(/^(?:city|shehar|shehr)\s*[.::\-]\s*(.+)/i);
-      if (cityMatch && !collected.city) {
-        extracted.city = extractCity(cityMatch[1]) || cityMatch[1].trim();
-      }
-      // Address from labeled
-      const addrMatch = line.match(/^(?:address|pata)\s*[.::\-]\s*(.+)/i);
-      if (addrMatch && !collected.address) {
-        extracted.address = addrMatch[1].trim();
-      }
+  // Name: basic sanity check
+  if (aiExtracted.name && !state.collected.name) {
+    let name = String(aiExtracted.name).trim();
+    // Title case
+    name = name.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    // Reject obvious non-names
+    if (name.length >= 2 && name.length <= 50 && !/\b(order|chahiye|product|price|send|nahi|haan|ok)\b/i.test(name)) {
+      validated.name = name;
     }
   }
 
-  // Single-line smart-fill: "Chaudhry Rehman 04212678976 Hyderabad"
-  // If phone was extracted, try to extract name from text before the phone number
-  if (extracted.phone && !collected.name && !extracted.name) {
-    const phonePattern = message.match(/(\d[\d\s\-]{9,})/);
-    if (phonePattern) {
-      const beforePhone = message.substring(0, phonePattern.index).trim();
-      // Remaining text after phone number
-      const afterPhone = message.substring(phonePattern.index + phonePattern[0].length).trim();
-      // Name = text before phone (if it looks like a name: 2+ alpha words)
-      if (beforePhone && /^[A-Za-z\s.]{2,50}$/.test(beforePhone) && !/\b(order|chahiye|product|send|bhej)\b/i.test(beforePhone)) {
-        extracted.name = beforePhone.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-      }
-      // City = text after phone (if it matches a known city)
-      if (afterPhone && !collected.city && !extracted.city) {
-        const cityFromAfter = extractCity(afterPhone);
-        if (cityFromAfter) extracted.city = cityFromAfter;
-      }
+  // Phone: strict Pakistani format validation
+  if (aiExtracted.phone && !state.collected.phone) {
+    const phone = String(aiExtracted.phone).replace(/[\s\-\(\)\+]/g, '');
+    const result = validatePhone(phone);
+    if (result.valid) validated.phone = result.phone;
+  }
+
+  // Delivery phone
+  if (aiExtracted.delivery_phone) {
+    const dp = String(aiExtracted.delivery_phone).toLowerCase().trim();
+    if (dp === 'same' || dp === 'yehi' || dp === 'same number') {
+      validated.delivery_phone = 'same';
+    } else {
+      const dpClean = dp.replace(/[\s\-\(\)\+]/g, '');
+      const result = validatePhone(dpClean);
+      if (result.valid) validated.delivery_phone = result.phone;
     }
   }
 
-  // Yes/No detection
-  const isYes = /^(jee|ji|g|j|haan|han|h[aā]n|yes|yess|yeah|ok|okay|theek|thik|sahi|bilkul|zaroor|kr\s*do|kardo|kar\s*dein|laga\s*do|lagado|confirm|done)\b/i.test(lm) ||
-    /^(jee|g|han|ji|ok)\s*$/i.test(lm);
-  const isNo = /^(nahi|nhi|nai|nahin|no|nope|cancel|nahi\s*chahiye|nahi\s*chaiye)\b/i.test(lm);
+  // City: validate against known cities
+  if (aiExtracted.city && !state.collected.city) {
+    const city = extractCity(String(aiExtracted.city));
+    if (city) validated.city = city;
+    else {
+      // AI might have correct city not in our list — accept if reasonable
+      const raw = String(aiExtracted.city).trim().replace(/\s*(hai|h|he)\s*$/i, '').trim();
+      if (raw.length >= 3 && raw.length <= 50) validated.city = raw;
+    }
+  }
 
-  // Complaint detection
-  const isComplaint = /\b(kharab|toot|broken|damaged|fake|dhoka|scam|fraud|return\s*kr|refund\s*kr|not\s*working|kam\s*nahi\s*kart[aie]|chal\s*nahi|galat\s*bhej)\b/i.test(lm);
+  // Address: accept as-is if reasonable length
+  if (aiExtracted.address && !state.collected.address) {
+    const addr = String(aiExtracted.address).trim();
+    if (addr.length >= 5) validated.address = addr;
+  }
 
-  return { extracted, isYes, isNo, isComplaint };
+  return validated;
 }
 
-// ============= DETERMINE NEXT STATE =============
-function determineNextState(state, extracted, isYes, isNo) {
-  const current = state.current;
+// ============= STATE VALIDATION =============
+// AI decides state but code enforces guardrails
+const VALID_STATES = [
+  'IDLE', 'GREETING', 'PRODUCT_INQUIRY', 'PRODUCT_SELECTION',
+  'COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_DELIVERY_PHONE',
+  'COLLECT_CITY', 'COLLECT_ADDRESS', 'ORDER_SUMMARY',
+  'HAGGLING', 'UPSELL_HOOK', 'UPSELL_SHOW', 'ORDER_CONFIRMED',
+  'COMPLAINT', 'CANCEL_AFTER_CONFIRM',
+];
+
+function validateState(aiState, state) {
+  if (!aiState || !VALID_STATES.includes(aiState)) return state.current;
+
   const collected = state.collected;
 
-  // Apply extracted data to collected
-  if (extracted.product && !collected.product) {
-    collected.product = extracted.product;
-    state.product = extracted.productObj;
+  // Guardrail: can't go to ORDER_SUMMARY without all required fields
+  if (aiState === 'ORDER_SUMMARY' || aiState === 'ORDER_CONFIRMED' || aiState === 'UPSELL_HOOK') {
+    if (!collected.product || !collected.name || !collected.phone || !collected.city) {
+      // Find first missing field
+      if (!collected.product) return 'PRODUCT_INQUIRY';
+      if (!collected.name) return 'COLLECT_NAME';
+      if (!collected.phone) return 'COLLECT_PHONE';
+      if (!collected.city) return 'COLLECT_CITY';
+    }
   }
-  if (extracted.name && !collected.name) collected.name = extracted.name;
-  if (extracted.phone && !collected.phone) collected.phone = extracted.phone;
-  if (extracted.city && !collected.city) collected.city = extracted.city;
-  if (extracted.address && !collected.address) collected.address = extracted.address;
 
-  switch (current) {
-    case 'IDLE':
-    case 'GREETING':
-      if (collected.product) return 'COLLECT_NAME';
-      return 'PRODUCT_INQUIRY';
-
-    case 'PRODUCT_INQUIRY':
-    case 'PRODUCT_SELECTION':
-      if (isYes && collected.product) return 'COLLECT_NAME';
-      if (collected.product && (isYes || /\b(order|chahiye|chahea|mangwa|bhej)\b/i.test(state._lastMsg || '')))
-        return 'COLLECT_NAME';
-      return current;
-
-    case 'COLLECT_NAME':
-      // AI will extract name from response
-      if (collected.name) {
-        // Skip ahead if phone/city already collected in same message
-        if (collected.phone) {
-          if (collected.delivery_phone || collected.delivery_phone === 'same') {
-            if (collected.city) return collected.address ? 'ORDER_SUMMARY' : 'COLLECT_ADDRESS';
-            return 'COLLECT_CITY';
-          }
-          return 'COLLECT_DELIVERY_PHONE';
-        }
-        return 'COLLECT_PHONE';
-      }
-      return current;
-
-    case 'COLLECT_PHONE':
-      if (collected.phone) {
-        // Skip ahead if city already collected
-        if (collected.city) return collected.address ? 'ORDER_SUMMARY' : 'COLLECT_ADDRESS';
-        return 'COLLECT_DELIVERY_PHONE';
-      }
-      return current;
-
-    case 'COLLECT_DELIVERY_PHONE':
-      if (isYes || /\b(same|yehi|yahi|isi|issi|haan)\b/i.test(state._lastMsg || '')) {
-        collected.delivery_phone = 'same';
-        return 'COLLECT_CITY';
-      }
-      // If they gave a different phone number
-      if (extracted.phone) {
-        collected.delivery_phone = extracted.phone;
-        return 'COLLECT_CITY';
-      }
-      return current;
-
-    case 'COLLECT_CITY':
-      if (collected.city) return 'COLLECT_ADDRESS';
-      return current;
-
-    case 'COLLECT_ADDRESS':
-      // AI should detect when address is complete
-      if (collected.address) return 'ORDER_SUMMARY';
-      return current;
-
-    case 'ORDER_SUMMARY':
-      if (isYes) return 'CONFIRM_AND_UPSELL';
-      if (isNo) return 'ORDER_SUMMARY'; // stay, ask what to change
-      return current;
-
-    case 'HAGGLING':
-      if (isYes) return 'ORDER_SUMMARY';
-      state.haggle_round++;
-      if (state.haggle_round >= 3) return 'ORDER_SUMMARY';
-      return current;
-
-    case 'UPSELL_HOOK':
-      if (isYes) return 'UPSELL_SHOW';
-      if (isNo) return 'ORDER_CONFIRMED';
-      return current;
-
-    case 'UPSELL_SHOW':
-      if (isNo || /\b(nahi|bas|koi\s*nahi|nhi)\b/i.test(state._lastMsg || '')) return 'ORDER_CONFIRMED';
-      return current;
-
-    case 'ORDER_CONFIRMED':
-      return current;
-
-    default:
-      return current;
-  }
+  return aiState;
 }
 
 // ============= MAIN HANDLER =============
@@ -291,11 +187,9 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
   phone = normalizePhone(phone);
   const state = getOrCreateConvV2(phone);
 
-  // Store pending options
   const pendingWaMessageId = options.wa_message_id || null;
   const pendingMediaType = options.incoming_media_type || null;
   const pendingMediaUrl = options.incoming_media_url || null;
-  const mediaCost = options.mediaCost || null;
 
   // Guard: empty message
   if (!message || typeof message !== 'string' || !message.trim()) {
@@ -314,17 +208,32 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     state._db_conversation_id = dbConv?.id;
     state._db_customer_id = dbCustomer?.id;
 
-    // Mark as v2
     if (dbConv) {
-      try {
-        getDb().prepare("UPDATE conversations SET bot_version = 'v2' WHERE id = ? AND (bot_version IS NULL OR bot_version != 'v2')").run(dbConv.id);
-      } catch (e) {}
+      try { getDb().prepare("UPDATE conversations SET bot_version = 'v2' WHERE id = ? AND (bot_version IS NULL OR bot_version != 'v2')").run(dbConv.id); } catch (e) {}
     }
 
-    // Sync: if DB is IDLE but memory has state, reset
+    // Sync: if DB is IDLE but memory has non-IDLE state, reset
     if (dbConv && dbConv.state === 'IDLE' && state.current !== 'IDLE' && state.current !== 'GREETING') {
       delete v2Conversations[phone];
       return handleMessageV2(message, phone, storeName, apiKey, options);
+    }
+
+    // Restore from DB if memory is empty
+    if (dbConv && state.current === 'IDLE' && dbConv.state && dbConv.state !== 'IDLE') {
+      state.current = dbConv.state;
+      try {
+        const dbCollected = JSON.parse(dbConv.collected_json || '{}');
+        Object.assign(state.collected, dbCollected);
+        if (dbConv.product_json) state.product = JSON.parse(dbConv.product_json);
+      } catch (e) {}
+      // Restore messages from DB
+      try {
+        const recentMsgs = messageModel.getRecent(dbConv.id, 12) || [];
+        state.messages = recentMsgs.map(m => ({
+          role: m.direction === 'incoming' ? 'user' : 'assistant',
+          content: m.content || '',
+        }));
+      } catch (e) {}
     }
   } catch (e) {
     console.error('[V2] DB setup error:', e.message);
@@ -340,121 +249,118 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     conversationModel.setAdminUnread(dbConv.id, true);
   }
 
-  state._lastMsg = message;
-
-  // Process message: extract data, detect yes/no/complaint
-  const { extracted, isYes, isNo, isComplaint: isComplaintMsg } = processMessage(state, message);
-
-  // Complaint intercept
-  if (isComplaintMsg && state.current !== 'COMPLAINT') {
-    state.current = 'COMPLAINT';
-    const honorific = getHonorific(state.collected.name, state.gender);
-    const reply = `${state.collected.name ? state.collected.name + ' ' + honorific + ', ' : ''}aap is number pe message karein — 03701337838 🙏 InshaAllah aapka masla resolve ho jayega ✅`;
-
-    state.messages.push({ role: 'user', content: message });
-    state.messages.push({ role: 'assistant', content: reply });
-
-    if (dbConv) {
-      messageModel.create(dbConv.id, 'outgoing', 'bot', reply, { source: 'v2_ai' });
-      conversationModel.updateState(dbConv.id, 'COMPLAINT');
-      conversationModel.updateLastMessage(dbConv.id, reply);
-      getDb().prepare('UPDATE conversations SET complaint_flag = 1, needs_human = 1 WHERE id = ?').run(dbConv.id);
-    }
-
-    return {
-      reply, state: 'COMPLAINT', collected: state.collected,
-      needs_human: true, source: 'v2_ai', intent: 'complaint',
-      tokens_in: 0, tokens_out: 0, response_ms: Date.now() - startTime,
-    };
-  }
-
-  // Explicit media request detection ("video dikhao", "picture bhejo")
+  // Gender detection
   const lm = message.toLowerCase().trim();
-  const isMediaRequest =
-    /\b(video|vidoe|vedio|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye)\b/i.test(lm) ||
-    /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid|vidoe|vedio)\b/i.test(lm) ||
-    /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(lm) ||
-    /\bki\s+(video|vidoe|vedio|vid|picture|photo|pic|image|tasveer)\b/i.test(lm);
-
-  if (isMediaRequest) {
-    const mediaProduct = detectProduct(message) || state.product;
-    const mediaType = /\b(video|vidoe|vedio|vid|reel)\b/i.test(lm) ? 'video' : 'image';
-    if (mediaProduct) {
-      state.messages.push({ role: 'user', content: message });
-      if (dbConv) {
-        messageModel.create(dbConv.id, 'incoming', 'customer', message, { source: 'customer', wa_message_id: options.wa_message_id });
-        conversationModel.updateLastMessage(dbConv.id, message);
-      }
-      return {
-        reply: null, state: state.current, collected: state.collected,
-        needs_human: false, source: 'v2_ai', intent: 'media_request',
-        tokens_in: 0, tokens_out: 0, response_ms: Date.now() - startTime,
-        _media: { product_id: mediaProduct.id, type: mediaType, product_name: mediaProduct.short },
-      };
+  if (!state.gender) {
+    if (/\b(btao\s*gi|batao\s*gi|krlun\s*gi|kar[uo]n\s*gi|deti\s*h[ou]n|lun\s*gi|karti\s*h[ou]n)\b/i.test(lm)) {
+      state.gender = 'female';
     }
-    // No product detected — AI will ask which product
   }
 
-  // Determine state transition BEFORE AI call (so AI knows what to do)
+  // Code-side product detection (AI might miss product keywords/misspellings)
+  let codeDetectedProduct = null;
+  if (!state.collected.product) {
+    codeDetectedProduct = detectProduct(message);
+  }
+
+  // Build system prompt with full context
   const prevState = state.current;
-  const nextState = determineNextState(state, extracted, isYes, isNo);
-
-  // Special: ORDER_SUMMARY confirmed → save order first
-  if (nextState === 'CONFIRM_AND_UPSELL') {
-    const orderSaved = saveOrder(state, storeName, dbConv, dbCustomer);
-    state.current = 'UPSELL_HOOK';
-  } else {
-    state.current = nextState;
-  }
-
-  // Handle product detection → auto-show product info
-  if (extracted.productObj && prevState === 'IDLE') {
-    state.product = extracted.productObj;
-    state.collected.product = extracted.productObj.short;
-  }
-
-  // Build AI context
   const honorific = getHonorific(state.collected.name, state.gender);
-  const upsellCandidates = getUpsellCandidates(state.product);
+  const upsellCandidates = state.product ? PRODUCTS.filter(p => p.id !== state.product.id) : [];
 
   const systemPrompt = buildV2SystemPrompt({
     storeName,
     collected: state.collected,
     state: state.current,
-    product: state.product,
+    product: state.product || codeDetectedProduct,
     honorific,
-    upsellCandidates: state.current === 'UPSELL_SHOW' ? upsellCandidates : null,
+    upsellCandidates,
+    codeDetectedProduct,
   });
 
   // Add user message to history
   state.messages.push({ role: 'user', content: message });
 
-  // Call AI
+  // Call AI — returns JSON
   let aiResult;
   try {
-    aiResult = await callAI(systemPrompt, state.messages, storeName, apiKey);
+    aiResult = await callAI(systemPrompt, state.messages, apiKey);
   } catch (e) {
     console.error('[V2] AI call failed:', e.message);
-    aiResult = { reply: 'Ji, ek second — abhi jawab deta hun 😊', tokens_in: 0, tokens_out: 0 };
+    aiResult = { parsed: { reply: 'Ji ek second, abhi jawab deta hun 😊', next_state: state.current, extracted: {} }, tokens_in: 0, tokens_out: 0 };
   }
 
-  let reply = aiResult.reply.trim();
+  const aiResponse = aiResult.parsed;
+  let reply = String(aiResponse.reply || 'Ji batayein? 😊').trim();
+  const aiExtracted = aiResponse.extracted || {};
+  let aiNextState = aiResponse.next_state || state.current;
 
-  // Quality checks
-  reply = reply.replace(/```[\s\S]*?```/g, '').trim(); // Remove code blocks
-  reply = reply.replace(/\{[\s\S]*?\}/g, '').trim(); // Remove JSON fragments
+  // Code-side product override (if AI missed but code detected)
+  if (codeDetectedProduct && !aiExtracted.product) {
+    aiExtracted.product = codeDetectedProduct.short;
+  }
+
+  // Validate AI's extracted data
+  const validated = validateExtracted(aiExtracted, state);
+
+  // Apply validated data to state
+  if (validated.product && !state.collected.product) {
+    state.collected.product = validated.product;
+    state.product = validated._productObj;
+  }
+  if (validated.name) state.collected.name = validated.name;
+  if (validated.phone) state.collected.phone = validated.phone;
+  if (validated.delivery_phone) state.collected.delivery_phone = validated.delivery_phone;
+  if (validated.city) state.collected.city = validated.city;
+  if (validated.address) state.collected.address = validated.address;
+
+  // Validate AI's state transition
+  const newState = validateState(aiNextState, state);
+  state.current = newState;
+
+  // Complaint intercept — code enforces
+  if (aiResponse.is_complaint || (aiNextState === 'COMPLAINT' && state.current !== 'COMPLAINT')) {
+    state.current = 'COMPLAINT';
+    if (dbConv) {
+      getDb().prepare('UPDATE conversations SET complaint_flag = 1, needs_human = 1 WHERE id = ?').run(dbConv.id);
+    }
+  }
+
+  // Order creation — when AI moves to ORDER_CONFIRMED or UPSELL_HOOK
+  let orderSaved = false;
+  if ((newState === 'ORDER_CONFIRMED' || newState === 'UPSELL_HOOK') && prevState === 'ORDER_SUMMARY') {
+    orderSaved = saveOrder(state, storeName, dbConv, dbCustomer);
+  }
+
+  // Media detection — product video on first product mention
+  let mediaToSend = null;
+  if (validated._productObj && !state._media_sent) {
+    mediaToSend = { product_id: validated._productObj.id, type: 'video', product_name: validated._productObj.short };
+    state._media_sent = true;
+  }
+  // AI requested media
+  if (aiResponse.send_media) {
+    const mediaProduct = detectProduct(aiResponse.send_media) || state.product;
+    if (mediaProduct) {
+      mediaToSend = { product_id: mediaProduct.id, type: 'video', product_name: mediaProduct.short };
+    }
+  }
+
+  // Quality check on reply
+  reply = reply.replace(/```[\s\S]*?```/g, '').trim();
+  if (reply.startsWith('{') || reply.startsWith('[')) {
+    // AI accidentally returned JSON as reply
+    reply = aiResponse.reply_text || `Ji ${honorific}, batayein kaise madad karun? 😊`;
+  }
   if (!reply || reply.length < 2) {
     reply = `Ji ${honorific}, batayein kaise madad karun? 😊`;
   }
-
-  // Post-AI: extract data from AI's context (name, address) if AI prompted and customer answered
-  postAIExtraction(state, message, prevState);
 
   // Add AI reply to history
   state.messages.push({ role: 'assistant', content: reply });
   if (state.messages.length > 20) state.messages = state.messages.slice(-20);
 
-  // Save outgoing message + update DB state
+  // Save to DB
   const costRs = calculateCost(aiResult.tokens_in, aiResult.tokens_out);
   const { getActiveModel, getModelInfo } = require('../ai/claude');
   const _modelName = getModelInfo(getActiveModel()).name;
@@ -464,11 +370,12 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
       source: 'v2_ai',
       debug_json: JSON.stringify({
         state: state.current, prev_state: prevState,
-        extracted, tokens_in: aiResult.tokens_in, tokens_out: aiResult.tokens_out,
+        ai_extracted: aiExtracted, validated,
+        ai_next_state: aiNextState, final_state: newState,
+        tokens_in: aiResult.tokens_in, tokens_out: aiResult.tokens_out,
         _cost_rs: costRs, _model: _modelName,
       }),
     });
-    // Update state + collected in DB
     try {
       const productJson = state.product ? JSON.stringify(state.product) : null;
       const collectedJson = JSON.stringify(state.collected);
@@ -476,18 +383,11 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
         .run(state.current, productJson, collectedJson, dbConv.id);
     } catch (e) {}
     conversationModel.updateLastMessage(dbConv.id, reply);
-    // Update customer name if collected
     if (state.collected.name && dbCustomer) {
       try {
         getDb().prepare('UPDATE customers SET name = ? WHERE id = ? AND (name IS NULL OR name = ?)').run(state.collected.name, dbCustomer.id, dbCustomer.name || '');
       } catch (e) {}
     }
-  }
-
-  // Handle media: if product just detected in IDLE, send product video
-  let mediaToSend = null;
-  if (extracted.productObj && prevState === 'IDLE') {
-    mediaToSend = { product_id: extracted.productObj.id, type: 'video', product_name: extracted.productObj.short };
   }
 
   const responseMs = Date.now() - startTime;
@@ -496,67 +396,18 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     reply,
     state: state.current,
     collected: state.collected,
-    needs_human: false,
+    needs_human: aiResponse.is_complaint || false,
     source: 'v2_ai',
-    intent: extracted.product ? 'product_inquiry' : 'unknown',
+    intent: validated.product ? 'product_inquiry' : (aiResponse.intent || 'conversation'),
     tokens_in: aiResult.tokens_in,
     tokens_out: aiResult.tokens_out,
     response_ms: responseMs,
-    ai_cost_rs: calculateCost(aiResult.tokens_in, aiResult.tokens_out),
+    ai_cost_rs: costRs,
     _media: mediaToSend,
   };
 }
 
 // ============= HELPERS =============
-
-function postAIExtraction(state, message, prevState) {
-  const lm = message.trim();
-
-  // Name extraction: if we were in COLLECT_NAME and customer replied
-  if (prevState === 'COLLECT_NAME' && !state.collected.name) {
-    // Simple heuristic: if message is 1-4 words and looks like a name
-    const words = lm.split(/\s+/).filter(w => w.length > 0);
-    if (words.length >= 1 && words.length <= 4) {
-      const nameCandidate = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-      // Reject if it looks like a command or question
-      if (!/\b(order|chahiye|karna|price|kitna|kitne|kya|nahi|haan)\b/i.test(nameCandidate) && nameCandidate.length >= 2 && nameCandidate.length <= 50) {
-        state.collected.name = nameCandidate;
-        // Auto-advance state
-        if (state.current === 'COLLECT_NAME') state.current = 'COLLECT_PHONE';
-      }
-    }
-  }
-
-  // Phone extraction
-  if (prevState === 'COLLECT_PHONE' && !state.collected.phone) {
-    const phone = extractPhone(lm);
-    if (phone) {
-      const validated = validatePhone(phone);
-      if (validated.valid) {
-        state.collected.phone = validated.phone;
-        if (state.current === 'COLLECT_PHONE') state.current = 'COLLECT_DELIVERY_PHONE';
-      }
-    }
-  }
-
-  // City extraction
-  if (prevState === 'COLLECT_CITY' && !state.collected.city) {
-    const city = extractCity(lm);
-    if (city) {
-      state.collected.city = city;
-      if (state.current === 'COLLECT_CITY') state.current = 'COLLECT_ADDRESS';
-    }
-  }
-
-  // Address: if in COLLECT_ADDRESS and customer sent something substantial
-  if (prevState === 'COLLECT_ADDRESS' && !state.collected.address) {
-    if (lm.length >= 10) {
-      // Accept address as-is (v2 philosophy: don't force parse)
-      state.collected.address = lm;
-      if (state.current === 'COLLECT_ADDRESS') state.current = 'ORDER_SUMMARY';
-    }
-  }
-}
 
 function saveOrder(state, storeName, dbConv, dbCustomer) {
   try {
@@ -573,19 +424,15 @@ function saveOrder(state, storeName, dbConv, dbCustomer) {
     const orderId = `NRV-WA-${Math.floor(10000 + Math.random() * 90000)}`;
 
     db.prepare(`INSERT INTO orders (order_id, conversation_id, customer_id, store_name, customer_name, customer_phone, delivery_phone, customer_city, customer_address, items_json, subtotal, delivery_fee, discount_percent, discount_total, grand_total, status, source, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 'confirmed', 'bot_v2', datetime('now','localtime'), datetime('now','localtime'))`
-    ).run(
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 'confirmed', 'bot_v2', datetime('now','localtime'), datetime('now','localtime'))`)
+    .run(
       orderId, dbConv.id, dbCustomer.id, storeName || 'Nureva',
       state.collected.name, state.collected.phone,
-      state.collected.delivery_phone || 'same',
+      state.collected.delivery_phone === 'same' ? state.collected.phone : (state.collected.delivery_phone || state.collected.phone),
       state.collected.city, state.collected.address,
       JSON.stringify(items), subtotal, discount, discountTotal, grandTotal
     );
 
-    // Update conversation state
-    db.prepare("UPDATE conversations SET state = 'ORDER_CONFIRMED' WHERE id = ?").run(dbConv.id);
-
-    // Update customer
     try {
       db.prepare('UPDATE customers SET name = ?, order_count = order_count + 1, total_spend = total_spend + ? WHERE id = ?')
         .run(state.collected.name, grandTotal, dbCustomer.id);
@@ -599,17 +446,11 @@ function saveOrder(state, storeName, dbConv, dbCustomer) {
   }
 }
 
-function getUpsellCandidates(product) {
-  if (!product) return [];
-  const upsellIds = UPSELL_MAP[product.id] || [];
-  return upsellIds.map(id => PRODUCTS.find(p => p.id === id)).filter(Boolean).slice(0, 3);
-}
-
 function calculateCost(tokensIn, tokensOut) {
   const { getActiveModel, getModelInfo } = require('../ai/claude');
   const modelInfo = getModelInfo(getActiveModel());
   const costUsd = (tokensIn * modelInfo.input + tokensOut * modelInfo.output) / 1_000_000;
-  return Math.round(costUsd * 280 * 100) / 100; // Convert to PKR (1 USD ≈ 280 PKR)
+  return Math.round(costUsd * 280 * 100) / 100;
 }
 
 module.exports = { handleMessageV2, getOrCreateConvV2, resetConvV2, v2Conversations };
