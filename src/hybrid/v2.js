@@ -334,6 +334,33 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     };
   }
 
+  // Explicit media request detection ("video dikhao", "picture bhejo")
+  const lm = message.toLowerCase().trim();
+  const isMediaRequest =
+    /\b(video|vidoe|vedio|vid|reel)\s*(dikha|dikhana|dikhao|dikhado|bhej|bhejo|bhejdo|bhejdena|send|de|do|dena|chahiye)\b/i.test(lm) ||
+    /\b(dikha|dikhana|dikhao|bhej|bhejo|send|de)\s*(do|dena|na)?\s*(picture|photo|pic|image|tasveer|tasver|video|vid|vidoe|vedio)\b/i.test(lm) ||
+    /\b(pic(ture)?s?\s*(send|bhej)|photos?\s*(send|bhej)|videos?\s*(send|bhej))\b/i.test(lm) ||
+    /\bki\s+(video|vidoe|vedio|vid|picture|photo|pic|image|tasveer)\b/i.test(lm);
+
+  if (isMediaRequest) {
+    const mediaProduct = detectProduct(message) || state.product;
+    const mediaType = /\b(video|vidoe|vedio|vid|reel)\b/i.test(lm) ? 'video' : 'image';
+    if (mediaProduct) {
+      state.messages.push({ role: 'user', content: message });
+      if (dbConv) {
+        messageModel.create(dbConv.id, 'incoming', 'customer', message, { source: 'customer', wa_message_id: options.wa_message_id });
+        conversationModel.updateLastMessage(dbConv.id, message);
+      }
+      return {
+        reply: null, state: state.current, collected: state.collected,
+        needs_human: false, source: 'v2_ai', intent: 'media_request',
+        tokens_in: 0, tokens_out: 0, response_ms: Date.now() - startTime,
+        _media: { product_id: mediaProduct.id, type: mediaType, product_name: mediaProduct.short },
+      };
+    }
+    // No product detected — AI will ask which product
+  }
+
   // Determine state transition BEFORE AI call (so AI knows what to do)
   const prevState = state.current;
   const nextState = determineNextState(state, extracted, isYes, isNo);
