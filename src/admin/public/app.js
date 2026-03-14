@@ -28,6 +28,7 @@ function _update24hWindow() {
     const color = hrs < 2 ? '#D97706' : '#38a169';
     el.innerHTML = '<span style="color:' + color + ';font-weight:600">⏱️ 24h Window: ' + hrs + 'h ' + mins + 'm remaining</span>';
   }
+  if (typeof updateTemplateBtnVisibility === 'function') updateTemplateBtnVisibility();
 }
 
 // ---- UTILS ----
@@ -478,6 +479,7 @@ async function openChat(chatId) {
       } else if (windowEl) {
         windowEl.textContent = '';
       }
+      if (typeof updateTemplateBtnVisibility === 'function') updateTemplateBtnVisibility();
     } catch(e) {}
   } catch (err) {
     if (seq !== _openChatSeq) return;
@@ -1793,4 +1795,96 @@ async function saveBotVersion() {
 function togglePasswordVisibility(inputId) {
   const el = document.getElementById(inputId);
   el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+// ---- WHATSAPP TEMPLATE SENDING (for expired 24h windows) ----
+let _waTemplatesCache = null;
+let _waTemplatesCacheTime = 0;
+
+async function toggleTemplatePicker() {
+  const picker = document.getElementById('templatePicker');
+  if (!picker) return;
+  if (picker.style.display !== 'none') {
+    picker.style.display = 'none';
+    return;
+  }
+  picker.style.display = 'block';
+  const listEl = document.getElementById('templatePickerList');
+  listEl.innerHTML = '<div style="padding:10px;color:#999;">Loading templates...</div>';
+
+  try {
+    // Cache for 60 seconds
+    if (!_waTemplatesCache || Date.now() - _waTemplatesCacheTime > 60000) {
+      const res = await api('/api/wa-templates');
+      if (res.error) {
+        listEl.innerHTML = `<div style="padding:10px;color:#c00;">${res.error}</div>`;
+        return;
+      }
+      _waTemplatesCache = (res.templates || []).filter(t => t.status === 'APPROVED');
+      _waTemplatesCacheTime = Date.now();
+    }
+
+    if (_waTemplatesCache.length === 0) {
+      listEl.innerHTML = '<div style="padding:10px;color:#999;">No approved templates. <a href="/admin/wa-templates.html">Create one</a></div>';
+      return;
+    }
+
+    listEl.innerHTML = _waTemplatesCache.map(t => {
+      const bodyComp = (t.components || []).find(c => c.type === 'BODY');
+      const bodyText = bodyComp?.text || '';
+      const bodyVars = (bodyText.match(/\{\{\d+\}\}/g) || []).length;
+      return `<div onclick="selectTemplate('${t.name}', '${t.language}', ${bodyVars})" style="padding:10px 12px;cursor:pointer;border-radius:8px;margin:2px 0;transition:.15s;border-bottom:1px solid #f5f5f5;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">
+        <div style="font-weight:600;color:#111;font-size:13px;">${t.name}</div>
+        <div style="color:#667781;font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:350px;">${bodyText.substring(0, 100)}${bodyText.length > 100 ? '...' : ''}</div>
+        <div style="font-size:10px;color:#999;margin-top:2px;">${t.language} | ${t.category}${bodyVars > 0 ? ' | ' + bodyVars + ' variable(s)' : ''}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    listEl.innerHTML = `<div style="padding:10px;color:#c00;">Error: ${e.message}</div>`;
+  }
+}
+
+async function selectTemplate(name, lang, varCount) {
+  document.getElementById('templatePicker').style.display = 'none';
+
+  let components = [];
+  if (varCount > 0) {
+    const vars = [];
+    for (let i = 1; i <= varCount; i++) {
+      const val = prompt(`Variable {{${i}}} ki value daalein:`, '');
+      if (val === null) return; // User cancelled
+      vars.push({ type: 'text', text: val || '' });
+    }
+    components = [{ type: 'body', parameters: vars }];
+  }
+
+  if (!confirm(`Template "${name}" send karein?`)) return;
+
+  try {
+    const res = await api(`/api/conversations/${currentChatId}/send-template`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template_name: name, language_code: lang, components })
+    });
+    if (res.error) {
+      alert('Template send failed: ' + res.error);
+    } else {
+      loadChats();
+      openChat(currentChatId);
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+function updateTemplateBtnVisibility() {
+  const btn = document.getElementById('chatTemplateBtn');
+  if (!btn) return;
+  if (window._24hExpiresAt && window._24hExpiresAt < Date.now()) {
+    btn.style.display = '';
+    btn.title = 'Send Template (24h window expired)';
+  } else {
+    btn.style.display = 'none';
+    document.getElementById('templatePicker') && (document.getElementById('templatePicker').style.display = 'none');
+  }
 }

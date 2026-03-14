@@ -188,4 +188,46 @@ async function sendAudio(to, audioUrl, phoneNumberId, accessToken) {
   }
 }
 
-module.exports = { sendMessage, sendImage, sendVideo, sendAudio, markAsRead, toInternational };
+/**
+ * Send a pre-approved WhatsApp template message.
+ * @param {string} to — Recipient phone (international format)
+ * @param {string} templateName — Template name as approved by Meta
+ * @param {string} languageCode — e.g. 'ur' or 'en_US'
+ * @param {Array} components — Template components (header, body, button params)
+ * @param {string} phoneNumberId — WhatsApp Business phone number ID
+ * @param {string} accessToken — Meta access token
+ */
+async function sendTemplate(to, templateName, languageCode, components, phoneNumberId, accessToken) {
+  const url = `${GRAPH_API}/${phoneNumberId}/messages`;
+  try {
+    const body = {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: {
+        name: templateName,
+        language: { code: languageCode },
+      },
+    };
+    if (components && components.length > 0) {
+      body.template.components = components;
+    }
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('[WA SendTemplate] Error:', data.error?.message || JSON.stringify(data));
+      return { success: false, error: data.error?.message || 'Unknown error' };
+    }
+    return { success: true, messageId: data.messages?.[0]?.id };
+  } catch (err) {
+    console.error('[WA SendTemplate] Network error:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+module.exports = { sendMessage, sendImage, sendVideo, sendAudio, sendTemplate, markAsRead, toInternational };

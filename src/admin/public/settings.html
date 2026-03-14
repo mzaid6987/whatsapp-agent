@@ -52,6 +52,10 @@
       Media
     </a>
 
+    <a href="/admin/wa-templates.html" class="nav-item" data-page="wa-templates">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
+      WA Templates
+    </a>
     <a href="/admin/complaints.html" class="nav-item" data-page="complaints">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Complaints
@@ -93,6 +97,10 @@
       Test
     </a>
 
+    <a href="/admin/wa-templates.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
+      WA Tpl
+    </a>
     <a href="/admin/complaints.html" class="mobile-nav-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Complaints
@@ -183,6 +191,13 @@
         <div class="api-key-input">
           <input type="password" id="meta_app_secret" data-section="api_keys" placeholder="abcdef123456...">
           <button class="btn btn-sm btn-outline" onclick="togglePasswordVisibility('meta_app_secret')">Show</button>
+        </div>
+      </div>
+      <div class="api-key-group">
+        <label>WABA ID (WhatsApp Business Account ID)</label>
+        <p style="color:#667781;font-size:11px;margin:-4px 0 6px;">Template management ke liye zaroori hai — Meta Business Suite se milega</p>
+        <div class="api-key-input">
+          <input type="text" id="meta_waba_id" data-section="api_keys" placeholder="123456789012345">
         </div>
       </div>
 

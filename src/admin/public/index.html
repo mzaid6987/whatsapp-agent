@@ -67,6 +67,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Templates
     </a>
+    <a href="/admin/wa-templates.html" class="nav-item" data-page="wa-templates">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
+      WA Templates
+    </a>
     <a href="/admin/complaints.html" class="nav-item" data-page="complaints">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Complaints
@@ -110,6 +114,10 @@
     <a href="/admin/templates.html" class="mobile-nav-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       Templates
+    </a>
+    <a href="/admin/wa-templates.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
+      WA Tpl
     </a>
     <a href="/admin/complaints.html" class="mobile-nav-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -277,10 +285,19 @@
             <!-- Messages populated by JS -->
           </div>
 
-          <div class="chat-input-area" id="chatInputArea">
+          <!-- Template Picker Dropdown (hidden by default) -->
+          <div id="templatePicker" style="display:none;position:absolute;bottom:60px;left:0;right:0;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 -4px 20px rgba(0,0,0,.15);max-height:300px;overflow-y:auto;z-index:100;padding:8px;">
+            <div style="padding:8px 12px;font-size:13px;font-weight:600;color:#333;border-bottom:1px solid #f0f2f5;margin-bottom:4px;">Select Template to Send</div>
+            <div id="templatePickerList" style="font-size:13px;color:#666;">Loading...</div>
+          </div>
+
+          <div class="chat-input-area" id="chatInputArea" style="position:relative;">
             <input type="file" id="chatMediaInput" accept="image/*,video/*,audio/*" style="display:none" onchange="handleMediaSelect(this)">
             <button class="chat-input-btn" id="chatAttachBtn" onclick="document.getElementById('chatMediaInput').click()" title="Send image, video or voice note" disabled>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <button class="chat-input-btn" id="chatTemplateBtn" onclick="toggleTemplatePicker()" title="Send Template (24h window expired)" style="display:none;color:#25D366;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
             </button>
             <input type="text" class="chat-input" id="chatInput" placeholder="Bot handling this chat..." disabled>
             <button class="chat-input-btn chat-send-btn" id="chatSendBtn" onclick="sendManualReply()" disabled>

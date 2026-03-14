@@ -14,7 +14,7 @@ const http = require('http');
 const hybrid = require('./hybrid');
 const { handleMessageV2 } = require('./hybrid/v2');
 const { webhookVerify, webhookHandler, setBroadcast } = require('./whatsapp/webhook');
-const { sendMessage, sendImage, sendVideo, sendAudio, toInternational } = require('./whatsapp/sender');
+const { sendMessage, sendImage, sendVideo, sendAudio, sendTemplate, toInternational } = require('./whatsapp/sender');
 
 // DB modules
 const { initDb, getDb } = require('./db');
@@ -2576,6 +2576,121 @@ app.use('/admin', express.static(path.join(__dirname, 'admin/public')));
 
 // Root redirect
 app.get('/', (req, res) => res.redirect('/admin/'));
+
+// ---- WHATSAPP TEMPLATE MANAGEMENT ----
+// Fetch approved templates from Meta
+app.get('/api/wa-templates', requireAuth, async (req, res) => {
+  try {
+    const wabaId = settingsModel.get('meta_waba_id', '');
+    const accessToken = settingsModel.get('meta_whatsapp_token', '');
+    if (!wabaId || !accessToken) {
+      return res.status(400).json({ error: 'WABA ID ya WhatsApp Token set nahi hai — Settings mein jaake daalein' });
+    }
+    const url = `https://graph.facebook.com/v21.0/${wabaId}/message_templates?limit=250`;
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.error?.message || 'Meta API error' });
+    }
+    res.json({ templates: data.data || [], paging: data.paging });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Create/submit new template to Meta for approval
+app.post('/api/wa-templates', requireAuth, async (req, res) => {
+  try {
+    const wabaId = settingsModel.get('meta_waba_id', '');
+    const accessToken = settingsModel.get('meta_whatsapp_token', '');
+    if (!wabaId || !accessToken) {
+      return res.status(400).json({ error: 'WABA ID ya WhatsApp Token set nahi hai' });
+    }
+    const { name, language, category, components } = req.body;
+    if (!name || !language || !category || !components) {
+      return res.status(400).json({ error: 'name, language, category, components required' });
+    }
+    const url = `https://graph.facebook.com/v21.0/${wabaId}/message_templates`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, language, category, components })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.error?.message || 'Meta API error', details: data.error });
+    }
+    res.json({ success: true, template: data });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Delete template from Meta
+app.delete('/api/wa-templates/:name', requireAuth, async (req, res) => {
+  try {
+    const wabaId = settingsModel.get('meta_waba_id', '');
+    const accessToken = settingsModel.get('meta_whatsapp_token', '');
+    if (!wabaId || !accessToken) {
+      return res.status(400).json({ error: 'WABA ID ya WhatsApp Token set nahi hai' });
+    }
+    const url = `https://graph.facebook.com/v21.0/${wabaId}/message_templates?name=${encodeURIComponent(req.params.name)}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.error?.message || 'Meta API error' });
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Send template to a customer (works outside 24h window)
+app.post('/api/conversations/:id/send-template', requireAuth, async (req, res) => {
+  try {
+    const convId = parseInt(req.params.id);
+    const { template_name, language_code, components } = req.body;
+    if (!template_name) return res.status(400).json({ error: 'template_name required' });
+
+    const conv = conversationModel.findById(convId);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    const customer = customerModel.findById(conv.customer_id);
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+
+    const accessToken = settingsModel.get('meta_whatsapp_token', '');
+    const phoneNumberId = settingsModel.get('meta_phone_number_id', '');
+    if (!accessToken || !phoneNumberId) {
+      return res.status(500).json({ error: 'WhatsApp credentials not configured' });
+    }
+
+    const intlPhone = toInternational(customer.phone);
+    const result = await sendTemplate(intlPhone, template_name, language_code || 'ur', components || [], phoneNumberId, accessToken);
+
+    if (!result.success) {
+      return res.status(500).json({ error: 'Template send failed: ' + result.error });
+    }
+
+    // Save to DB as outgoing message
+    const templateLabel = `[Template: ${template_name}]`;
+    const msgId = messageModel.create(convId, 'outgoing', 'human', templateLabel, { source: 'template', template_name });
+    if (result.messageId) {
+      try { getDb().prepare('UPDATE messages SET wa_message_id = ? WHERE id = ?').run(result.messageId, msgId); } catch (e) {}
+    }
+    conversationModel.updateLastMessage(convId, templateLabel);
+
+    broadcast({ type: 'new_message', conversationId: convId });
+    res.json({ success: true, messageId: result.messageId });
+  } catch (e) {
+    console.error('[API] Send template error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ---- DEPLOY INFO ENDPOINT ----
 const { execSync } = require('child_process');

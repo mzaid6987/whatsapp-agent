@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WA Templates — WhatsApp Agent</title>
+  <link rel="stylesheet" href="/admin/style.css">
+  <style>
+    .wt-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px,1fr)); gap:12px; margin-bottom:20px; }
+    .wt-stat { background:#fff; border-radius:10px; padding:14px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    .wt-stat .num { font-size:26px; font-weight:700; color:#25D366; }
+    .wt-stat .label { font-size:11px; color:#667781; margin-top:4px; }
+    .wt-tabs { display:flex; gap:0; margin-bottom:16px; border-bottom:2px solid #e0e0e0; }
+    .wt-tab { padding:10px 20px; cursor:pointer; font-size:14px; font-weight:600; color:#667781; border-bottom:3px solid transparent; margin-bottom:-2px; transition:.2s; }
+    .wt-tab.active { color:#25D366; border-bottom-color:#25D366; }
+    .wt-tab .tab-count { background:#f0f2f5; color:#667781; padding:1px 7px; border-radius:10px; font-size:11px; margin-left:6px; }
+    .wt-tab.active .tab-count { background:#e8f5e9; color:#25D366; }
+    .wt-filters { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+    .wt-filters select, .wt-filters input { padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-size:13px; background:#fff; }
+    .wt-filters input { flex:1; min-width:150px; }
+    .wt-table { width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    .wt-table th { background:#f0f2f5; padding:10px 12px; text-align:left; font-size:12px; color:#667781; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    .wt-table td { padding:10px 12px; border-top:1px solid #f0f2f5; font-size:13px; vertical-align:top; }
+    .wt-table tr:hover { background:#f8fafb; }
+    .wt-status { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+    .wt-status.approved { background:#e8f5e9; color:#2e7d32; }
+    .wt-status.pending { background:#fff3e0; color:#e65100; }
+    .wt-status.rejected { background:#fce4ec; color:#c62828; }
+    .wt-status.paused { background:#f5f5f5; color:#616161; }
+    .wt-category { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; background:#e3f2fd; color:#1565c0; }
+    .wt-body { max-width:400px; white-space:pre-wrap; word-break:break-word; font-size:12px; color:#333; line-height:1.4; }
+    .wt-actions { display:flex; gap:4px; flex-wrap:wrap; }
+    .wt-actions button { padding:4px 10px; border:none; border-radius:6px; cursor:pointer; font-size:11px; font-weight:600; }
+    .btn-del { background:#fce4ec; color:#c62828; }
+    .btn-preview { background:#e3f2fd; color:#1565c0; }
+
+    /* Create template form */
+    .wt-form { background:#fff; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:20px; display:none; }
+    .wt-form.show { display:block; }
+    .wt-form h3 { margin:0 0 16px; font-size:16px; color:#111; }
+    .wt-form-group { margin-bottom:14px; }
+    .wt-form-group label { display:block; font-size:13px; font-weight:600; color:#333; margin-bottom:4px; }
+    .wt-form-group input, .wt-form-group select, .wt-form-group textarea {
+      width:100%; padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-size:13px; font-family:inherit; box-sizing:border-box;
+    }
+    .wt-form-group textarea { min-height:80px; resize:vertical; }
+    .wt-form-group .hint { font-size:11px; color:#667781; margin-top:3px; }
+    .wt-form-actions { display:flex; gap:8px; margin-top:16px; }
+
+    .btn-green { background:#25D366; color:#fff; border:none; padding:8px 20px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px; }
+    .btn-green:hover { background:#1fb855; }
+    .btn-outline { background:#fff; color:#667781; border:1px solid #ddd; padding:8px 20px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px; }
+
+    @media (max-width:768px) {
+      .wt-table th:nth-child(4), .wt-table td:nth-child(4),
+      .wt-table th:nth-child(5), .wt-table td:nth-child(5) { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="bot-status on" id="botStatus" onclick="toggleBot()">
+        <span class="bot-status-dot"></span>
+        <span id="botStatusText">BOT ON</span>
+      </div>
+      <span class="header-title">WhatsApp Agent</span>
+    </div>
+    <div class="header-right">
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- NAV BAR (Desktop) -->
+  <nav class="nav-bar">
+    <a href="/admin/" class="nav-item" data-page="chats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/customers.html" class="nav-item" data-page="customers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Customers
+    </a>
+    <a href="/admin/orders.html" class="nav-item" data-page="orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Orders
+    </a>
+    <a href="/admin/analytics.html" class="nav-item" data-page="analytics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H4.6c-.6 0-.6-.4-.6-1V3"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+      Analytics
+    </a>
+    <a href="/admin/stats.html" class="nav-item" data-page="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </a>
+    <a href="/admin/products.html" class="nav-item" data-page="products">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      Products
+    </a>
+    <a href="/admin/media.html" class="nav-item" data-page="media">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Media
+    </a>
+    <a href="/admin/diagnostics.html" class="nav-item" data-page="diagnostics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Diagnostics
+    </a>
+    <a href="/admin/templates.html" class="nav-item" data-page="templates">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Templates
+    </a>
+    <a href="/admin/wa-templates.html" class="nav-item active" data-page="wa-templates">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
+      WA Templates
+    </a>
+    <a href="/admin/complaints.html" class="nav-item" data-page="complaints">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Complaints
+    </a>
+    <a href="/admin/monitoring.html" class="nav-item" data-page="monitoring">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Monitoring
+    </a>
+    <a href="/admin/settings.html" class="nav-item" data-page="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+    <a href="/admin/test-chat.html" class="nav-item" data-page="test-chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      Test Chat
+    </a>
+  </nav>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mobile-nav">
+    <a href="/admin/" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chats
+    </a>
+    <a href="/admin/orders.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      Orders
+    </a>
+    <a href="/admin/wa-templates.html" class="mobile-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
+      WA Tpl
+    </a>
+    <a href="/admin/templates.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Templates
+    </a>
+    <a href="/admin/complaints.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Complaints
+    </a>
+    <a href="/admin/settings.html" class="mobile-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <h2>WhatsApp Templates (Meta)</h2>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-green" onclick="toggleCreateForm()">+ New Template</button>
+        <button class="btn-outline" onclick="loadTemplates()">Refresh</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="wt-stats" id="wtStats"></div>
+
+    <!-- Create Template Form (hidden by default) -->
+    <div class="wt-form" id="createForm">
+      <h3>Create New Template</h3>
+      <div class="wt-form-group">
+        <label>Template Name</label>
+        <input type="text" id="tplName" placeholder="e.g. order_followup" pattern="[a-z0-9_]+" title="Sirf lowercase letters, numbers aur underscore">
+        <div class="hint">Sirf lowercase, numbers, underscore — spaces nahi (Meta requirement)</div>
+      </div>
+      <div class="wt-form-group">
+        <label>Category</label>
+        <select id="tplCategory">
+          <option value="MARKETING">Marketing</option>
+          <option value="UTILITY" selected>Utility</option>
+          <option value="AUTHENTICATION">Authentication</option>
+        </select>
+        <div class="hint">UTILITY = transactional (order updates), MARKETING = promotional</div>
+      </div>
+      <div class="wt-form-group">
+        <label>Language</label>
+        <select id="tplLanguage">
+          <option value="ur" selected>Urdu (ur)</option>
+          <option value="en_US">English (en_US)</option>
+          <option value="en">English (en)</option>
+        </select>
+      </div>
+      <div class="wt-form-group">
+        <label>Header (Optional)</label>
+        <select id="tplHeaderType" onchange="toggleHeaderInput()">
+          <option value="none">No Header</option>
+          <option value="TEXT">Text Header</option>
+        </select>
+        <input type="text" id="tplHeaderText" placeholder="Header text..." style="display:none;margin-top:6px;">
+        <div class="hint">Variables: {{1}}, {{2}} etc.</div>
+      </div>
+      <div class="wt-form-group">
+        <label>Body Text</label>
+        <textarea id="tplBody" placeholder="Assalam o Alaikum {{1}}, apka order {{2}} confirm ho gaya hai..."></textarea>
+        <div class="hint">Variables: {{1}}, {{2}} etc. — ye customer ke naam, order ID waghaira ke liye</div>
+      </div>
+      <div class="wt-form-group">
+        <label>Footer (Optional)</label>
+        <input type="text" id="tplFooter" placeholder="e.g. Reply STOP to unsubscribe">
+      </div>
+      <div class="wt-form-group">
+        <label>Buttons (Optional)</label>
+        <select id="tplButtonType" onchange="toggleButtonInput()">
+          <option value="none">No Buttons</option>
+          <option value="QUICK_REPLY">Quick Reply</option>
+          <option value="URL">URL Button</option>
+        </select>
+        <div id="buttonInputs" style="display:none;margin-top:6px;"></div>
+      </div>
+      <div class="wt-form-actions">
+        <button class="btn-green" onclick="submitTemplate()">Submit for Approval</button>
+        <button class="btn-outline" onclick="toggleCreateForm()">Cancel</button>
+      </div>
+      <div id="createStatus" style="margin-top:10px;font-size:13px;"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="wt-tabs">
+      <div class="wt-tab active" data-filter="all" onclick="filterTemplates('all', this)">All <span class="tab-count" id="countAll">0</span></div>
+      <div class="wt-tab" data-filter="APPROVED" onclick="filterTemplates('APPROVED', this)">Approved <span class="tab-count" id="countApproved">0</span></div>
+      <div class="wt-tab" data-filter="PENDING" onclick="filterTemplates('PENDING', this)">Pending <span class="tab-count" id="countPending">0</span></div>
+      <div class="wt-tab" data-filter="REJECTED" onclick="filterTemplates('REJECTED', this)">Rejected <span class="tab-count" id="countRejected">0</span></div>
+    </div>
+
+    <!-- Search -->
+    <div class="wt-filters">
+      <input type="text" id="wtSearch" placeholder="Search template name..." oninput="renderTable()">
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto;">
+      <table class="wt-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Category</th>
+            <th>Language</th>
+            <th>Body</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="wtTableBody">
+          <tr><td colspan="6" style="text-align:center;color:#999;padding:30px;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/admin/app.js"></script>
+  <script>
+    let allTemplates = [];
+    let currentFilter = 'all';
+
+    async function loadTemplates() {
+      try {
+        document.getElementById('wtTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:30px;">Loading...</td></tr>';
+        const res = await api('/api/wa-templates');
+        if (res.error) {
+          document.getElementById('wtTableBody').innerHTML = `<tr><td colspan="6" style="text-align:center;color:#c00;padding:30px;">${res.error}</td></tr>`;
+          return;
+        }
+        allTemplates = res.templates || [];
+        updateStats();
+        renderTable();
+      } catch (e) {
+        document.getElementById('wtTableBody').innerHTML = `<tr><td colspan="6" style="text-align:center;color:#c00;padding:30px;">Error: ${e.message}</td></tr>`;
+      }
+    }
+
+    function updateStats() {
+      const approved = allTemplates.filter(t => t.status === 'APPROVED').length;
+      const pending = allTemplates.filter(t => t.status === 'PENDING').length;
+      const rejected = allTemplates.filter(t => t.status === 'REJECTED').length;
+
+      document.getElementById('wtStats').innerHTML = `
+        <div class="wt-stat"><div class="num">${allTemplates.length}</div><div class="label">Total</div></div>
+        <div class="wt-stat"><div class="num" style="color:#2e7d32">${approved}</div><div class="label">Approved</div></div>
+        <div class="wt-stat"><div class="num" style="color:#e65100">${pending}</div><div class="label">Pending</div></div>
+        <div class="wt-stat"><div class="num" style="color:#c62828">${rejected}</div><div class="label">Rejected</div></div>
+      `;
+
+      document.getElementById('countAll').textContent = allTemplates.length;
+      document.getElementById('countApproved').textContent = approved;
+      document.getElementById('countPending').textContent = pending;
+      document.getElementById('countRejected').textContent = rejected;
+    }
+
+    function filterTemplates(status, el) {
+      currentFilter = status;
+      document.querySelectorAll('.wt-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      renderTable();
+    }
+
+    function renderTable() {
+      const search = (document.getElementById('wtSearch').value || '').toLowerCase();
+      let filtered = allTemplates;
+
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(t => t.status === currentFilter);
+      }
+      if (search) {
+        filtered = filtered.filter(t => t.name.toLowerCase().includes(search));
+      }
+
+      if (filtered.length === 0) {
+        document.getElementById('wtTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:30px;">No templates found</td></tr>';
+        return;
+      }
+
+      document.getElementById('wtTableBody').innerHTML = filtered.map(t => {
+        const statusClass = (t.status || '').toLowerCase();
+        const bodyComponent = (t.components || []).find(c => c.type === 'BODY');
+        const bodyText = bodyComponent?.text || '-';
+        const lang = t.language || '-';
+        return `<tr>
+          <td><strong>${t.name}</strong></td>
+          <td><span class="wt-status ${statusClass}">${t.status}</span></td>
+          <td><span class="wt-category">${t.category || '-'}</span></td>
+          <td>${lang}</td>
+          <td class="wt-body">${escapeHtml(bodyText).substring(0, 200)}${bodyText.length > 200 ? '...' : ''}</td>
+          <td class="wt-actions">
+            ${t.status === 'APPROVED' ? `<button class="btn-preview" onclick="previewTemplate('${t.name}', '${lang}')">Preview</button>` : ''}
+            <button class="btn-del" onclick="deleteTemplate('${t.name}')">Delete</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function toggleCreateForm() {
+      document.getElementById('createForm').classList.toggle('show');
+    }
+
+    function toggleHeaderInput() {
+      const type = document.getElementById('tplHeaderType').value;
+      document.getElementById('tplHeaderText').style.display = type === 'TEXT' ? 'block' : 'none';
+    }
+
+    function toggleButtonInput() {
+      const type = document.getElementById('tplButtonType').value;
+      const container = document.getElementById('buttonInputs');
+      if (type === 'none') {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+      }
+      container.style.display = 'block';
+      if (type === 'QUICK_REPLY') {
+        container.innerHTML = `
+          <input type="text" id="btnText1" placeholder="Button 1 text (e.g. Haan)" style="margin-bottom:4px;">
+          <input type="text" id="btnText2" placeholder="Button 2 text (e.g. Nahi)" style="margin-bottom:4px;">
+          <input type="text" id="btnText3" placeholder="Button 3 text (optional)">
+        `;
+      } else if (type === 'URL') {
+        container.innerHTML = `
+          <input type="text" id="btnUrlText" placeholder="Button text (e.g. View Order)" style="margin-bottom:4px;">
+          <input type="text" id="btnUrl" placeholder="URL (e.g. https://example.com/{{1}})">
+        `;
+      }
+    }
+
+    async function submitTemplate() {
+      const name = document.getElementById('tplName').value.trim();
+      const category = document.getElementById('tplCategory').value;
+      const language = document.getElementById('tplLanguage').value;
+      const body = document.getElementById('tplBody').value.trim();
+      const footer = document.getElementById('tplFooter').value.trim();
+      const headerType = document.getElementById('tplHeaderType').value;
+      const headerText = document.getElementById('tplHeaderText').value.trim();
+      const buttonType = document.getElementById('tplButtonType').value;
+      const statusEl = document.getElementById('createStatus');
+
+      if (!name || !body) {
+        statusEl.innerHTML = '<span style="color:#c00">Name aur Body zaroori hain</span>';
+        return;
+      }
+
+      if (!/^[a-z0-9_]+$/.test(name)) {
+        statusEl.innerHTML = '<span style="color:#c00">Name mein sirf lowercase, numbers, underscore allowed hain</span>';
+        return;
+      }
+
+      // Build components array
+      const components = [];
+
+      if (headerType === 'TEXT' && headerText) {
+        components.push({ type: 'HEADER', format: 'TEXT', text: headerText });
+      }
+
+      components.push({ type: 'BODY', text: body });
+
+      if (footer) {
+        components.push({ type: 'FOOTER', text: footer });
+      }
+
+      if (buttonType === 'QUICK_REPLY') {
+        const buttons = [];
+        for (let i = 1; i <= 3; i++) {
+          const el = document.getElementById('btnText' + i);
+          if (el && el.value.trim()) {
+            buttons.push({ type: 'QUICK_REPLY', text: el.value.trim() });
+          }
+        }
+        if (buttons.length) components.push({ type: 'BUTTONS', buttons });
+      } else if (buttonType === 'URL') {
+        const urlText = document.getElementById('btnUrlText')?.value?.trim();
+        const url = document.getElementById('btnUrl')?.value?.trim();
+        if (urlText && url) {
+          components.push({ type: 'BUTTONS', buttons: [{ type: 'URL', text: urlText, url }] });
+        }
+      }
+
+      statusEl.innerHTML = '<span style="color:#666">Submitting to Meta...</span>';
+
+      try {
+        const res = await api('/api/wa-templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, language, category, components })
+        });
+        if (res.error) {
+          statusEl.innerHTML = `<span style="color:#c00">Error: ${res.error}</span>`;
+        } else {
+          statusEl.innerHTML = '<span style="color:#2e7d32">Template submitted! Meta review mein 24-48 hours lag sakte hain.</span>';
+          // Reset form
+          document.getElementById('tplName').value = '';
+          document.getElementById('tplBody').value = '';
+          document.getElementById('tplFooter').value = '';
+          document.getElementById('tplHeaderText').value = '';
+          document.getElementById('tplHeaderType').value = 'none';
+          document.getElementById('tplButtonType').value = 'none';
+          toggleHeaderInput();
+          toggleButtonInput();
+          // Reload
+          setTimeout(() => { loadTemplates(); toggleCreateForm(); statusEl.innerHTML = ''; }, 2000);
+        }
+      } catch (e) {
+        statusEl.innerHTML = `<span style="color:#c00">Error: ${e.message}</span>`;
+      }
+    }
+
+    async function deleteTemplate(name) {
+      if (!confirm(`"${name}" template delete karein? Ye Meta se bhi hat jayega.`)) return;
+      try {
+        const res = await api(`/api/wa-templates/${encodeURIComponent(name)}`, { method: 'DELETE' });
+        if (res.error) {
+          alert('Delete failed: ' + res.error);
+        } else {
+          loadTemplates();
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function previewTemplate(name, lang) {
+      const tpl = allTemplates.find(t => t.name === name && t.language === lang);
+      if (!tpl) return;
+
+      const components = tpl.components || [];
+      const header = components.find(c => c.type === 'HEADER');
+      const body = components.find(c => c.type === 'BODY');
+      const footer = components.find(c => c.type === 'FOOTER');
+      const buttons = components.find(c => c.type === 'BUTTONS');
+
+      let preview = '';
+      if (header) preview += `[Header] ${header.text || header.format}\n\n`;
+      if (body) preview += body.text + '\n';
+      if (footer) preview += `\n---\n${footer.text}`;
+      if (buttons) {
+        preview += '\n\n[Buttons]:\n';
+        (buttons.buttons || []).forEach(b => { preview += `  - ${b.text}\n`; });
+      }
+
+      alert(preview || 'No content');
+    }
+
+    // Load on page ready
+    loadTemplates();
+  </script>
+</body>
+</html>
