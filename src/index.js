@@ -793,7 +793,12 @@ app.patch('/api/orders/:id', requireAuth, (req, res) => {
 app.post('/api/orders/mark-downloaded', requireAuth, (req, res) => {
   try {
     const db = getDb();
-    const { order_ids } = req.body; // array of order IDs
+    const { order_ids, reset } = req.body;
+    if (reset) {
+      // Reset all to 0
+      const result = db.prepare("UPDATE orders SET data_downloaded = 0, updated_at = datetime('now','localtime') WHERE data_downloaded = 1").run();
+      return res.json({ ok: true, reset: result.changes });
+    }
     if (order_ids && order_ids.length) {
       const placeholders = order_ids.map(() => '?').join(',');
       const result = db.prepare(`UPDATE orders SET data_downloaded = 1, updated_at = datetime('now','localtime') WHERE id IN (${placeholders})`).run(...order_ids);
