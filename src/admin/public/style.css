@@ -559,6 +559,11 @@ body:has(.chats-container) {
   color: #DC2626;
   font-weight: 600;
 }
+.label-v1 {
+  background: #F3F4F6;
+  color: #6B7280;
+  font-weight: 600;
+}
 .label-v2 {
   background: #E0E7FF;
   color: #4338CA;

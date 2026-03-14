@@ -187,6 +187,7 @@ function renderChatList(convos) {
     if (c.address_incomplete) labels.push('<span class="label-badge label-addr-incomplete">ADDR INCOMPLETE</span>');
     if (c.state === 'CANCEL_AFTER_CONFIRM') labels.push('<span class="label-badge label-cancel">CANCEL</span>');
     if (c.bot_version === 'v2') labels.push('<span class="label-badge label-v2">V2</span>');
+    else labels.push('<span class="label-badge label-v1">V1</span>');
     if (c.downloaded) labels.push('<span class="label-badge label-downloaded" title="Downloaded">&#8681;</span>');
     if (c.unreplied && !labels.length) labels.push(`<span class="label-badge label-unreplied">UNREPLIED ${Math.floor((c.unreplied_since || 0) / 60)}m</span>`);
     // Silent customer timer — live calculated from last_msg_time
