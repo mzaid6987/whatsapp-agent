@@ -421,12 +421,17 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
   if (state.messages.length > 20) state.messages = state.messages.slice(-20);
 
   // Save outgoing message + update DB state
+  const costRs = calculateCost(aiResult.tokens_in, aiResult.tokens_out);
+  const { getActiveModel, getModelInfo } = require('../ai/claude');
+  const _modelName = getModelInfo(getActiveModel()).name;
+
   if (dbConv) {
     messageModel.create(dbConv.id, 'outgoing', 'bot', reply, {
       source: 'v2_ai',
       debug_json: JSON.stringify({
         state: state.current, prev_state: prevState,
         extracted, tokens_in: aiResult.tokens_in, tokens_out: aiResult.tokens_out,
+        _cost_rs: costRs, _model: _modelName,
       }),
     });
     // Update state + collected in DB
@@ -567,8 +572,9 @@ function getUpsellCandidates(product) {
 }
 
 function calculateCost(tokensIn, tokensOut) {
-  // Claude Haiku pricing: ~$0.25/1M in, ~$1.25/1M out
-  const costUsd = (tokensIn * 0.25 + tokensOut * 1.25) / 1_000_000;
+  const { getActiveModel, getModelInfo } = require('../ai/claude');
+  const modelInfo = getModelInfo(getActiveModel());
+  const costUsd = (tokensIn * modelInfo.input + tokensOut * modelInfo.output) / 1_000_000;
   return Math.round(costUsd * 280 * 100) / 100; // Convert to PKR (1 USD ≈ 280 PKR)
 }
 
