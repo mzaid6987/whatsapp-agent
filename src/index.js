@@ -795,7 +795,12 @@ app.post('/api/orders/mark-downloaded', requireAuth, (req, res) => {
     const db = getDb();
     const { order_ids, reset } = req.body;
     if (reset) {
-      // Reset all to 0
+      // Reset specific IDs or all
+      if (order_ids && order_ids.length) {
+        const placeholders = order_ids.map(() => '?').join(',');
+        const result = db.prepare(`UPDATE orders SET data_downloaded = 0, updated_at = datetime('now','localtime') WHERE id IN (${placeholders})`).run(...order_ids);
+        return res.json({ ok: true, reset: result.changes });
+      }
       const result = db.prepare("UPDATE orders SET data_downloaded = 0, updated_at = datetime('now','localtime') WHERE data_downloaded = 1").run();
       return res.json({ ok: true, reset: result.changes });
     }
