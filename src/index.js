@@ -894,6 +894,10 @@ app.patch('/api/conversations/:id/collected', requireAuth, (req, res) => {
       db.prepare('UPDATE conversations SET collected_json = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
         .run(JSON.stringify(collected), id);
     }
+    // Allow bot_version override from admin
+    if (updates._bot_version) {
+      db.prepare('UPDATE conversations SET bot_version = ? WHERE id = ?').run(updates._bot_version, id);
+    }
     // Also update customer record if changed
     if (conv.customer_id) {
       if (updates.name) db.prepare('UPDATE customers SET name = ? WHERE id = ?').run(updates.name, conv.customer_id);
