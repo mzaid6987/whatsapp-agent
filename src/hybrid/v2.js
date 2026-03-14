@@ -50,21 +50,40 @@ function resetConvV2(phone) {
 }
 
 // ============= AI CALL =============
-async function callAI(systemPrompt, messages, storeName) {
-  const { chat, AI_MODEL_NAME, AI_PRICING } = require('../ai/claude');
+async function callAI(systemPrompt, messages, storeName, apiKey) {
+  const OpenAI = require('openai');
+  const { getActiveModel, getModelInfo } = require('../ai/claude');
+
+  if (!apiKey) {
+    const settingsModel = require('../db/models/settings');
+    apiKey = settingsModel.get('openai_api_key', '');
+  }
+  if (!apiKey) throw new Error('OpenAI API key not set');
+
+  const openai = new OpenAI({ apiKey });
+  const activeModel = getActiveModel();
 
   // Keep last 10 messages for context (5 exchanges)
   const recentMessages = messages.slice(-10);
 
-  const result = await chat(systemPrompt, recentMessages, {
+  const openaiMessages = [
+    { role: 'system', content: systemPrompt },
+    ...recentMessages
+  ];
+
+  const response = await openai.chat.completions.create({
+    model: activeModel,
     max_tokens: 300,
-    temperature: 0.7,
+    messages: openaiMessages,
+    // No response_format — V2 returns plain text, not JSON
   });
 
+  const reply = response.choices[0]?.message?.content || '';
+
   return {
-    reply: result.reply || result.text || '',
-    tokens_in: result.tokens_in || 0,
-    tokens_out: result.tokens_out || 0,
+    reply,
+    tokens_in: response.usage?.prompt_tokens || 0,
+    tokens_out: response.usage?.completion_tokens || 0,
   };
 }
 
@@ -352,7 +371,7 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
   // Call AI
   let aiResult;
   try {
-    aiResult = await callAI(systemPrompt, state.messages, storeName);
+    aiResult = await callAI(systemPrompt, state.messages, storeName, apiKey);
   } catch (e) {
     console.error('[V2] AI call failed:', e.message);
     aiResult = { reply: 'Ji, ek second — abhi jawab deta hun 😊', tokens_in: 0, tokens_out: 0 };
