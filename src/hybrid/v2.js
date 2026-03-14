@@ -150,6 +150,15 @@ function validateExtracted(aiExtracted, state) {
     if (addr.length >= 5) validated.address = addr;
   }
 
+  // Auto-extract city from address if city is missing
+  if (!validated.city && !state.collected.city) {
+    const addrToCheck = validated.address || state.collected.address || '';
+    if (addrToCheck) {
+      const cityFromAddr = extractCity(addrToCheck);
+      if (cityFromAddr) validated.city = cityFromAddr;
+    }
+  }
+
   return validated;
 }
 
@@ -199,6 +208,26 @@ function validateState(aiState, state) {
       return 'ORDER_SUMMARY';
     }
     return prev;
+  }
+
+  // Guardrail: don't go to COLLECT_X if data already collected — skip to next missing
+  const collectStates = {
+    'COLLECT_NAME': 'name',
+    'COLLECT_PHONE': 'phone',
+    'COLLECT_DELIVERY_PHONE': 'delivery_phone',
+    'COLLECT_CITY': 'city',
+    'COLLECT_ADDRESS': 'address',
+  };
+  if (collectStates[aiState] && collected[collectStates[aiState]]) {
+    // This field already collected — find next missing or go to ORDER_SUMMARY
+    if (!collected.product) return 'PRODUCT_INQUIRY';
+    if (!collected.name) return 'COLLECT_NAME';
+    if (!collected.phone) return 'COLLECT_PHONE';
+    if (!collected.delivery_phone) return 'COLLECT_DELIVERY_PHONE';
+    if (!collected.city) return 'COLLECT_CITY';
+    if (!collected.address) return 'COLLECT_ADDRESS';
+    // All collected — go to summary
+    return 'ORDER_SUMMARY';
   }
 
   return aiState;

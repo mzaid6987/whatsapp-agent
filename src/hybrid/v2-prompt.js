@@ -144,6 +144,8 @@ ORDER_CONFIRMED → Sab done. Thank you + delivery time.
 - Customer ki correction TURANT accept karo
 - Agar customer ne pehle se info di hai (COLLECTED DATA dekh) → woh DOBARA mat pooch, acknowledge kar ke aage badh
 - Customer frustration dikha raha hai → TURANT maafi maang, baat seedhi kar
+- Customer ek message mein naam + address + city de → SAARI fields extracted mein daal, KUCH BHI miss mat kar
+- Agar address mein city ka naam hai (e.g. "Ghotki Sindh") → city field mein bhi extract kar
 
 ## DON'Ts ❌
 - "You wasting my time" = address NAHI hai
