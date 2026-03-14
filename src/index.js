@@ -1444,17 +1444,24 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
       return res.status(500).json({ error: 'WhatsApp credentials not configured' });
     }
 
-    // Send via WhatsApp (with retry)
+    // Send via WhatsApp (with retry — 3 attempts: 3s, 10s, 30s)
     const intlPhone = toInternational(customer.phone);
+    const RETRY_DELAYS = [3000, 10000, 30000];
     let sendResult = await sendMessage(intlPhone, text.trim(), phoneNumberId, accessToken);
     if (!sendResult.success) {
-      console.error(`[Admin Reply] Send failed to ${customer.phone}: ${sendResult.error} — retrying in 3s...`);
-      await new Promise(r => setTimeout(r, 3000));
-      sendResult = await sendMessage(intlPhone, text.trim(), phoneNumberId, accessToken);
-      if (!sendResult.success) {
-        return res.status(500).json({ error: 'Failed to send (after retry): ' + sendResult.error });
+      for (let attempt = 0; attempt < RETRY_DELAYS.length; attempt++) {
+        const delay = RETRY_DELAYS[attempt];
+        console.error(`[Admin Reply] Send failed to ${customer.phone}: ${sendResult.error} — retry ${attempt + 1}/${RETRY_DELAYS.length} in ${delay / 1000}s...`);
+        await new Promise(r => setTimeout(r, delay));
+        sendResult = await sendMessage(intlPhone, text.trim(), phoneNumberId, accessToken);
+        if (sendResult.success) {
+          console.log(`[Admin Reply] Retry ${attempt + 1} succeeded for ${customer.phone}`);
+          break;
+        }
       }
-      console.log(`[Admin Reply] Retry succeeded for ${customer.phone}`);
+      if (!sendResult.success) {
+        return res.status(500).json({ error: 'Failed to send (after 3 retries): ' + sendResult.error });
+      }
     }
 
     // Mark customer's last message as read in WhatsApp (blue ticks)

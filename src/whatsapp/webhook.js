@@ -729,17 +729,20 @@ async function webhookHandler(req, res) {
 
     // Send reply back to WhatsApp (skip complaint — handled by delayed sequence)
     if (result.reply && !result._media && !result._complaint_audio) {
+      const RETRY_DELAYS = [3000, 10000, 30000]; // 3s, 10s, 30s
       let sendResult = await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
 
-      // Retry once after 3s if failed
+      // Retry up to 3 times with increasing delay
       if (!sendResult.success) {
-        console.error(`[WA] Send failed to ${fromPhone}: ${sendResult.error} — retrying in 3s...`);
-        await new Promise(r => setTimeout(r, 3000));
-        sendResult = await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
-        if (sendResult.success) {
-          console.log(`[WA] Retry succeeded for ${fromPhone}`);
-        } else {
-          console.error(`[WA] Retry also failed for ${fromPhone}: ${sendResult.error}`);
+        for (let attempt = 0; attempt < RETRY_DELAYS.length; attempt++) {
+          const delay = RETRY_DELAYS[attempt];
+          console.error(`[WA] Send failed to ${fromPhone}: ${sendResult.error} — retry ${attempt + 1}/${RETRY_DELAYS.length} in ${delay / 1000}s...`);
+          await new Promise(r => setTimeout(r, delay));
+          sendResult = await sendMessage(fromPhone, result.reply, phoneNumberId, accessToken);
+          if (sendResult.success) {
+            console.log(`[WA] Retry ${attempt + 1} succeeded for ${fromPhone}`);
+            break;
+          }
         }
       }
 
