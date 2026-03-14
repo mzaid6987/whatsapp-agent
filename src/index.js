@@ -874,8 +874,8 @@ app.patch('/api/conversations/:id/collected', requireAuth, (req, res) => {
         collected[key] = val;
       }
     }
-    // Build address string from parts
-    if (collected.address_parts) {
+    // Build address string from parts (skip if address explicitly provided)
+    if (collected.address_parts && !updates.address) {
       const ap = collected.address_parts;
       // Order: delivery point (landmark/house) first → street → area → city
       const parts = [ap.landmark, ap.house, ap.street, ap.area].filter(v => v && v !== 'nahi_pata');
