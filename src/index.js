@@ -884,13 +884,16 @@ app.patch('/api/conversations/:id/collected', requireAuth, (req, res) => {
         collected.address = parts.join(', ') + (collected.city ? ', ' + collected.city : '');
       }
     }
+    // Strip any _prefixed keys that leaked into collected
+    for (const k of Object.keys(collected)) {
+      if (k.startsWith('_')) delete collected[k];
+    }
     // Update DB
     const db = require('./db').getDb();
     // Allow state override from admin (e.g. un-cancel)
     if (updates._state) {
       db.prepare('UPDATE conversations SET collected_json = ?, state = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
         .run(JSON.stringify(collected), updates._state, id);
-      delete collected._state;
     } else {
       db.prepare('UPDATE conversations SET collected_json = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
         .run(JSON.stringify(collected), id);
