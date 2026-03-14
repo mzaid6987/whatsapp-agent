@@ -1376,11 +1376,11 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
   const storedCost = debugObj?._cost_rs;
   const storedModel = debugObj?._model;
   // Show cost badge if _cost_rs exists in debug_json OR if source is 'ai' with tokens
-  const isAiSource = m.source === 'ai' || !!storedModel;
+  const isAiSource = m.source === 'ai' || m.source === 'v2_ai' || !!storedModel;
   const aiCostPkr = storedCost != null ? storedCost.toFixed(2)
     : (isAiSource && (m.tokens_in || m.tokens_out) ? ((m.tokens_in || 0) * _m.pricing.input + (m.tokens_out || 0) * _m.pricing.output) / 1000000 * 300 : null)?.toFixed?.(2) || null;
   const costLabel = aiCostPkr ? ` <span class="ai-cost-badge">Rs.${aiCostPkr}</span>` : '';
-  const modelLabel = storedModel || (m.source === 'ai' ? _m.name : 'T');
+  const modelLabel = storedModel || (isAiSource ? _m.name : 'T');
   const srcBadge = (isOut && m.sender === 'bot' && m.source)
     ? `<span class="msg-source-badge ${isAiSource ? 'src-ai' : 'src-tpl'}">${modelLabel}</span>${costLabel}`
     : '';
