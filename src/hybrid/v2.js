@@ -408,6 +408,10 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
   if (!reply || reply.length < 3) {
     reply = getStateFallback(state.current, state.collected, honorific);
   }
+  // "Ji batayein" killer — if AI returns this generic garbage, replace with context-aware response
+  if (/^ji\s*batay?ein/i.test(reply.replace(/[^\w\s]/g, '').trim())) {
+    reply = getStateFallback(state.current, state.collected, honorific);
+  }
 
   // Banned words filter — code-side enforcement
   const BANNED_WORDS = ['premium', 'high-quality', 'ultra', 'top-notch', 'superior', 'excellent', 'nureva', 'thenureva', 'kripya', 'dhanyavaad', 'namaste'];
@@ -420,10 +424,14 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
   // Replace "best" only when used as adjective
   reply = reply.replace(/\b(best)\b/gi, 'achi').trim();
 
-  // Duplicate reply prevention — don't send same message as last bot message
+  // Duplicate reply prevention — don't send same or similar message as last bot message
   const lastBotMsg = state.messages.filter(m => m.role === 'assistant').slice(-1)[0];
-  if (lastBotMsg && lastBotMsg.content === reply && reply.length > 15) {
-    reply = getStateFallback(state.current, state.collected, honorific);
+  if (lastBotMsg && reply.length > 15) {
+    const lastContent = lastBotMsg.content || '';
+    // Exact match OR first 50 chars match (catches slight variations of same reply)
+    if (lastContent === reply || (lastContent.substring(0, 50) === reply.substring(0, 50) && lastContent.length > 20)) {
+      reply = getStateFallback(state.current, state.collected, honorific);
+    }
   }
 
   // Add AI reply to history
