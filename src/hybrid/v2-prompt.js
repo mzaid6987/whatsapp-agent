@@ -184,7 +184,9 @@ function getStateInstruction(state, collected, honorific, deliveryEst) {
     case 'COLLECT_NAME':
       return `Naam chahiye. "${honorific}, apna naam bata dein? 😊"
 - Jo customer bole woh accept karo (2-50 chars, proper name)
-- Agar customer ne naam ke sath phone/city bhi diya → SAARI extract kar`;
+- Agar customer ne naam ke sath phone/city bhi diya → SAARI extract kar
+- IMPORTANT: Agar customer price/discount/delivery pooch raha hai → PEHLE uska sawal answer karo, PHIR naam poocho. Sirf "naam bata dein" bol ke question ignore mat karo.
+- Agar customer haggling kar raha hai → next_state=HAGGLING, price discuss karo`;
 
     case 'COLLECT_PHONE':
       return `Phone chahiye. "Apna phone number bata dein? 📱"

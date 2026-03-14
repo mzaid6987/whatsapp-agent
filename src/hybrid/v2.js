@@ -108,7 +108,8 @@ function validateExtracted(aiExtracted, state) {
     // Title case
     name = name.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
     // Reject obvious non-names
-    if (name.length >= 2 && name.length <= 50 && !/\b(order|chahiye|product|price|send|nahi|haan|ok)\b/i.test(name)) {
+    const nonNameWords = /\b(order|chahiye|product|price|send|nahi|haan|ok|purani|soorh|address|delivery|city|gali|road|colony|bazar|market|street|mohalla)\b/i;
+    if (name.length >= 2 && name.length <= 50 && !nonNameWords.test(name)) {
       validated.name = name;
     }
   }
@@ -179,6 +180,11 @@ function validateState(aiState, state) {
       if (!collected.city) return 'COLLECT_CITY';
       if (!collected.address) return 'COLLECT_ADDRESS';
     }
+  }
+
+  // Allow HAGGLING from collection states (customer asked about price during info gathering)
+  if (aiState === 'HAGGLING' && collected.product) {
+    return 'HAGGLING'; // always allow if product selected
   }
 
   // Guardrail: UPSELL_SHOW only from UPSELL_HOOK (not from random states)
@@ -356,6 +362,15 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
   // Validate AI's state transition
   const newState = validateState(aiNextState, state);
   state.current = newState;
+
+  // "Can't read English" detection → escalate to human
+  const cantReadEnglish = /english\s*nahi\s*aa|urdu\s*mein\s*(bol|baat|likh)|samajh\s*nahi\s*aa|mujhe\s*nahi\s*aata|nahi\s*samajh/i.test(message);
+  if (cantReadEnglish && state.messages.filter(m => m.role === 'user' && /english|urdu|samajh\s*nahi|nahi\s*aata/i.test(m.content)).length >= 2) {
+    // Customer has asked 2+ times → needs human
+    if (dbConv) {
+      getDb().prepare('UPDATE conversations SET needs_human = 1 WHERE id = ?').run(dbConv.id);
+    }
+  }
 
   // Complaint intercept — code enforces
   if (aiResponse.is_complaint || (aiNextState === 'COMPLAINT' && state.current !== 'COMPLAINT')) {
