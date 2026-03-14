@@ -222,7 +222,7 @@
               ${o.has_upsell ? '<span class="order-badge badge-upsell">UPSELL</span>' : ''}
               ${o.address_incomplete ? '<span class="order-badge badge-addr-incomplete">ADDR INCOMPLETE</span>' : ''}
               ${o.data_downloaded ? '<span class="order-badge badge-downloaded">DATA DOWNLOADED</span>' : ''}
-              <span class="order-badge badge-source">${o.source === 'bot' ? 'Bot' : 'Human'}</span>
+              <span class="order-badge badge-source">${o.source === 'bot_v2' ? 'Bot v2' : o.source === 'bot' ? 'Bot' : 'Human'}</span>
               <span class="order-badge ${badgeClass}">${statusText}</span>
             </div>
             <span class="order-total">${fmtPrice(o.grand_total)}${o.discount_total > 0 ? ' <small>-' + o.discount_percent + '%</small>' : ''}</span>

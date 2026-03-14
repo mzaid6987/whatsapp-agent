@@ -8,6 +8,7 @@
 const { sendMessage, sendImage, sendVideo, sendAudio, markAsRead, toInternational } = require('./sender');
 const { transcribeVoice, analyzeImage, downloadMedia, saveIncomingMedia } = require('./media-handler');
 const hybrid = require('../hybrid');
+const { handleMessageV2 } = require('../hybrid/v2');
 const settingsModel = require('../db/models/settings');
 const { getDb } = require('../db');
 const customerModel = require('../db/models/customer');
@@ -634,8 +635,21 @@ async function webhookHandler(req, res) {
       }
     }
 
-    // Process message through the hybrid engine
-    const result = await hybrid.handleMessage(messageText, fromPhone, storeName, apiKey || undefined, { mediaCost, wa_message_id: messageId, incoming_media_type: incomingMediaType, incoming_media_url: incomingMediaFile });
+    // Determine bot version: existing conversation keeps its version, new ones use default setting
+    let botVersion = 'v1';
+    try {
+      if (convo && convo.bot_version) {
+        botVersion = convo.bot_version;
+      } else {
+        botVersion = settingsModel.get('bot_version_default', 'v1');
+      }
+    } catch (e) {}
+
+    // Process message through appropriate engine
+    const msgOpts = { mediaCost, wa_message_id: messageId, incoming_media_type: incomingMediaType, incoming_media_url: incomingMediaFile };
+    const result = botVersion === 'v2'
+      ? await handleMessageV2(messageText, fromPhone, storeName, apiKey || undefined, msgOpts)
+      : await hybrid.handleMessage(messageText, fromPhone, storeName, apiKey || undefined, msgOpts);
 
     // Add media processing cost to result (so dashboard shows it)
     if (mediaCost) {

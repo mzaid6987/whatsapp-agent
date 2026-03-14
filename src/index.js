@@ -12,6 +12,7 @@ const path = require('path');
 const { WebSocketServer } = require('ws');
 const http = require('http');
 const hybrid = require('./hybrid');
+const { handleMessageV2 } = require('./hybrid/v2');
 const { webhookVerify, webhookHandler, setBroadcast } = require('./whatsapp/webhook');
 const { sendMessage, sendImage, sendVideo, sendAudio, toInternational } = require('./whatsapp/sender');
 
@@ -2510,7 +2511,11 @@ app.post('/api/test-chat', requireAuth, async (req, res) => {
     const storeObj = stores.find(s => s.name === store) || stores[0];
     const apiKey = process.env.OPENAI_API_KEY || '';
 
-    const result = await hybrid.handleMessage(message, key, storeObj?.brand_name || '', apiKey || undefined);
+    // Use v2 if bot_version param sent or default setting is v2
+    const botVer = req.body.bot_version || settingsModel.get('bot_version_default', 'v1');
+    const result = botVer === 'v2'
+      ? await handleMessageV2(message, key, storeObj?.brand_name || '', apiKey || undefined)
+      : await hybrid.handleMessage(message, key, storeObj?.brand_name || '', apiKey || undefined);
 
     // Broadcast to dashboard
     broadcast({ type: 'new_message', phone: key, result });

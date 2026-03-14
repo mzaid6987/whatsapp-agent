@@ -186,6 +186,7 @@ function renderChatList(convos) {
     if (isOrderState) labels.push('<span class="label-badge label-order">ORDER</span>');
     if (c.address_incomplete) labels.push('<span class="label-badge label-addr-incomplete">ADDR INCOMPLETE</span>');
     if (c.state === 'CANCEL_AFTER_CONFIRM') labels.push('<span class="label-badge label-cancel">CANCEL</span>');
+    if (c.bot_version === 'v2') labels.push('<span class="label-badge label-v2">V2</span>');
     if (c.downloaded) labels.push('<span class="label-badge label-downloaded" title="Downloaded">&#8681;</span>');
     if (c.unreplied && !labels.length) labels.push(`<span class="label-badge label-unreplied">UNREPLIED ${Math.floor((c.unreplied_since || 0) / 60)}m</span>`);
     // Silent customer timer — live calculated from last_msg_time
@@ -1714,6 +1715,12 @@ async function loadSettingsPage() {
   // Bot status
   updateBotUI(settings.bot_enabled);
 
+  // Bot version
+  const verSelect = document.getElementById('botVersionSelect');
+  if (verSelect && settings.bot_version_default) {
+    verSelect.value = settings.bot_version_default;
+  }
+
   // Fill form values
   const fields = [
     'haggle_max_discount', 'haggle_first_discount', 'haggle_max_rounds',
@@ -1748,6 +1755,16 @@ async function saveSettings(section) {
     btn.textContent = 'Saved!';
     btn.classList.add('btn-green');
     setTimeout(() => { btn.textContent = orig; btn.classList.remove('btn-green'); }, 2000);
+  }
+}
+
+async function saveBotVersion() {
+  const ver = document.getElementById('botVersionSelect')?.value || 'v1';
+  await api('/api/settings', { method: 'POST', body: JSON.stringify({ bot_version_default: ver }) });
+  const sel = document.getElementById('botVersionSelect');
+  if (sel) {
+    sel.style.borderColor = '#34C759';
+    setTimeout(() => { sel.style.borderColor = '#E0E0E0'; }, 1500);
   }
 }
 
