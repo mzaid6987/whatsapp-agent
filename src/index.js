@@ -766,7 +766,7 @@ app.patch('/api/orders/:id', requireAuth, (req, res) => {
   try {
     const db = getDb();
     const id = parseInt(req.params.id);
-    const { customer_name, customer_phone, delivery_phone, customer_city, customer_address, items, grand_total, notes, status } = req.body;
+    const { customer_name, customer_phone, delivery_phone, customer_city, customer_address, items, grand_total, notes, status, created_at } = req.body;
     const updates = [];
     const params = [];
     if (customer_name !== undefined) { updates.push('customer_name = ?'); params.push(customer_name); }
@@ -778,6 +778,7 @@ app.patch('/api/orders/:id', requireAuth, (req, res) => {
     if (grand_total !== undefined) { updates.push('grand_total = ?'); params.push(grand_total); }
     if (notes !== undefined) { updates.push('notes = ?'); params.push(notes); }
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+    if (created_at !== undefined) { updates.push('created_at = ?'); params.push(created_at); }
     if (updates.length === 0) return res.json({ ok: true });
     updates.push("updated_at = datetime('now','localtime')");
     params.push(id);
