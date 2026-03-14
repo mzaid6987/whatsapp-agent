@@ -154,6 +154,26 @@ function processMessage(state, message) {
     }
   }
 
+  // Single-line smart-fill: "Chaudhry Rehman 04212678976 Hyderabad"
+  // If phone was extracted, try to extract name from text before the phone number
+  if (extracted.phone && !collected.name && !extracted.name) {
+    const phonePattern = message.match(/(\d[\d\s\-]{9,})/);
+    if (phonePattern) {
+      const beforePhone = message.substring(0, phonePattern.index).trim();
+      // Remaining text after phone number
+      const afterPhone = message.substring(phonePattern.index + phonePattern[0].length).trim();
+      // Name = text before phone (if it looks like a name: 2+ alpha words)
+      if (beforePhone && /^[A-Za-z\s.]{2,50}$/.test(beforePhone) && !/\b(order|chahiye|product|send|bhej)\b/i.test(beforePhone)) {
+        extracted.name = beforePhone.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      }
+      // City = text after phone (if it matches a known city)
+      if (afterPhone && !collected.city && !extracted.city) {
+        const cityFromAfter = extractCity(afterPhone);
+        if (cityFromAfter) extracted.city = cityFromAfter;
+      }
+    }
+  }
+
   // Yes/No detection
   const isYes = /^(jee|ji|g|j|haan|han|h[aā]n|yes|yess|yeah|ok|okay|theek|thik|sahi|bilkul|zaroor|kr\s*do|kardo|kar\s*dein|laga\s*do|lagado|confirm|done)\b/i.test(lm) ||
     /^(jee|g|han|ji|ok)\s*$/i.test(lm);
@@ -195,11 +215,25 @@ function determineNextState(state, extracted, isYes, isNo) {
 
     case 'COLLECT_NAME':
       // AI will extract name from response
-      if (collected.name) return 'COLLECT_PHONE';
+      if (collected.name) {
+        // Skip ahead if phone/city already collected in same message
+        if (collected.phone) {
+          if (collected.delivery_phone || collected.delivery_phone === 'same') {
+            if (collected.city) return collected.address ? 'ORDER_SUMMARY' : 'COLLECT_ADDRESS';
+            return 'COLLECT_CITY';
+          }
+          return 'COLLECT_DELIVERY_PHONE';
+        }
+        return 'COLLECT_PHONE';
+      }
       return current;
 
     case 'COLLECT_PHONE':
-      if (collected.phone) return 'COLLECT_DELIVERY_PHONE';
+      if (collected.phone) {
+        // Skip ahead if city already collected
+        if (collected.city) return collected.address ? 'ORDER_SUMMARY' : 'COLLECT_ADDRESS';
+        return 'COLLECT_DELIVERY_PHONE';
+      }
       return current;
 
     case 'COLLECT_DELIVERY_PHONE':
