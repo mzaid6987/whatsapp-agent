@@ -2583,6 +2583,14 @@ app.all('/deploy', (req, res) => {
     const pullResult = execSync('git reset --hard origin/main', { cwd: appRoot, timeout: 30000 }).toString();
     console.log('[DEPLOY] git fetch+reset:', pullResult);
 
+    // Install any new/updated dependencies
+    try {
+      execSync('npm install --production', { cwd: appRoot, timeout: 120000 });
+      console.log('[DEPLOY] npm install done');
+    } catch (npmErr) {
+      console.warn('[DEPLOY] npm install warning:', npmErr.message);
+    }
+
     res.json({ success: true, output: pullResult, restarting: true });
 
     // Kill process after response sent — Passenger auto-respawns with new code
