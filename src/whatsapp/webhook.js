@@ -789,7 +789,7 @@ async function webhookHandler(req, res) {
           console.log(`[WA] Complaint voice note ${audioResult.success ? 'sent' : 'FAILED'} to ${_compPhone}`);
           // Log voice note in DB + dashboard
           if (audioResult.success && _compConvId) {
-            messageModel.create(_compConvId, 'outgoing', 'bot', '[🎤 Complaint Voice Note]', { source: 'complaint_voice', media_type: 'audio', media_url: '/media/complaint-voice.mp3' });
+            messageModel.create(_compConvId, 'outgoing', 'bot', '[🎤 Complaint Voice Note]', { source: 'complaint_voice', media_type: 'audio', media_url: '/media/complaint-voice.mp3', wa_message_id: audioResult.messageId || null });
             conversationModel.updateLastMessage(_compConvId, '[🎤 Voice Note]');
             _broadcast({ type: 'new_message', conversationId: _compConvId });
           }
@@ -801,7 +801,7 @@ async function webhookHandler(req, res) {
               console.log(`[WA] Complaint number text ${sendResult.success ? 'sent' : 'FAILED'} to ${_compPhone}`);
               // Save complaint text to DB (after voice note — correct order)
               if (sendResult.success && _compConvId) {
-                messageModel.create(_compConvId, 'outgoing', 'bot', _compReply, { source: 'complaint_text' });
+                messageModel.create(_compConvId, 'outgoing', 'bot', _compReply, { source: 'complaint_text', wa_message_id: sendResult.messageId || null });
                 conversationModel.updateLastMessage(_compConvId, _compReply);
                 _broadcast({ type: 'new_message', conversationId: _compConvId });
               }

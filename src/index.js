@@ -2714,11 +2714,11 @@ function startFollowUpScheduler() {
         if (result.success) {
           // Mark as followed up so it won't send again
           db.prepare('UPDATE conversations SET followup_sent = 1 WHERE id = ?').run(c.id);
-          // Save message to DB
-          messageModel.create(c.id, 'outgoing', 'bot', '[🎤 Voice Follow-up Sent]', { source: 'followup_scheduler', media_type: 'audio', media_url: `/media/${FOLLOWUP_VOICE_FILE}` });
+          // Save message to DB with wa_message_id for delivery tracking
+          const msgId = messageModel.create(c.id, 'outgoing', 'bot', '[🎤 Voice Follow-up Sent]', { source: 'followup_scheduler', media_type: 'audio', media_url: `/media/${FOLLOWUP_VOICE_FILE}`, wa_message_id: result.messageId || null });
           conversationModel.updateLastMessage(c.id, '[Voice Follow-up]');
           broadcast({ type: 'new_message', conversationId: c.id });
-          console.log(`[FOLLOWUP] Sent successfully to ${c.phone}`);
+          console.log(`[FOLLOWUP] Sent successfully to ${c.phone} (wa_id: ${result.messageId || 'none'})`);
           sentThisCycle++;
         } else {
           console.error(`[FOLLOWUP] Failed for ${c.phone}:`, result.error);

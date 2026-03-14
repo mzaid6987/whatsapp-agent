@@ -520,6 +520,8 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     response_ms: responseMs,
     ai_cost_rs: costRs,
     _media: mediaToSend,
+    db_conversation_id: state._db_conversation_id,
+    db_customer_id: state._db_customer_id,
   };
 }
 
