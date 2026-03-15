@@ -87,7 +87,7 @@ async function analyzeScreenshot(imageBuffer, apiKey) {
       content: [
         {
           type: 'text',
-          text: 'This is a Google Maps screenshot with a red pin marker. List ALL visible place names — every shop, mosque, masjid, restaurant, bakery, sweets, clinic, hospital, school, college, academy, campus, university, park, salon, petrol pump, bank, pharmacy, office, store, hotel, and any other labeled business or landmark. IMPORTANT: Sort by proximity to the red pin — places CLOSEST to the pin marker first, farthest last. Schools/colleges/academies/campuses must use type "school". Return ONLY a JSON array: [{"name":"Place Name","type":"shop/mosque/restaurant/bakery/clinic/hospital/park/school/salon/petrol_pump/bank/pharmacy/other"}]. No explanation, just valid JSON array.'
+          text: 'This is a Google Maps screenshot. The user\'s location is at the CENTER of this image. List ALL visible place names — every shop, mosque, masjid, restaurant, bakery, sweets, clinic, hospital, school, college, academy, campus, university, park, salon, petrol pump, bank, pharmacy, office, store, hotel, and any other labeled business or landmark. CRITICAL: Sort by distance from the CENTER of the image — places closest to the center first, farthest (near edges) last. Schools/colleges/academies/campuses must use type "school". Return ONLY a JSON array: [{"name":"Place Name","type":"shop/mosque/restaurant/bakery/clinic/hospital/park/school/salon/petrol_pump/bank/pharmacy/other"}]. No explanation, just valid JSON array.'
         },
         { type: 'image_url', image_url: { url: 'data:image/png;base64,' + base64Image } }
       ]
@@ -139,8 +139,8 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
   // 18z = area view (bigger landmarks, mosques, hospitals, schools)
   // 20z = close-up (small shops, bakeries, salons visible at higher zoom)
   const baseUrl = `https://image.thum.io/get/width/1280/crop/900`;
-  const url18 = `${baseUrl}/https://www.google.com/maps/search/?api=1&query=${lat},${lng}&zoom=18`;
-  const url20 = `${baseUrl}/https://www.google.com/maps/search/?api=1&query=${lat},${lng}&zoom=20`;
+  const url18 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},18z`;
+  const url20 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},20z`;
 
   logDebug(`Starting screenshots for ${lat},${lng}`);
   console.log('[Location] Taking Google Maps screenshots (18z + 20z)...');
