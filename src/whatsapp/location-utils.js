@@ -152,7 +152,6 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
   } else {
     console.warn('[Location] 20z screenshot too small or null:', buf20?.length || 0, 'bytes');
   }
-  }
 
   if (analyses.length === 0) throw new Error('No screenshots available');
 
