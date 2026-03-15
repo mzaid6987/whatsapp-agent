@@ -120,12 +120,14 @@ async function analyzeScreenshot(imageBuffer, apiKey) {
     req.end();
   });
 
+  logDebug(`GPT raw response: ${result.substring(0, 300)}`);
   const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
   try {
     const places = JSON.parse(cleaned);
+    logDebug(`GPT parsed ${Array.isArray(places) ? places.length : 0} places`);
     return Array.isArray(places) ? places : [];
   } catch (e) {
-    console.error('[Location] GPT response parse failed:', cleaned.substring(0, 200));
+    logDebug(`GPT parse FAILED: ${cleaned.substring(0, 200)}`);
     return [];
   }
 }
