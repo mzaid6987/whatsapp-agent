@@ -113,8 +113,13 @@ async function analyzeScreenshot(imageBuffer, apiKey) {
   });
 
   const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-  const places = JSON.parse(cleaned);
-  return Array.isArray(places) ? places : [];
+  try {
+    const places = JSON.parse(cleaned);
+    return Array.isArray(places) ? places : [];
+  } catch (e) {
+    console.error('[Location] GPT response parse failed:', cleaned.substring(0, 200));
+    return [];
+  }
 }
 
 async function findNearbyGoogleMaps(lat, lng, apiKey) {
@@ -137,11 +142,16 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
   const analyses = [];
   if (buf18 && buf18.length > 10000) {
     console.log('[Location] 18z screenshot:', buf18.length, 'bytes');
-    analyses.push(analyzeScreenshot(buf18, apiKey).catch(() => []));
+    analyses.push(analyzeScreenshot(buf18, apiKey).catch(e => { console.error('[Location] 18z analyze failed:', e.message); return []; }));
+  } else {
+    console.warn('[Location] 18z screenshot too small or null:', buf18?.length || 0, 'bytes');
   }
   if (buf20 && buf20.length > 10000) {
     console.log('[Location] 20z screenshot:', buf20.length, 'bytes');
-    analyses.push(analyzeScreenshot(buf20, apiKey).catch(() => []));
+    analyses.push(analyzeScreenshot(buf20, apiKey).catch(e => { console.error('[Location] 20z analyze failed:', e.message); return []; }));
+  } else {
+    console.warn('[Location] 20z screenshot too small or null:', buf20?.length || 0, 'bytes');
+  }
   }
 
   if (analyses.length === 0) throw new Error('No screenshots available');
@@ -170,11 +180,11 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
  */
 async function findNearbyOSM(lat, lng) {
   const query = `[out:json][timeout:10];(
-    node(around:500,${lat},${lng})["amenity"];
-    node(around:500,${lat},${lng})["shop"];
-    node(around:500,${lat},${lng})["name"]["building"];
-    way(around:500,${lat},${lng})["amenity"];
-    way(around:500,${lat},${lng})["shop"];
+    node(around:200,${lat},${lng})["amenity"];
+    node(around:200,${lat},${lng})["shop"];
+    node(around:200,${lat},${lng})["name"]["building"];
+    way(around:200,${lat},${lng})["amenity"];
+    way(around:200,${lat},${lng})["shop"];
   );out center 20;`;
 
   const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
@@ -214,7 +224,9 @@ async function findNearbyLandmarks(lat, lng, apiKey) {
   // Try Google Maps screenshot approach first
   try {
     const gmapsResults = await findNearbyGoogleMaps(lat, lng, apiKey);
+    console.log('[Location] Google Maps results:', gmapsResults.length, 'places');
     if (gmapsResults.length > 0) return gmapsResults;
+    console.warn('[Location] Google Maps returned 0 places — falling back to OSM');
   } catch (e) {
     console.warn('[Location] Google Maps screenshot failed:', e.message, '— falling back to OSM');
   }
