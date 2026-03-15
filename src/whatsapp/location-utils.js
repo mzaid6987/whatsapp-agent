@@ -135,11 +135,11 @@ async function analyzeScreenshot(imageBuffer, apiKey) {
 async function findNearbyGoogleMaps(lat, lng, apiKey) {
   if (!apiKey) throw new Error('No API key');
 
-  // Take 2 screenshots at close zoom levels (1-200m range):
-  // 20z = ~150-200m area (shops, schools, mosques visible)
+  // Take 2 screenshots at different zoom levels:
+  // 19z = ~250-300m area (ensures labels visible even in sparse areas)
   // 21z = ~50-100m area (very close shops, salons, bakeries)
   const baseUrl = `https://image.thum.io/get/width/1280/crop/900`;
-  const url18 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},20z`;
+  const url18 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},19z`;
   const url20 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},21z`;
 
   logDebug(`Starting screenshots for ${lat},${lng}`);
