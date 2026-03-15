@@ -110,10 +110,12 @@ async function findNearbyLandmarks(lat, lng, radiusMeters = 50) {
  * Returns a formatted message for the customer
  */
 async function analyzeLocation(lat, lng) {
-  // Run both in parallel
+  // Run reverse geocode + nearby landmarks in parallel
+  // Use 500m radius to get enough results (OSM Pakistan data is sparse)
+  // Sort by distance so closest ones show first
   const [geo, landmarks] = await Promise.all([
     reverseGeocode(lat, lng),
-    findNearbyLandmarks(lat, lng, 50),
+    findNearbyLandmarks(lat, lng, 500),
   ]);
 
   const result = {
