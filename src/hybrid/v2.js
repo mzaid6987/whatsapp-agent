@@ -219,6 +219,13 @@ function validateState(aiState, state) {
     return prev;
   }
 
+  // Guardrail: don't go BACK to collection states from ORDER_CONFIRMED/UPSELL
+  if (['ORDER_CONFIRMED', 'UPSELL_HOOK', 'UPSELL_SHOW'].includes(prev)) {
+    if (['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_DELIVERY_PHONE', 'COLLECT_CITY', 'COLLECT_ADDRESS', 'ORDER_SUMMARY'].includes(aiState)) {
+      return prev; // Stay in current state — order is already done
+    }
+  }
+
   // Guardrail: don't go to COLLECT_X if data already collected — skip to next missing
   const collectStates = {
     'COLLECT_NAME': 'name',
@@ -681,6 +688,13 @@ function saveOrder(state, storeName, dbConv, dbCustomer) {
       if (product) state.product = product;
     }
     if (!product || !dbConv || !dbCustomer) return false;
+
+    // FIX: Duplicate order prevention — don't create another order if one already exists for this conversation
+    const existingOrder = db.prepare('SELECT id FROM orders WHERE conversation_id = ? AND status = ?').get(dbConv.id, 'confirmed');
+    if (existingOrder) {
+      console.log(`[V2] Order already exists for conv ${dbConv.id}, skipping duplicate`);
+      return true; // Return true so flow continues normally
+    }
 
     const items = [{ name: product.name, price: product.price, quantity: 1 }];
     const discount = state.discount_percent || 0;
