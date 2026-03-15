@@ -1,6 +1,6 @@
 /**
  * Location utilities — reverse geocoding + nearby landmarks
- * Uses OpenStreetMap Nominatim (free) + Overpass API (free)
+ * Uses OpenStreetMap Nominatim (free) + Google Maps screenshot + GPT-4o mini
  */
 
 const https = require('https');
@@ -16,6 +16,27 @@ function fetchJSON(url, timeout = 8000) {
       res.on('end', () => {
         clearTimeout(timer);
         try { resolve(JSON.parse(d)); } catch { resolve(null); }
+      });
+    });
+    req.on('error', e => { clearTimeout(timer); reject(e); });
+  });
+}
+
+function fetchBuffer(url, timeout = 20000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Screenshot timeout')), timeout);
+    const mod = url.startsWith('https') ? https : http;
+    const req = mod.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
+      // Follow redirects
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        clearTimeout(timer);
+        return fetchBuffer(res.headers.location, timeout).then(resolve).catch(reject);
+      }
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        clearTimeout(timer);
+        resolve(Buffer.concat(chunks));
       });
     });
     req.on('error', e => { clearTimeout(timer); reject(e); });
@@ -48,74 +69,108 @@ async function reverseGeocode(lat, lng) {
 }
 
 /**
- * Find nearby landmarks (mosques, schools, shops, hospitals, etc.) within radius
- * Uses Overpass API (OpenStreetMap)
+ * Find nearby landmarks using Google Maps screenshot + GPT-4o mini vision
+ * Takes screenshot of Google Maps at coordinates, then AI reads place names
  */
-async function findNearbyLandmarks(lat, lng, radiusMeters = 50) {
+async function findNearbyLandmarks(lat, lng, apiKey) {
   try {
-    // Overpass query: find amenities, shops, and named buildings within radius
-    // Include both nodes AND ways (many shops/buildings are mapped as ways in OSM)
-    const query = `[out:json][timeout:10];(
-      node(around:${radiusMeters},${lat},${lng})["amenity"];
-      node(around:${radiusMeters},${lat},${lng})["shop"];
-      node(around:${radiusMeters},${lat},${lng})["name"]["building"];
-      node(around:${radiusMeters},${lat},${lng})["name"]["office"];
-      node(around:${radiusMeters},${lat},${lng})["name"]["leisure"];
-      way(around:${radiusMeters},${lat},${lng})["amenity"];
-      way(around:${radiusMeters},${lat},${lng})["shop"];
-      way(around:${radiusMeters},${lat},${lng})["name"]["building"];
-    );out center 20;`;
+    // Step 1: Take screenshot of Google Maps via free screenshot service
+    const mapsUrl = `https://www.google.com/maps/@${lat},${lng},18z`;
+    const screenshotUrl = `https://image.thum.io/get/width/1280/crop/900/${mapsUrl}`;
 
-    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-    const data = await fetchJSON(url, 10000);
+    console.log('[Location] Taking Google Maps screenshot for', lat, lng);
+    const imageBuffer = await fetchBuffer(screenshotUrl, 25000);
 
-    if (!data || !data.elements || data.elements.length === 0) return [];
+    if (!imageBuffer || imageBuffer.length < 10000) {
+      console.warn('[Location] Screenshot too small:', imageBuffer?.length, 'bytes');
+      return [];
+    }
 
-    // Calculate distance and sort by proximity
-    const toRad = (deg) => deg * Math.PI / 180;
-    const haversine = (lat1, lon1, lat2, lon2) => {
-      const R = 6371000; // meters
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    };
+    console.log('[Location] Screenshot received:', imageBuffer.length, 'bytes');
 
-    const landmarks = data.elements
-      .filter(e => e.tags && e.tags.name)
-      .map(e => {
-        // Ways use center coordinates (from "out center"), nodes use direct lat/lon
-        const eLat = e.lat || e.center?.lat;
-        const eLon = e.lon || e.center?.lon;
-        if (!eLat || !eLon) return null;
-        return {
-          name: e.tags.name,
-          type: e.tags.amenity || e.tags.shop || e.tags.building || e.tags.office || e.tags.leisure || 'place',
-          distance: Math.round(haversine(lat, lng, eLat, eLon)),
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, 10); // Top 10 nearest
+    // Step 2: Send to GPT-4o mini for place extraction
+    apiKey = apiKey || process.env.OPENAI_API_KEY || '';
+    if (!apiKey) {
+      console.error('[Location] No OpenAI API key for vision analysis');
+      return [];
+    }
 
-    return landmarks;
+    const base64Image = imageBuffer.toString('base64');
+    const payload = JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'This is a Google Maps screenshot. List ALL visible place names (shops, mosques, restaurants, clinics, schools, parks, salons, etc). Return ONLY a JSON array: [{"name":"Place Name","type":"shop/mosque/restaurant/clinic/park/school/salon/other"}]. No explanation, just valid JSON array.'
+          },
+          { type: 'image_url', image_url: { url: 'data:image/png;base64,' + base64Image } }
+        ]
+      }],
+      max_tokens: 500,
+      temperature: 0.1,
+    });
+
+    const result = await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'api.openai.com',
+        path: '/v1/chat/completions',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + apiKey,
+        }
+      }, res => {
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            resolve(parsed.choices?.[0]?.message?.content || '[]');
+          } catch (e) { resolve('[]'); }
+        });
+      });
+      req.on('error', reject);
+      req.write(payload);
+      req.end();
+    });
+
+    // Step 3: Parse AI response
+    let places = [];
+    try {
+      // Remove markdown code block if present
+      const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      places = JSON.parse(cleaned);
+    } catch (e) {
+      console.error('[Location] Failed to parse AI response:', result.substring(0, 200));
+      return [];
+    }
+
+    if (!Array.isArray(places)) return [];
+
+    console.log('[Location] Google Maps places found:', places.length);
+    return places.map(p => ({
+      name: p.name || '',
+      type: p.type || 'place',
+      distance: 0, // Distance not available from screenshot
+    })).filter(p => p.name.length > 1);
+
   } catch (e) {
-    console.error('[Location] Nearby landmarks failed:', e.message);
+    console.error('[Location] Google Maps screenshot analysis failed:', e.message);
     return [];
   }
 }
 
 /**
- * Full location analysis — reverse geocode + nearby landmarks
+ * Full location analysis — reverse geocode + Google Maps nearby places
  * Returns a formatted message for the customer
  */
-async function analyzeLocation(lat, lng) {
-  // Run reverse geocode + nearby landmarks in parallel
-  // Use 500m radius to get enough results (OSM Pakistan data is sparse)
-  // Sort by distance so closest ones show first
+async function analyzeLocation(lat, lng, apiKey) {
+  // Run reverse geocode + Google Maps screenshot in parallel
   const [geo, landmarks] = await Promise.all([
     reverseGeocode(lat, lng),
-    findNearbyLandmarks(lat, lng, 500),
+    findNearbyLandmarks(lat, lng, apiKey),
   ]);
 
   const result = {
@@ -126,13 +181,12 @@ async function analyzeLocation(lat, lng) {
     landmarks: landmarks || [],
     formattedAddress: '',
     customerMessage: '',
+    googleMapsLink: `https://maps.google.com/?q=${lat},${lng}`,
   };
 
   // Determine city (clean up Urdu script)
   if (geo) {
-    // Extract English city name from display_name or town/city fields
     const cityRaw = geo.town || geo.city || '';
-    // Common Karachi divisions show as "کراچی ڈویژن" — map to Karachi
     if (/karachi|کراچی/i.test(cityRaw) || /karachi|کراچی/i.test(geo.displayName)) {
       result.city = 'Karachi';
     } else if (/lahore|لاہور/i.test(cityRaw) || /lahore|لاہور/i.test(geo.displayName)) {
@@ -142,9 +196,7 @@ async function analyzeLocation(lat, lng) {
     } else if (/rawalpindi|راولپنڈی/i.test(cityRaw) || /rawalpindi|راولپنڈی/i.test(geo.displayName)) {
       result.city = 'Rawalpindi';
     } else {
-      // Try to extract city from display_name (format: "..., CityName, ...")
       const parts = (geo.displayName || '').split(',').map(p => p.trim());
-      // Find first part that looks like an English city name
       for (const p of parts) {
         if (/^[A-Z][a-z]/.test(p) && p.length >= 4 && p.length <= 30) {
           result.city = p;
@@ -170,17 +222,18 @@ async function analyzeLocation(lat, lng) {
   if (landmarks.length > 0) {
     msg += '\nQareeb ki jagahein:\n';
     const typeIcons = {
-      mosque: '🕌', place_of_worship: '🕌', school: '🏫', hospital: '🏥',
-      clinic: '🏥', pharmacy: '💊', bank: '🏦', fuel: '⛽',
-      restaurant: '🍽️', fast_food: '🍔', supermarket: '🛒',
+      mosque: '🕌', school: '🏫', hospital: '🏥', clinic: '🏥',
+      pharmacy: '💊', restaurant: '🍽️', park: '🌳', salon: '💇',
+      shop: '🏪', other: '📍',
     };
-    for (const lm of landmarks.slice(0, 5)) {
+    for (const lm of landmarks.slice(0, 6)) {
       const icon = typeIcons[lm.type] || '📍';
-      msg += `${icon} ${lm.name} (~${lm.distance}m)\n`;
+      msg += `${icon} ${lm.name}\n`;
     }
   }
 
-  msg += `\nApna ghar/shop number aur qareeb ki koi mashoor jagah bata dein — taake rider asaani se pohonch sake 🚚`;
+  msg += `\n🗺️ Map: ${result.googleMapsLink}`;
+  msg += `\n\nApna ghar/shop number aur qareeb ki koi mashoor jagah bata dein — taake rider asaani se pohonch sake 🚚`;
 
   result.customerMessage = msg;
   return result;

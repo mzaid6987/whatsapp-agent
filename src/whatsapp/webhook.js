@@ -464,7 +464,7 @@ async function webhookHandler(req, res) {
           // Smart location analysis — reverse geocode + nearby landmarks
           try {
             const { analyzeLocation } = require('./location-utils');
-            const locationData = await analyzeLocation(parseFloat(lat), parseFloat(lng));
+            const locationData = await analyzeLocation(parseFloat(lat), parseFloat(lng), apiKey);
 
             if (locationData) {
               // Save rich location data in display content
