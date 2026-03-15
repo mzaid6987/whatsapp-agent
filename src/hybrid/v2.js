@@ -440,10 +440,22 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     orderSaved = saveOrder(state, storeName, dbConv, dbCustomer);
   }
 
-  // Media detection — product video on first product mention
+  // Media detection — product video on FIRST product mention only
   let mediaToSend = null;
   if (validated._productObj && !state._media_sent) {
-    mediaToSend = { product_id: validated._productObj.id, type: 'video', product_name: validated._productObj.short };
+    // Double-check DB — don't send video if already sent in this conversation
+    let alreadySentVideo = false;
+    if (dbConv) {
+      try {
+        const videoCheck = getDb().prepare(
+          "SELECT COUNT(*) as cnt FROM messages WHERE conversation_id = ? AND direction = 'outgoing' AND media_type = 'video'"
+        ).get(dbConv.id);
+        alreadySentVideo = (videoCheck?.cnt || 0) > 0;
+      } catch (e) {}
+    }
+    if (!alreadySentVideo) {
+      mediaToSend = { product_id: validated._productObj.id, type: 'video', product_name: validated._productObj.short };
+    }
     state._media_sent = true;
   }
   // AI requested media
