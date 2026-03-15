@@ -138,7 +138,7 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
   // Take 2 screenshots at different zoom levels:
   // 19z = ~250-300m area (ensures labels visible even in sparse areas)
   // 21z = ~50-100m area (very close shops, salons, bakeries)
-  const baseUrl = `https://image.thum.io/get/width/1280/crop/900`;
+  const baseUrl = `https://image.thum.io/get/width/1280/crop/900/wait/5000`;
   const url18 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},19z`;
   const url20 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},21z`;
 
