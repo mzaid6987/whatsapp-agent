@@ -565,14 +565,7 @@ async function webhookHandler(req, res) {
     }
 
     // (Reactions handled above, before text extraction)
-
-    // Unsupported media types (sticker, document, location, contacts)
-    if (['sticker', 'document', 'location', 'contacts'].includes(msg.type)) {
-      const replyText = 'Abhi sirf text, voice aur video messages support hain. Ap please message likh ke bhej dein.';
-      await sendMessage(fromPhone, replyText, phoneNumberId, accessToken);
-      console.log(`[WA] Unsupported (${msg.type}) from ${fromPhone}`);
-      return;
-    }
+    // NOTE: sticker/document/location/contacts are handled earlier in the type-switch block (line ~437)
 
     // Get store name
     const stores = getDb().prepare('SELECT * FROM stores').all();
