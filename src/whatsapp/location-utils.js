@@ -51,14 +51,20 @@ async function reverseGeocode(lat, lng) {
  * Find nearby landmarks (mosques, schools, shops, hospitals, etc.) within radius
  * Uses Overpass API (OpenStreetMap)
  */
-async function findNearbyLandmarks(lat, lng, radiusMeters = 300) {
+async function findNearbyLandmarks(lat, lng, radiusMeters = 50) {
   try {
     // Overpass query: find amenities, shops, and named buildings within radius
+    // Include both nodes AND ways (many shops/buildings are mapped as ways in OSM)
     const query = `[out:json][timeout:10];(
-      node(around:${radiusMeters},${lat},${lng})["amenity"~"school|mosque|hospital|clinic|pharmacy|bank|fuel|restaurant|fast_food|place_of_worship"];
+      node(around:${radiusMeters},${lat},${lng})["amenity"];
       node(around:${radiusMeters},${lat},${lng})["shop"];
       node(around:${radiusMeters},${lat},${lng})["name"]["building"];
-    );out body 10;`;
+      node(around:${radiusMeters},${lat},${lng})["name"]["office"];
+      node(around:${radiusMeters},${lat},${lng})["name"]["leisure"];
+      way(around:${radiusMeters},${lat},${lng})["amenity"];
+      way(around:${radiusMeters},${lat},${lng})["shop"];
+      way(around:${radiusMeters},${lat},${lng})["name"]["building"];
+    );out center 20;`;
 
     const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
     const data = await fetchJSON(url, 10000);
@@ -77,13 +83,20 @@ async function findNearbyLandmarks(lat, lng, radiusMeters = 300) {
 
     const landmarks = data.elements
       .filter(e => e.tags && e.tags.name)
-      .map(e => ({
-        name: e.tags.name,
-        type: e.tags.amenity || e.tags.shop || e.tags.building || 'place',
-        distance: Math.round(haversine(lat, lng, e.lat, e.lon)),
-      }))
+      .map(e => {
+        // Ways use center coordinates (from "out center"), nodes use direct lat/lon
+        const eLat = e.lat || e.center?.lat;
+        const eLon = e.lon || e.center?.lon;
+        if (!eLat || !eLon) return null;
+        return {
+          name: e.tags.name,
+          type: e.tags.amenity || e.tags.shop || e.tags.building || e.tags.office || e.tags.leisure || 'place',
+          distance: Math.round(haversine(lat, lng, eLat, eLon)),
+        };
+      })
+      .filter(Boolean)
       .sort((a, b) => a.distance - b.distance)
-      .slice(0, 8); // Top 8 nearest
+      .slice(0, 10); // Top 10 nearest
 
     return landmarks;
   } catch (e) {
@@ -100,7 +113,7 @@ async function analyzeLocation(lat, lng) {
   // Run both in parallel
   const [geo, landmarks] = await Promise.all([
     reverseGeocode(lat, lng),
-    findNearbyLandmarks(lat, lng, 300),
+    findNearbyLandmarks(lat, lng, 50),
   ]);
 
   const result = {
