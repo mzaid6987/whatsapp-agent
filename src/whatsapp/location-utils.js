@@ -295,23 +295,36 @@ async function findNearbyLandmarks(lat, lng, apiKey) {
     getNearestKeyPlaces(lat, lng).catch(() => []),
   ]);
 
-  // If Google Maps got results, supplement with nearest OSM school/hospital/mosque if missing
-  if (gmapsResults.length > 0) {
-    const gmapsNames = new Set(gmapsResults.map(r => r.name.toLowerCase().trim()));
-    const gmapsTypes = new Set(gmapsResults.map(r => r.type));
+  // Hybrid: OSM nearest school/mosque/hospital + Google Maps shops/restaurants/salons
+  if (gmapsResults.length > 0 || keyPlaces.length > 0) {
+    const combined = [];
+    const usedNames = new Set();
 
-    for (const kp of keyPlaces) {
-      // Add nearest school/hospital if that type is missing from Google Maps results
-      const typeKey = kp.type === 'place_of_worship' ? 'mosque' : kp.type;
-      if (!gmapsTypes.has(typeKey) && !gmapsTypes.has(kp.type)) {
-        if (!gmapsNames.has(kp.name.toLowerCase().trim())) {
-          gmapsResults.push({ name: kp.name, type: typeKey, distance: kp.distance });
-          gmapsTypes.add(typeKey);
-          logDebug(`Supplemented with OSM ${typeKey}: ${kp.name} (${kp.distance}m)`);
-        }
+    // 1) Add nearest school, mosque, hospital from OSM (accurate distance)
+    const osmTypes = ['school', 'place_of_worship', 'hospital'];
+    for (const osmType of osmTypes) {
+      const nearest = keyPlaces.find(kp => kp.type === osmType && !usedNames.has(kp.name.toLowerCase().trim()));
+      if (nearest) {
+        const displayType = osmType === 'place_of_worship' ? 'mosque' : osmType;
+        combined.push({ name: nearest.name, type: displayType, distance: nearest.distance });
+        usedNames.add(nearest.name.toLowerCase().trim());
+        logDebug(`OSM nearest ${displayType}: ${nearest.name} (${nearest.distance}m)`);
       }
     }
-    return gmapsResults;
+
+    // 2) Add Google Maps places (skip schools/mosques/hospitals — OSM has better ones)
+    const skipTypes = new Set(['school', 'mosque', 'place_of_worship', 'hospital', 'clinic']);
+    for (const gp of gmapsResults) {
+      if (skipTypes.has(gp.type)) continue;
+      const key = gp.name.toLowerCase().trim();
+      if (!usedNames.has(key)) {
+        combined.push(gp);
+        usedNames.add(key);
+      }
+    }
+
+    logDebug(`Combined: ${combined.length} places (${combined.filter(c=>c.distance>0).length} from OSM)`);
+    return combined;
   }
 
   // Fallback to full OSM if Google Maps failed
