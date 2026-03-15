@@ -94,7 +94,7 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
       content: [
         {
           type: 'text',
-          text: 'This is a Google Maps screenshot. List ALL visible place names (shops, mosques, restaurants, clinics, schools, parks, salons, etc). Return ONLY a JSON array: [{"name":"Place Name","type":"shop/mosque/restaurant/clinic/park/school/salon/other"}]. No explanation, just valid JSON array.'
+          text: 'This is a Google Maps screenshot. List ALL visible place names — every shop, mosque, masjid, restaurant, bakery, sweets, clinic, hospital, school, park, salon, petrol pump, bank, pharmacy, office, store, hotel, and any other labeled business or landmark. Return ONLY a JSON array: [{"name":"Place Name","type":"shop/mosque/restaurant/bakery/clinic/hospital/park/school/salon/petrol_pump/bank/pharmacy/other"}]. No explanation, just valid JSON array.'
         },
         { type: 'image_url', image_url: { url: 'data:image/png;base64,' + base64Image } }
       ]
@@ -263,8 +263,8 @@ async function analyzeLocation(lat, lng, apiKey) {
     const typeIcons = {
       mosque: '🕌', place_of_worship: '🕌', school: '🏫', hospital: '🏥',
       clinic: '🏥', pharmacy: '💊', restaurant: '🍽️', fast_food: '🍔',
-      park: '🌳', salon: '💇', shop: '🏪', fuel: '⛽', bank: '🏦',
-      supermarket: '🛒', other: '📍',
+      bakery: '🍞', sweets: '🍰', park: '🌳', salon: '💇', shop: '🏪',
+      fuel: '⛽', petrol_pump: '⛽', bank: '🏦', supermarket: '🛒', other: '📍',
     };
     for (const lm of landmarks.slice(0, 6)) {
       const icon = typeIcons[lm.type] || '📍';
