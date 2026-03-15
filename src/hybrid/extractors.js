@@ -671,7 +671,7 @@ function extractLandmark(msg) {
 
   // Standalone named institutional landmarks WITHOUT "near" prefix
   // e.g., "NADRA CENTRE", "Jinnah Hospital", "City School", "Al-Noor Masjid"
-  const INSTITUTION_SUFFIXES = 'centre|center|hospital|school|college|university|academy|office|court|station|terminal|library|museum|cinema|theater|theatre|stadium|tower|building|clinic|pharmacy|darbar|masjid|mosque|church|mandir|temple|hotel|bank|plaza|mall|chowk';
+  const INSTITUTION_SUFFIXES = 'centre|center|hospital|school|college|university|academy|office|court|station|terminal|library|museum|cinema|theater|theatre|stadium|tower|building|clinic|pharmacy|darbar|masjid|mosque|church|mandir|temple|hotel|bank|plaza|mall|chowk|salon|parlour|parlor|workshop|godown|warehouse|factory|bakery|restaurant|dhaba|store|mart|supermarket|petrol|pump';
   // Words that should NOT be treated as landmark names (area/common words)
   const SKIP_LANDMARK_NAME = /^(the|my|this|that|our|your|its|main|new|old|big|small|city|dha|bahria|gulshan|gulberg|model|cantt|defence|north|south|east|west|colony|town|nagar|abad|pura|society|scheme|sector|block|phase|street|gali|mohalla|housing|villas|heights|enclave|ke|ka|ki|ko|se|me|mein|pe|par|hai|he|ha|ho|hn|hain|hein|ap|aap|ek|do|ye|yeh|wo|woh|waha|yaha|or|aur|bs|bas|ji|gi|si|sa|hi|bhi|to|toh|na|ni|nhi|nahi|order|deliver|delivery|bhjwa|bhejwa|bhej|send|dena|rakh|krna|karna|kro|karo)$/i;
   // Find institution type words in the message, then check the word(s) before/after

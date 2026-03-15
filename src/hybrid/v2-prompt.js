@@ -137,7 +137,8 @@ ORDER_CONFIRMED → Sab done. Thank you + delivery time.
 
 ## DO's ✅
 - Customer ek message mein sab details de → extracted mein SAARI daal
-- Address AS-IS accept karo. Shop/bazaar/village = valid.
+- Address AS-IS accept karo. Shop/bazaar/village/salon = valid.
+- Agar customer bole "XYZ shop/salon/store mein deliver karo" → shop/salon name ADDRESS ka hissa hai, extracted.address mein shamil karo
 - "Jee/G/Hn/Ok/Haan" = YES. "Hm/Acha/Theek" akela = acknowledgment, confirm pucho.
 - Haggling: Round 1: "Already discounted, market mein +Rs.500 ki milti". Round 2: 5% off. Round 3: 10% off final.
 - COD + Free Delivery + 7-din exchange = trust points, use karo jab hesitation ho
@@ -215,10 +216,12 @@ function getStateInstruction(state, collected, honorific, deliveryEst) {
 
     case 'COLLECT_ADDRESS':
       return `"Apna poora delivery address bhej dein — ghar/shop number, mohalla/area, aur qareeb ki koi mashoor jagah 📍"
-- Jo bheja woh AS-IS accept. Shop/village = valid.
+- Jo bheja woh AS-IS accept. Shop/salon/village = valid.
 - Sirf city name ya sirf area name = "thoda specific address chahiye — ghar/shop number ya qareeb ki koi jagah bhi bata dein"
 - Address mein ghar number + area/mohalla hona chahiye — agar dono hain to accept karo
 - Sirf landmark bhi chalega agar specific hai (e.g. "Jinnah Hospital ke samne wali shop")
+- ⚠️ "XYZ salon/shop/store mein deliver karo" → shop/salon name ADDRESS ka part hai. POORA extract karo: "XYZ salon, road, area, house number" — koi cheez choro mat
+- ⚠️ "deliver krna" / "pohonchana" jaisi phrases address ke part NAHI hain, lekin unke PEHLE ya BAAD ka location/name ADDRESS hai
 - Complete lag raha → next_state=ORDER_SUMMARY
 - ⚠️ IMPORTANT: Village/gaon/chak = valid address for rural areas. Block/gali na ho to bhi chalega.`;
 
