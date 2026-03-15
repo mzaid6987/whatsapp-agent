@@ -461,49 +461,84 @@ async function webhookHandler(req, res) {
           const locLabel = [locName, locAddr].filter(Boolean).join(', ') || `${lat}, ${lng}`;
           displayContent = `[📍 Location: ${locLabel}]`;
 
-          // Smart location analysis — reverse geocode + nearby landmarks
-          try {
-            const { analyzeLocation } = require('./location-utils');
-            const locationData = await analyzeLocation(parseFloat(lat), parseFloat(lng), apiKey);
+          // Save incoming message + send quick ack immediately, then run analysis in background
+          const customerModel = require('../db/models/customer');
+          const _locCust = customerModel.findOrCreate(fromPhone);
+          if (contactName) customerModel.update(_locCust.id, { wa_profile_name: contactName });
+          const _locStoreName = getDb().prepare('SELECT brand_name FROM stores LIMIT 1').get()?.brand_name || 'nureva';
+          const _locConv = conversationModel.getOrCreateActive(_locCust.id, _locStoreName.toLowerCase());
 
-            if (locationData) {
-              // Save rich location data in display content
-              const landmarkNames = locationData.landmarks.slice(0, 5).map(l => l.name).join(', ');
-              displayContent = `[📍 Location: ${locLabel}]\n📌 Area: ${locationData.area || 'N/A'}, ${locationData.city || ''}\n🗺️ Nearby: ${landmarkNames || 'N/A'}`;
+          if (_locConv && !_locConv.needs_human && !_locConv.is_spam) {
+            // Save incoming location message
+            messageModel.create(_locConv.id, 'incoming', 'customer', displayContent, { source: 'unsupported_media' });
+            markAsRead(messageId, phoneNumberId, accessToken);
 
-              // Check customer's conversation state — auto-fill if in collection
-              const customerModel = require('../db/models/customer');
-              const _locCust = customerModel.findOrCreate(fromPhone);
-              if (contactName) customerModel.update(_locCust.id, { wa_profile_name: contactName });
-              const _locStoreName = getDb().prepare('SELECT brand_name FROM stores LIMIT 1').get()?.brand_name || 'nureva';
-              const _locConv = conversationModel.getOrCreateActive(_locCust.id, _locStoreName.toLowerCase());
-              if (_locConv && !_locConv.needs_human && !_locConv.is_spam) {
-                const convState = _locConv.state || '';
-                const collected = _locConv.collected_json ? JSON.parse(_locConv.collected_json) : {};
+            // Run location analysis in background (don't block webhook response)
+            const _bgApiKey = apiKey;
+            const _bgFromPhone = fromPhone;
+            const _bgPhoneNumberId = phoneNumberId;
+            const _bgAccessToken = accessToken;
+            const _bgConvId = _locConv.id;
+            const _bgConvState = _locConv.state || '';
+            const _bgCollected = _locConv.collected_json ? JSON.parse(_locConv.collected_json) : {};
 
-                // Auto-fill city if in COLLECT_CITY or COLLECT_ADDRESS
-                if (locationData.city && ['COLLECT_CITY', 'COLLECT_ADDRESS'].includes(convState) && !collected.city) {
-                  collected.city = locationData.city;
-                  getDb().prepare('UPDATE conversations SET collected_json = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
-                    .run(JSON.stringify(collected), _locConv.id);
+            setImmediate(async () => {
+              try {
+                console.log('[Location BG] Starting analysis for', _bgFromPhone);
+                const { analyzeLocation } = require('./location-utils');
+                const locationData = await analyzeLocation(parseFloat(lat), parseFloat(lng), _bgApiKey);
+
+                if (locationData) {
+                  const landmarkNames = locationData.landmarks.slice(0, 5).map(l => l.name).join(', ');
+                  const richDisplay = `[📍 Location: ${locLabel}]\n📌 Area: ${locationData.area || 'N/A'}, ${locationData.city || ''}\n🗺️ Nearby: ${landmarkNames || 'N/A'}`;
+
+                  // Update the incoming message with rich content
+                  try {
+                    getDb().prepare('UPDATE messages SET content = ? WHERE conversation_id = ? AND direction = \'incoming\' ORDER BY id DESC LIMIT 1')
+                      .run(richDisplay, _bgConvId);
+                  } catch (e) { /* ok */ }
+
+                  // Auto-fill city if in collection state
+                  if (locationData.city && ['COLLECT_CITY', 'COLLECT_ADDRESS'].includes(_bgConvState) && !_bgCollected.city) {
+                    _bgCollected.city = locationData.city;
+                    getDb().prepare('UPDATE conversations SET collected_json = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
+                      .run(JSON.stringify(_bgCollected), _bgConvId);
+                  }
+
+                  // Send smart location message
+                  const smartReply = locationData.customerMessage;
+                  await sendMessage(_bgFromPhone, smartReply, _bgPhoneNumberId, _bgAccessToken);
+                  messageModel.create(_bgConvId, 'outgoing', 'bot', smartReply, { source: 'location_analysis' });
+                  conversationModel.updateLastMessage(_bgConvId, smartReply);
+                  conversationModel.setAdminUnread(_bgConvId, true);
+                  _broadcast({ type: 'new_message', conversationId: _bgConvId });
+                  console.log('[Location BG] Done — sent', locationData.landmarks.length, 'landmarks to', _bgFromPhone);
+                } else {
+                  // Analysis returned nothing — send generic reply
+                  const fallbackReply = 'Location receive hui lekin hum address text mein lete hain — apna area, gali aur ghar number type kar dein please 📍';
+                  await sendMessage(_bgFromPhone, fallbackReply, _bgPhoneNumberId, _bgAccessToken);
+                  messageModel.create(_bgConvId, 'outgoing', 'bot', fallbackReply, { source: 'template' });
+                  conversationModel.updateLastMessage(_bgConvId, fallbackReply);
+                  conversationModel.setAdminUnread(_bgConvId, true);
+                  _broadcast({ type: 'new_message', conversationId: _bgConvId });
                 }
-
-                // Send smart location message instead of generic reply
-                const smartReply = locationData.customerMessage;
-                await sendMessage(fromPhone, smartReply, phoneNumberId, accessToken);
-                markAsRead(messageId, phoneNumberId, accessToken);
-                messageModel.create(_locConv.id, 'incoming', 'customer', displayContent, { source: 'unsupported_media' });
-                messageModel.create(_locConv.id, 'outgoing', 'bot', smartReply, { source: 'location_analysis' });
-                conversationModel.updateLastMessage(_locConv.id, smartReply);
-                conversationModel.setAdminUnread(_locConv.id, true);
-                _broadcast({ type: 'new_message', conversationId: _locConv.id });
-                return; // Already handled — skip generic reply below
+              } catch (bgErr) {
+                console.error('[Location BG] Failed:', bgErr.message);
+                // Send generic fallback on error
+                try {
+                  const fallbackReply = 'Location receive hui lekin hum address text mein lete hain — apna area, gali aur ghar number type kar dein please 📍';
+                  await sendMessage(_bgFromPhone, fallbackReply, _bgPhoneNumberId, _bgAccessToken);
+                  messageModel.create(_bgConvId, 'outgoing', 'bot', fallbackReply, { source: 'template' });
+                  conversationModel.updateLastMessage(_bgConvId, fallbackReply);
+                  conversationModel.setAdminUnread(_bgConvId, true);
+                  _broadcast({ type: 'new_message', conversationId: _bgConvId });
+                } catch (e2) { console.error('[Location BG] Even fallback failed:', e2.message); }
               }
-            }
-          } catch (locErr) {
-            console.error('[WA] Location analysis failed, using fallback:', locErr.message);
+            });
+
+            return; // Respond to webhook immediately — analysis runs in background
           }
-        } catch (e) { /* fallback to default */ }
+        } catch (e) { console.error('[WA] Location handler error:', e.message); }
       } else if (msgTypeLabel === 'sticker') {
         displayContent = '[🏷️ Sticker]';
       } else if (msgTypeLabel === 'document' && msg.document) {
