@@ -227,61 +227,17 @@ async function findNearbyOSM(lat, lng) {
       };
     })
     .filter(Boolean)
-    .sort((a, b) => a.distance - b.distance)
-    .slice(0, 10);
+    .sort((a, b) => a.distance - b.distance);
 }
 
 /**
- * Get nearest key landmarks (school, hospital, mosque) from OSM
- */
-async function getNearestKeyPlaces(lat, lng) {
-  try {
-    const query = `[out:json][timeout:10];(
-      node(around:200,${lat},${lng})["amenity"="school"];
-      way(around:200,${lat},${lng})["amenity"="school"];
-      node(around:200,${lat},${lng})["amenity"="hospital"];
-      way(around:200,${lat},${lng})["amenity"="hospital"];
-      node(around:200,${lat},${lng})["amenity"="place_of_worship"];
-      way(around:200,${lat},${lng})["amenity"="place_of_worship"];
-    );out center;`;
-    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-    const data = await fetchJSON(url, 10000);
-    if (!data || !data.elements) return [];
-
-    const toRad = (deg) => deg * Math.PI / 180;
-    const haversine = (lat1, lon1, lat2, lon2) => {
-      const R = 6371000;
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    };
-
-    return data.elements
-      .filter(e => e.tags && e.tags.name)
-      .map(e => {
-        const eLat = e.lat || e.center?.lat;
-        const eLon = e.lon || e.center?.lon;
-        if (!eLat || !eLon) return null;
-        return {
-          name: e.tags.name,
-          type: e.tags.amenity || 'place',
-          distance: Math.round(haversine(lat, lng, eLat, eLon)),
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.distance - b.distance);
-  } catch (e) {
-    return [];
-  }
-}
-
-/**
- * Find nearby landmarks — Google Maps + OSM key places supplement
+ * Find nearby landmarks — OSM (accurate distance) + Google Maps (extra names)
+ * Merge all, sort by distance, return top 10 nearest
  */
 async function findNearbyLandmarks(lat, lng, apiKey) {
-  // Run Google Maps screenshots + OSM key places in parallel
-  const [gmapsResults, keyPlaces] = await Promise.all([
+  // Run OSM (all types) + Google Maps screenshots in parallel
+  const [osmResults, gmapsResults] = await Promise.all([
+    findNearbyOSM(lat, lng).catch(() => []),
     (async () => {
       try {
         const r = await findNearbyGoogleMaps(lat, lng, apiKey);
@@ -292,46 +248,38 @@ async function findNearbyLandmarks(lat, lng, apiKey) {
         return [];
       }
     })(),
-    getNearestKeyPlaces(lat, lng).catch(() => []),
   ]);
 
-  // Hybrid: OSM nearest school/mosque/hospital + Google Maps shops/restaurants/salons
-  if (gmapsResults.length > 0 || keyPlaces.length > 0) {
-    const combined = [];
-    const usedNames = new Set();
+  // Merge: OSM has accurate distances, Google Maps has more place names
+  const combined = [];
+  const usedNames = new Set();
 
-    // 1) Add nearest school, mosque, hospital from OSM (accurate distance)
-    const osmTypes = ['school', 'place_of_worship', 'hospital'];
-    for (const osmType of osmTypes) {
-      const nearest = keyPlaces.find(kp => kp.type === osmType && !usedNames.has(kp.name.toLowerCase().trim()));
-      if (nearest) {
-        const displayType = osmType === 'place_of_worship' ? 'mosque' : osmType;
-        combined.push({ name: nearest.name, type: displayType, distance: nearest.distance });
-        usedNames.add(nearest.name.toLowerCase().trim());
-        logDebug(`OSM nearest ${displayType}: ${nearest.name} (${nearest.distance}m)`);
-      }
+  // 1) Add all OSM places (have real distances)
+  for (const p of osmResults) {
+    const key = p.name.toLowerCase().trim();
+    if (!usedNames.has(key)) {
+      combined.push(p);
+      usedNames.add(key);
     }
-
-    // 2) Add ALL Google Maps places (including schools not in OSM)
-    for (const gp of gmapsResults) {
-      const key = gp.name.toLowerCase().trim();
-      if (!usedNames.has(key)) {
-        combined.push(gp);
-        usedNames.add(key);
-      }
-    }
-
-    logDebug(`Combined: ${combined.length} places (${combined.filter(c=>c.distance>0).length} from OSM)`);
-    return combined;
   }
 
-  // Fallback to full OSM if Google Maps failed
-  try {
-    return await findNearbyOSM(lat, lng);
-  } catch (e) {
-    console.error('[Location] OSM fallback also failed:', e.message);
-    return [];
-  }
+  // 2) Add Google Maps places not in OSM — estimate distance from GPT order
+  //    GPT sorts by center proximity. 19z covers ~300m radius, 21z ~100m.
+  //    Estimate: position in list → proportional distance (10m to 200m)
+  const gmapsTotal = gmapsResults.length || 1;
+  gmapsResults.forEach((gp, idx) => {
+    const key = gp.name.toLowerCase().trim();
+    if (!usedNames.has(key)) {
+      const estimatedDist = Math.round(10 + (idx / gmapsTotal) * 190); // 10m to 200m
+      combined.push({ name: gp.name, type: gp.type, distance: estimatedDist });
+      usedNames.add(key);
+    }
+  });
+
+  // Sort by distance, top 10
+  combined.sort((a, b) => a.distance - b.distance);
+  logDebug(`Combined: ${combined.length} places (${osmResults.length} OSM + ${gmapsResults.length} GMaps). Top 10 returned.`);
+  return combined.slice(0, 10);
 }
 
 /**
@@ -395,31 +343,10 @@ async function analyzeLocation(lat, lng, apiKey) {
       mosque: '🕌', place_of_worship: '🕌', school: '🏫', hospital: '🏥',
       clinic: '🏥', pharmacy: '💊', restaurant: '🍽️', fast_food: '🍔',
       bakery: '🍞', sweets: '🍰', park: '🌳', salon: '💇', shop: '🏪',
-      fuel: '⛽', petrol_pump: '⛽', bank: '🏦', supermarket: '🛒', other: '📍',
+      fuel: '⛽', petrol_pump: '⛽', bank: '🏦', supermarket: '🛒', store: '🏪', other: '📍',
     };
-    // Pick diverse types — prioritize key landmarks, allow 2 schools/mosques
-    const picked = [];
-    const usedNames = new Set();
-    const pickOne = (type) => {
-      const match = landmarks.find(l => l.type === type && !usedNames.has(l.name));
-      if (match) { picked.push(match); usedNames.add(match.name); }
-    };
-    // Key landmarks first (nearest from OSM come first in list)
-    pickOne('mosque'); pickOne('school'); pickOne('hospital');
-    // Second school (Google Maps one, different from OSM)
-    pickOne('school');
-    // Other types
-    const otherTypes = ['bakery', 'park', 'restaurant', 'fast_food', 'salon', 'clinic', 'bank', 'petrol_pump', 'fuel', 'pharmacy', 'shop', 'supermarket', 'sweets', 'place_of_worship', 'other'];
-    for (const t of otherTypes) {
-      if (picked.length >= 8) break;
-      pickOne(t);
-    }
-    // Fill remaining up to 8
-    for (const lm of landmarks) {
-      if (picked.length >= 8) break;
-      if (!usedNames.has(lm.name)) { picked.push(lm); usedNames.add(lm.name); }
-    }
-    for (const lm of picked) {
+    // Already sorted by distance — just show top 10
+    for (const lm of landmarks.slice(0, 10)) {
       const icon = typeIcons[lm.type] || '📍';
       const dist = lm.distance ? ` (~${lm.distance}m)` : '';
       msg += `${icon} ${lm.name}${dist}\n`;
