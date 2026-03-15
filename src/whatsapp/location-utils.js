@@ -135,12 +135,12 @@ async function analyzeScreenshot(imageBuffer, apiKey) {
 async function findNearbyGoogleMaps(lat, lng, apiKey) {
   if (!apiKey) throw new Error('No API key');
 
-  // Take 2 screenshots at different zoom levels in parallel:
-  // 18z = area view (bigger landmarks, mosques, hospitals, schools)
-  // 20z = close-up (small shops, bakeries, salons visible at higher zoom)
+  // Take 2 screenshots at close zoom levels (1-200m range):
+  // 20z = ~150-200m area (shops, schools, mosques visible)
+  // 21z = ~50-100m area (very close shops, salons, bakeries)
   const baseUrl = `https://image.thum.io/get/width/1280/crop/900`;
-  const url18 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},18z`;
-  const url20 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},20z`;
+  const url18 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},20z`;
+  const url20 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},21z`;
 
   logDebug(`Starting screenshots for ${lat},${lng}`);
   console.log('[Location] Taking Google Maps screenshots (18z + 20z)...');
@@ -237,12 +237,12 @@ async function findNearbyOSM(lat, lng) {
 async function getNearestKeyPlaces(lat, lng) {
   try {
     const query = `[out:json][timeout:10];(
-      node(around:500,${lat},${lng})["amenity"="school"];
-      way(around:500,${lat},${lng})["amenity"="school"];
-      node(around:500,${lat},${lng})["amenity"="hospital"];
-      way(around:500,${lat},${lng})["amenity"="hospital"];
-      node(around:500,${lat},${lng})["amenity"="place_of_worship"];
-      way(around:500,${lat},${lng})["amenity"="place_of_worship"];
+      node(around:200,${lat},${lng})["amenity"="school"];
+      way(around:200,${lat},${lng})["amenity"="school"];
+      node(around:200,${lat},${lng})["amenity"="hospital"];
+      way(around:200,${lat},${lng})["amenity"="hospital"];
+      node(around:200,${lat},${lng})["amenity"="place_of_worship"];
+      way(around:200,${lat},${lng})["amenity"="place_of_worship"];
     );out center;`;
     const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
     const data = await fetchJSON(url, 10000);
