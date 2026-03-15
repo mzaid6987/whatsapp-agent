@@ -473,31 +473,31 @@ async function webhookHandler(req, res) {
 
               // Check customer's conversation state — auto-fill if in collection
               const customerModel = require('../db/models/customer');
-              const _locCust = customerModel.findByPhone(fromPhone);
-              if (_locCust) {
-                const _locConv = conversationModel.findActive(_locCust.id);
-                if (_locConv && !_locConv.needs_human && !_locConv.is_spam) {
-                  const convState = _locConv.state || '';
-                  const collected = _locConv.collected_json ? JSON.parse(_locConv.collected_json) : {};
+              const _locCust = customerModel.findOrCreate(fromPhone);
+              if (contactName) customerModel.update(_locCust.id, { wa_profile_name: contactName });
+              const _locStoreName = getDb().prepare('SELECT brand_name FROM stores LIMIT 1').get()?.brand_name || 'nureva';
+              const _locConv = conversationModel.getOrCreateActive(_locCust.id, _locStoreName.toLowerCase());
+              if (_locConv && !_locConv.needs_human && !_locConv.is_spam) {
+                const convState = _locConv.state || '';
+                const collected = _locConv.collected_json ? JSON.parse(_locConv.collected_json) : {};
 
-                  // Auto-fill city if in COLLECT_CITY or COLLECT_ADDRESS
-                  if (locationData.city && ['COLLECT_CITY', 'COLLECT_ADDRESS'].includes(convState) && !collected.city) {
-                    collected.city = locationData.city;
-                    getDb().prepare('UPDATE conversations SET collected_json = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
-                      .run(JSON.stringify(collected), _locConv.id);
-                  }
-
-                  // Send smart location message instead of generic reply
-                  const smartReply = locationData.customerMessage;
-                  await sendMessage(fromPhone, smartReply, phoneNumberId, accessToken);
-                  markAsRead(messageId, phoneNumberId, accessToken);
-                  messageModel.create(_locConv.id, 'incoming', 'customer', displayContent, { source: 'unsupported_media' });
-                  messageModel.create(_locConv.id, 'outgoing', 'bot', smartReply, { source: 'location_analysis' });
-                  conversationModel.updateLastMessage(_locConv.id, smartReply);
-                  conversationModel.setAdminUnread(_locConv.id, true);
-                  _broadcast({ type: 'new_message', conversationId: _locConv.id });
-                  return; // Already handled — skip generic reply below
+                // Auto-fill city if in COLLECT_CITY or COLLECT_ADDRESS
+                if (locationData.city && ['COLLECT_CITY', 'COLLECT_ADDRESS'].includes(convState) && !collected.city) {
+                  collected.city = locationData.city;
+                  getDb().prepare('UPDATE conversations SET collected_json = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
+                    .run(JSON.stringify(collected), _locConv.id);
                 }
+
+                // Send smart location message instead of generic reply
+                const smartReply = locationData.customerMessage;
+                await sendMessage(fromPhone, smartReply, phoneNumberId, accessToken);
+                markAsRead(messageId, phoneNumberId, accessToken);
+                messageModel.create(_locConv.id, 'incoming', 'customer', displayContent, { source: 'unsupported_media' });
+                messageModel.create(_locConv.id, 'outgoing', 'bot', smartReply, { source: 'location_analysis' });
+                conversationModel.updateLastMessage(_locConv.id, smartReply);
+                conversationModel.setAdminUnread(_locConv.id, true);
+                _broadcast({ type: 'new_message', conversationId: _locConv.id });
+                return; // Already handled — skip generic reply below
               }
             }
           } catch (locErr) {
@@ -522,25 +522,28 @@ async function webhookHandler(req, res) {
 
       try {
         const customerModel = require('../db/models/customer');
-        const _cust = customerModel.findByPhone(fromPhone);
-        if (_cust) {
-          const _conv = conversationModel.findActive(_cust.id);
-          if (_conv) {
-            // Check if bot is disabled or human-assigned — don't reply if so
-            if (!_conv.needs_human && !_conv.is_spam) {
-              await sendMessage(fromPhone, politeReply, phoneNumberId, accessToken);
-              markAsRead(messageId, phoneNumberId, accessToken);
-              // Save both messages to DB with detailed content
-              messageModel.create(_conv.id, 'incoming', 'customer', displayContent, { source: 'unsupported_media' });
-              messageModel.create(_conv.id, 'outgoing', 'bot', politeReply, { source: 'template' });
-              conversationModel.updateLastMessage(_conv.id, politeReply);
-              _broadcast({ type: 'new_message', conversationId: _conv.id });
-            } else {
-              // Human-assigned — just save incoming, no bot reply
-              messageModel.create(_conv.id, 'incoming', 'customer', displayContent, { source: 'unsupported_media' });
-              conversationModel.updateLastMessage(_conv.id, displayContent);
-              _broadcast({ type: 'new_message', conversationId: _conv.id });
-            }
+        // Use findOrCreate so new customers who send location/sticker first still get tracked
+        const _cust = customerModel.findOrCreate(fromPhone);
+        if (contactName) customerModel.update(_cust.id, { wa_profile_name: contactName });
+        const storeName = getDb().prepare('SELECT brand_name FROM stores LIMIT 1').get()?.brand_name || 'nureva';
+        const _conv = conversationModel.getOrCreateActive(_cust.id, storeName.toLowerCase());
+        if (_conv) {
+          // Check if bot is disabled or human-assigned — don't reply if so
+          if (!_conv.needs_human && !_conv.is_spam) {
+            await sendMessage(fromPhone, politeReply, phoneNumberId, accessToken);
+            markAsRead(messageId, phoneNumberId, accessToken);
+            // Save both messages to DB with detailed content
+            messageModel.create(_conv.id, 'incoming', 'customer', displayContent, { source: 'unsupported_media' });
+            messageModel.create(_conv.id, 'outgoing', 'bot', politeReply, { source: 'template' });
+            conversationModel.updateLastMessage(_conv.id, politeReply);
+            conversationModel.setAdminUnread(_conv.id, true);
+            _broadcast({ type: 'new_message', conversationId: _conv.id });
+          } else {
+            // Human-assigned — just save incoming, no bot reply
+            messageModel.create(_conv.id, 'incoming', 'customer', displayContent, { source: 'unsupported_media' });
+            conversationModel.updateLastMessage(_conv.id, displayContent);
+            conversationModel.setAdminUnread(_conv.id, true);
+            _broadcast({ type: 'new_message', conversationId: _conv.id });
           }
         }
       } catch (e) { console.error('[WA] Unsupported type handler error:', e.message); }
