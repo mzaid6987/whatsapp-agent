@@ -87,7 +87,7 @@ async function analyzeScreenshot(imageBuffer, apiKey) {
       content: [
         {
           type: 'text',
-          text: 'This is a Google Maps screenshot. List ALL visible place names — every shop, mosque, masjid, restaurant, bakery, sweets, clinic, hospital, school, college, academy, campus, university, park, salon, petrol pump, bank, pharmacy, office, store, hotel, and any other labeled business or landmark. IMPORTANT: Schools, colleges, academies, campuses must use type "school". Return ONLY a JSON array: [{"name":"Place Name","type":"shop/mosque/restaurant/bakery/clinic/hospital/park/school/salon/petrol_pump/bank/pharmacy/other"}]. No explanation, just valid JSON array.'
+          text: 'This is a Google Maps screenshot with a red pin marker. List ALL visible place names — every shop, mosque, masjid, restaurant, bakery, sweets, clinic, hospital, school, college, academy, campus, university, park, salon, petrol pump, bank, pharmacy, office, store, hotel, and any other labeled business or landmark. IMPORTANT: Sort by proximity to the red pin — places CLOSEST to the pin marker first, farthest last. Schools/colleges/academies/campuses must use type "school". Return ONLY a JSON array: [{"name":"Place Name","type":"shop/mosque/restaurant/bakery/clinic/hospital/park/school/salon/petrol_pump/bank/pharmacy/other"}]. No explanation, just valid JSON array.'
         },
         { type: 'image_url', image_url: { url: 'data:image/png;base64,' + base64Image } }
       ]
