@@ -251,7 +251,8 @@ app.get('/api/debug/location', requireAuth, async (req, res) => {
     const settingsModel = require('./db/models/settings');
     const apiKey = settingsModel.get('openai_api_key', '') || process.env.OPENAI_API_KEY || '';
     console.log('[Debug] Testing location analysis, apiKey:', apiKey ? 'SET' : 'NOT SET');
-    const { analyzeLocation } = require('./whatsapp/location-utils');
+    const { analyzeLocation, getDebugLog } = require('./whatsapp/location-utils');
+    if (req.query.logs) return res.json({ logs: getDebugLog() });
     const result = await analyzeLocation(parseFloat(lat), parseFloat(lng), apiKey);
     res.json({ success: true, result });
   } catch (e) {

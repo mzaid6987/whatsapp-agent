@@ -7,6 +7,14 @@
 const https = require('https');
 const http = require('http');
 
+// Debug: store last location analysis details
+const _debugLog = [];
+function logDebug(msg) {
+  _debugLog.push({ t: new Date().toISOString(), msg });
+  if (_debugLog.length > 50) _debugLog.shift();
+}
+function getDebugLog() { return _debugLog; }
+
 function fetchJSON(url, timeout = 8000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Timeout')), timeout);
@@ -132,28 +140,32 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
   const url18 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},18z`;
   const url20 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},20z`;
 
+  logDebug(`Starting screenshots for ${lat},${lng}`);
   console.log('[Location] Taking Google Maps screenshots (18z + 20z)...');
   const [buf18, buf20] = await Promise.all([
-    fetchBuffer(url18, 45000).catch(e => { console.warn('[Location] 18z failed:', e.message); return null; }),
-    fetchBuffer(url20, 45000).catch(e => { console.warn('[Location] 20z failed:', e.message); return null; }),
+    fetchBuffer(url18, 45000).catch(e => { logDebug(`18z fetch FAILED: ${e.message}`); return null; }),
+    fetchBuffer(url20, 45000).catch(e => { logDebug(`20z fetch FAILED: ${e.message}`); return null; }),
   ]);
+
+  logDebug(`Screenshots done: 18z=${buf18?.length || 0}b, 20z=${buf20?.length || 0}b`);
 
   // Analyze both screenshots in parallel
   const analyses = [];
   if (buf18 && buf18.length > 10000) {
-    console.log('[Location] 18z screenshot:', buf18.length, 'bytes');
-    analyses.push(analyzeScreenshot(buf18, apiKey).catch(e => { console.error('[Location] 18z analyze failed:', e.message); return []; }));
+    analyses.push(analyzeScreenshot(buf18, apiKey).catch(e => { logDebug(`18z GPT FAILED: ${e.message}`); return []; }));
   } else {
-    console.warn('[Location] 18z screenshot too small or null:', buf18?.length || 0, 'bytes');
+    logDebug(`18z too small or null: ${buf18?.length || 0}b`);
   }
   if (buf20 && buf20.length > 10000) {
-    console.log('[Location] 20z screenshot:', buf20.length, 'bytes');
-    analyses.push(analyzeScreenshot(buf20, apiKey).catch(e => { console.error('[Location] 20z analyze failed:', e.message); return []; }));
+    analyses.push(analyzeScreenshot(buf20, apiKey).catch(e => { logDebug(`20z GPT FAILED: ${e.message}`); return []; }));
   } else {
-    console.warn('[Location] 20z screenshot too small or null:', buf20?.length || 0, 'bytes');
+    logDebug(`20z too small or null: ${buf20?.length || 0}b`);
   }
 
-  if (analyses.length === 0) throw new Error('No screenshots available');
+  if (analyses.length === 0) {
+    logDebug('No valid screenshots — throwing');
+    throw new Error('No screenshots available');
+  }
 
   const results = await Promise.all(analyses);
 
@@ -170,6 +182,7 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
     }
   }
 
+  logDebug(`Google Maps total unique places: ${merged.length}`);
   console.log('[Location] Google Maps total unique places:', merged.length);
   return merged;
 }
@@ -316,4 +329,4 @@ async function analyzeLocation(lat, lng, apiKey) {
   return result;
 }
 
-module.exports = { reverseGeocode, findNearbyLandmarks, analyzeLocation };
+module.exports = { reverseGeocode, findNearbyLandmarks, analyzeLocation, getDebugLog };
