@@ -312,10 +312,8 @@ async function findNearbyLandmarks(lat, lng, apiKey) {
       }
     }
 
-    // 2) Add Google Maps places (skip schools/mosques/hospitals — OSM has better ones)
-    const skipTypes = new Set(['school', 'mosque', 'place_of_worship', 'hospital', 'clinic']);
+    // 2) Add ALL Google Maps places (including schools not in OSM)
     for (const gp of gmapsResults) {
-      if (skipTypes.has(gp.type)) continue;
       const key = gp.name.toLowerCase().trim();
       if (!usedNames.has(key)) {
         combined.push(gp);
