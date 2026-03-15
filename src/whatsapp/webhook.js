@@ -440,6 +440,34 @@ async function webhookHandler(req, res) {
       const msgTypeLabel = msg.type || 'unsupported';
       console.log(`[WA] Unsupported type (${msgTypeLabel}) from ${fromPhone} — sending polite reply. Raw keys: ${Object.keys(msg).join(',')}`);
 
+      // Extract useful info from special message types
+      let displayContent = `[📎 ${msgTypeLabel}]`;
+      if (msgTypeLabel === 'contacts' && msg.contacts) {
+        try {
+          const contactList = msg.contacts.map(c => {
+            const name = c.name ? (c.name.formatted_name || [c.name.first_name, c.name.last_name].filter(Boolean).join(' ')) : 'Unknown';
+            const phones = (c.phones || []).map(p => p.phone || p.wa_id || '').filter(Boolean).join(', ');
+            return phones ? `${name}: ${phones}` : name;
+          });
+          displayContent = `[📇 Contact: ${contactList.join(' | ')}]`;
+        } catch (e) { /* fallback to default */ }
+      } else if (msgTypeLabel === 'location' && msg.location) {
+        try {
+          const loc = msg.location;
+          const lat = loc.latitude || '';
+          const lng = loc.longitude || '';
+          const locName = loc.name || '';
+          const locAddr = loc.address || '';
+          const locLabel = [locName, locAddr].filter(Boolean).join(', ') || `${lat}, ${lng}`;
+          displayContent = `[📍 Location: ${locLabel}]`;
+        } catch (e) { /* fallback to default */ }
+      } else if (msgTypeLabel === 'sticker') {
+        displayContent = '[🏷️ Sticker]';
+      } else if (msgTypeLabel === 'document' && msg.document) {
+        const docName = msg.document.filename || 'document';
+        displayContent = `[📄 Document: ${docName}]`;
+      }
+
       // Send a polite reply so customer doesn't feel ignored
       const replyMap = {
         sticker: '😊 Apna sawal ya order text mein likh ke bhejein — main madad karti hun!',
@@ -459,15 +487,15 @@ async function webhookHandler(req, res) {
             if (!_conv.needs_human && !_conv.is_spam) {
               await sendMessage(fromPhone, politeReply, phoneNumberId, accessToken);
               markAsRead(messageId, phoneNumberId, accessToken);
-              // Save both messages to DB
-              messageModel.create(_conv.id, 'incoming', 'customer', `[📎 ${msgTypeLabel}]`, { source: 'unsupported_media' });
+              // Save both messages to DB with detailed content
+              messageModel.create(_conv.id, 'incoming', 'customer', displayContent, { source: 'unsupported_media' });
               messageModel.create(_conv.id, 'outgoing', 'bot', politeReply, { source: 'template' });
               conversationModel.updateLastMessage(_conv.id, politeReply);
               _broadcast({ type: 'new_message', conversationId: _conv.id });
             } else {
               // Human-assigned — just save incoming, no bot reply
-              messageModel.create(_conv.id, 'incoming', 'customer', `[📎 ${msgTypeLabel}]`, { source: 'unsupported_media' });
-              conversationModel.updateLastMessage(_conv.id, `[📎 ${msgTypeLabel}]`);
+              messageModel.create(_conv.id, 'incoming', 'customer', displayContent, { source: 'unsupported_media' });
+              conversationModel.updateLastMessage(_conv.id, displayContent);
               _broadcast({ type: 'new_message', conversationId: _conv.id });
             }
           }

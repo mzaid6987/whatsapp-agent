@@ -1485,13 +1485,74 @@ function _renderMessageBubble(m, _m, lastMsgConv) {
       mediaPreviewHtml = `<div class="msg-media-badge">${icon} ${mCount} ${mType}${mCount > 1 ? 's' : ''} sent: ${mProduct}</div>`;
     }
   }
+
+  // Rich display for contacts, location, sticker, document
+  if (m.content) {
+    // Contact card: [📇 Contact: Name: 03001234567]
+    const contactMatch = m.content.match(/\[📇 Contact: (.+?)\]/);
+    if (contactMatch) {
+      const contacts = contactMatch[1].split(' | ');
+      const contactCards = contacts.map(c => {
+        const parts = c.split(': ');
+        const name = parts[0] || 'Contact';
+        const phone = parts[1] || '';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0f2f5;border-radius:8px;margin:4px 0">
+          <div style="width:36px;height:36px;border-radius:50%;background:#00a884;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;flex-shrink:0">👤</div>
+          <div><div style="font-weight:600;font-size:13px">${name}</div>${phone ? `<div style="font-size:12px;color:#667781">${phone}</div>` : ''}</div>
+        </div>`;
+      }).join('');
+      mediaPreviewHtml = `<div class="msg-special-content">${contactCards}</div>`;
+      m._hideContent = true;
+    }
+
+    // Location: [📍 Location: label]
+    const locMatch = m.content.match(/\[📍 Location: (.+?)\]/);
+    if (locMatch) {
+      const locLabel = locMatch[1];
+      // Check if it has coordinates
+      const coordMatch = locLabel.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+      const mapLink = coordMatch ? `https://maps.google.com/maps?q=${coordMatch[1]},${coordMatch[2]}` : `https://maps.google.com/maps?q=${encodeURIComponent(locLabel)}`;
+      mediaPreviewHtml = `<div style="padding:8px 12px;background:#f0f2f5;border-radius:8px;margin:4px 0;cursor:pointer" onclick="window.open('${mapLink}','_blank')">
+        <div style="font-size:24px;text-align:center;margin-bottom:4px">📍</div>
+        <div style="font-size:13px;font-weight:600;text-align:center">${locLabel}</div>
+        <div style="font-size:11px;color:#00a884;text-align:center;margin-top:4px">View on Maps →</div>
+      </div>`;
+      m._hideContent = true;
+    }
+
+    // Sticker: [🏷️ Sticker]
+    if (m.content.includes('[🏷️ Sticker]') || m.content.includes('[📎 sticker]')) {
+      mediaPreviewHtml = `<div style="padding:8px;text-align:center"><div style="font-size:36px">🏷️</div><div style="font-size:11px;color:#667781">Sticker</div></div>`;
+      m._hideContent = true;
+    }
+
+    // Document: [📄 Document: filename]
+    const docMatch = m.content.match(/\[📄 Document: (.+?)\]/);
+    if (docMatch) {
+      mediaPreviewHtml = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0f2f5;border-radius:8px;margin:4px 0">
+        <div style="font-size:28px">📄</div>
+        <div style="font-size:13px;font-weight:500">${docMatch[1]}</div>
+      </div>`;
+      m._hideContent = true;
+    }
+
+    // Old format: [📎 contacts] / [📎 location] / [📎 sticker]
+    if (!m._hideContent && /\[📎 (contacts|location|sticker|document)\]/.test(m.content)) {
+      const typeMatch = m.content.match(/\[📎 (contacts|location|sticker|document)\]/);
+      const icons = { contacts: '👤', location: '📍', sticker: '🏷️', document: '📄' };
+      const labels = { contacts: 'Contact Shared', location: 'Location Shared', sticker: 'Sticker', document: 'Document' };
+      const t = typeMatch[1];
+      mediaPreviewHtml = `<div style="padding:8px;text-align:center"><div style="font-size:28px">${icons[t]}</div><div style="font-size:11px;color:#667781">${labels[t]}</div></div>`;
+      m._hideContent = true;
+    }
+  }
   return `
     <div class="msg-bubble ${bubbleClass}" data-msg-id="${m.id}" data-wa-id="${m.wa_message_id || ''}">
       ${senderLabel ? `<div class="msg-sender ${senderClass}">${senderLabel}${srcBadge}</div>` : ''}
       ${mediaBadge ? `<div style="margin-bottom:4px">${mediaBadge}</div>` : ''}
       ${followUpBadge}
       ${mediaPreviewHtml}
-      <div>${m.content}</div>
+      ${m._hideContent ? '' : `<div>${m.content}</div>`}
       ${feedbackHtml}
       ${tickHtml}
       ${silentTimerHtml}
