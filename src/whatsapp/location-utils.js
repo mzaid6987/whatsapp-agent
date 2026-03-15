@@ -139,8 +139,8 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
   // 18z = area view (bigger landmarks, mosques, hospitals, schools)
   // 20z = close-up (small shops, bakeries, salons visible at higher zoom)
   const baseUrl = `https://image.thum.io/get/width/1280/crop/900`;
-  const url18 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},18z`;
-  const url20 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},20z`;
+  const url18 = `${baseUrl}/https://www.google.com/maps/search/?api=1&query=${lat},${lng}&zoom=18`;
+  const url20 = `${baseUrl}/https://www.google.com/maps/search/?api=1&query=${lat},${lng}&zoom=20`;
 
   logDebug(`Starting screenshots for ${lat},${lng}`);
   console.log('[Location] Taking Google Maps screenshots (18z + 20z)...');
