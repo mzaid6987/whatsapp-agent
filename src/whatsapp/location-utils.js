@@ -70,22 +70,7 @@ async function reverseGeocode(lat, lng) {
 /**
  * PRIMARY: Google Maps screenshot + GPT-4o mini vision
  */
-async function findNearbyGoogleMaps(lat, lng, apiKey) {
-  // Step 1: Screenshot via thum.io (free, 45s timeout for first-time renders)
-  const mapsUrl = `https://www.google.com/maps/@${lat},${lng},18z`;
-  const screenshotUrl = `https://image.thum.io/get/width/1280/crop/900/${mapsUrl}`;
-
-  console.log('[Location] Taking Google Maps screenshot...');
-  const imageBuffer = await fetchBuffer(screenshotUrl, 45000);
-
-  if (!imageBuffer || imageBuffer.length < 10000) {
-    throw new Error('Screenshot too small: ' + (imageBuffer?.length || 0) + ' bytes');
-  }
-  console.log('[Location] Screenshot OK:', imageBuffer.length, 'bytes');
-
-  // Step 2: GPT-4o mini vision analysis
-  if (!apiKey) throw new Error('No API key');
-
+async function analyzeScreenshot(imageBuffer, apiKey) {
   const base64Image = imageBuffer.toString('base64');
   const payload = JSON.stringify({
     model: 'gpt-4o-mini',
@@ -127,17 +112,57 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
     req.end();
   });
 
-  // Parse AI response
   const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
   const places = JSON.parse(cleaned);
-  if (!Array.isArray(places)) return [];
+  return Array.isArray(places) ? places : [];
+}
 
-  console.log('[Location] Google Maps places found:', places.length);
-  return places.map(p => ({
-    name: p.name || '',
-    type: p.type || 'place',
-    distance: 0,
-  })).filter(p => p.name.length > 1);
+async function findNearbyGoogleMaps(lat, lng, apiKey) {
+  if (!apiKey) throw new Error('No API key');
+
+  // Take 2 screenshots at different zoom levels in parallel:
+  // 18z = area view (bigger landmarks, mosques, hospitals, schools)
+  // 20z = close-up (small shops, bakeries, salons visible at higher zoom)
+  const baseUrl = `https://image.thum.io/get/width/1280/crop/900`;
+  const url18 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},18z`;
+  const url20 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},20z`;
+
+  console.log('[Location] Taking Google Maps screenshots (18z + 20z)...');
+  const [buf18, buf20] = await Promise.all([
+    fetchBuffer(url18, 45000).catch(e => { console.warn('[Location] 18z failed:', e.message); return null; }),
+    fetchBuffer(url20, 45000).catch(e => { console.warn('[Location] 20z failed:', e.message); return null; }),
+  ]);
+
+  // Analyze both screenshots in parallel
+  const analyses = [];
+  if (buf18 && buf18.length > 10000) {
+    console.log('[Location] 18z screenshot:', buf18.length, 'bytes');
+    analyses.push(analyzeScreenshot(buf18, apiKey).catch(() => []));
+  }
+  if (buf20 && buf20.length > 10000) {
+    console.log('[Location] 20z screenshot:', buf20.length, 'bytes');
+    analyses.push(analyzeScreenshot(buf20, apiKey).catch(() => []));
+  }
+
+  if (analyses.length === 0) throw new Error('No screenshots available');
+
+  const results = await Promise.all(analyses);
+
+  // Merge + deduplicate (by name, case-insensitive)
+  const seen = new Set();
+  const merged = [];
+  for (const places of results) {
+    for (const p of places) {
+      const key = (p.name || '').toLowerCase().trim();
+      if (key.length > 1 && !seen.has(key)) {
+        seen.add(key);
+        merged.push({ name: p.name, type: p.type || 'place', distance: 0 });
+      }
+    }
+  }
+
+  console.log('[Location] Google Maps total unique places:', merged.length);
+  return merged;
 }
 
 /**
