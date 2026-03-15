@@ -189,6 +189,15 @@ function validateState(aiState, state) {
       if (!collected.city) return 'COLLECT_CITY';
       if (!collected.address) return 'COLLECT_ADDRESS';
     }
+    // FIX: Address quality gate — don't allow ORDER_SUMMARY with too-short/city-only address
+    if (collected.address && aiState === 'ORDER_SUMMARY') {
+      const addr = collected.address.trim();
+      const addrWithoutCity = addr.replace(new RegExp(collected.city || 'XXXXX', 'gi'), '').trim();
+      // If address is just the city name or too short (<10 chars without city), ask for more
+      if (addrWithoutCity.length < 10) {
+        return 'COLLECT_ADDRESS';
+      }
+    }
   }
 
   // Allow HAGGLING from collection states (customer asked about price during info gathering)
@@ -438,7 +447,9 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     }
   }
 
-  // Quality check on reply
+  // ============= COMPREHENSIVE QUALITY CHECKS =============
+
+  // Basic cleanup
   reply = reply.replace(/```[\s\S]*?```/g, '').trim();
   if (reply.startsWith('{') || reply.startsWith('[')) {
     reply = getStateFallback(state.current, state.collected, honorific);
@@ -446,41 +457,115 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
   if (!reply || reply.length < 3) {
     reply = getStateFallback(state.current, state.collected, honorific);
   }
-  // "Ji batayein" killer — if AI returns this generic garbage, replace with context-aware response
-  if (/^ji\s*batay?ein/i.test(reply.replace(/[^\w\s]/g, '').trim())) {
+
+  // FIX 1: Broadened "Ji batayein" + generic response killer
+  const replyClean = reply.replace(/[^\w\s]/g, '').trim().toLowerCase();
+  if (/^ji\s*batay?ein/i.test(replyClean) ||
+      /^ji\s*kaise\s*madad/i.test(replyClean) ||
+      /^ji\s*farmay?ein/i.test(replyClean) ||
+      /^aap\s*batay?ein/i.test(replyClean) ||
+      /^ji\s*bol[ei]n/i.test(replyClean) ||
+      /^ji\s*kya\s*chahiye/i.test(replyClean) ||
+      (replyClean.length < 20 && /^ji\b/i.test(replyClean) && !/price|rs|rate|\d{3,}|product|order/i.test(replyClean))) {
     reply = getStateFallback(state.current, state.collected, honorific);
   }
 
-  // Price/discount dodge killer — if in COLLECT_NAME and customer asked about price/discount, ensure reply includes price
-  if (state.current === 'COLLECT_NAME' && state.collected.product) {
-    const priceDodge = /\b(price|rate|kitne|kitni|kya\s*rate|discount|kam|less|kum|final\s*rate|kitna)\b/i.test(message);
-    const replyHasPrice = /Rs\.?\s*\d|price|rate|kitne/i.test(reply);
-    if (priceDodge && !replyHasPrice) {
-      const p = PRODUCTS.find(pr => pr.short === state.collected.product);
-      if (p) {
-        reply = `${state.collected.product} ki price Rs.${fmtPrice(p.price)} hai, COD hai aur delivery FREE hai 😊 ${honorific}, apna naam bata dein?`;
-      }
+  // FIX 2: Price/discount dodge killer — ALL states, not just COLLECT_NAME
+  const msgLower = message.toLowerCase();
+  const isPriceQuestion = /\b(price|rate|kitne|kitni|kya\s*rate|discount|kam\s*kar|less|kum|final\s*rate|kitna|kitnay|kya\s*price|price\s*kya|rate\s*kya|paisay?|paisy?|paise|rupees?|rs|delivery\s*charge|shipping|free\s*hai|cod\s*hai)\b/i.test(msgLower);
+  const replyHasPrice = /Rs\.?\s*\d|\d[,.]?\d{3}|free\s*delivery|cod/i.test(reply);
+  const activeProduct = state.product || (state.collected.product ? PRODUCTS.find(pr => pr.short === state.collected.product) : null);
+
+  if (isPriceQuestion && !replyHasPrice && activeProduct) {
+    const p = activeProduct;
+    if (state.current === 'COLLECT_NAME') {
+      reply = `${p.short} ki price ${fmtPrice(p.price)} hai, COD hai aur delivery FREE hai 😊 ${honorific}, apna naam bata dein?`;
+    } else if (state.current === 'PRODUCT_INQUIRY' || state.current === 'PRODUCT_SELECTION' || state.current === 'GREETING') {
+      reply = `${p.short} ki price ${fmtPrice(p.price)} hai, COD hai aur delivery FREE hai 😊 Order karna chahein ge?`;
+    } else if (['COLLECT_PHONE', 'COLLECT_DELIVERY_PHONE', 'COLLECT_CITY', 'COLLECT_ADDRESS'].includes(state.current)) {
+      // Mid-flow price question — prepend price info to existing reply
+      reply = `${p.short} ki price ${fmtPrice(p.price)} hai. ` + reply;
+    } else if (state.current === 'HAGGLING') {
+      // In haggling, ensure price is mentioned
+      reply = `${p.short} ki price ${fmtPrice(p.price)} hai — COD hai, delivery FREE hai, aur 7 din exchange bhi hai 😊`;
     }
+  }
+
+  // FIX 3: English reply detector — formal English → Roman Urdu fallback
+  if (/\b(Please provide|Could you|I would be|certainly|absolutely|I apologize|I understand your|Thank you for your|Let me assist|How may I help|Would you like to|I'd be happy to|I can help you|Please let me know|feel free to)\b/i.test(reply)) {
+    reply = getStateFallback(state.current, state.collected, honorific);
   }
 
   // Banned words filter — code-side enforcement
   const BANNED_WORDS = ['premium', 'high-quality', 'ultra', 'top-notch', 'superior', 'excellent', 'nureva', 'thenureva', 'kripya', 'dhanyavaad', 'namaste'];
-  const replyLower = reply.toLowerCase();
   for (const word of BANNED_WORDS) {
-    if (replyLower.includes(word)) {
+    if (reply.toLowerCase().includes(word)) {
       reply = reply.replace(new RegExp(word, 'gi'), '').replace(/\s{2,}/g, ' ').trim();
     }
   }
   // Replace "best" only when used as adjective
   reply = reply.replace(/\b(best)\b/gi, 'achi').trim();
 
-  // Duplicate reply prevention — don't send same or similar message as last bot message
-  const lastBotMsg = state.messages.filter(m => m.role === 'assistant').slice(-1)[0];
-  if (lastBotMsg && reply.length > 15) {
-    const lastContent = lastBotMsg.content || '';
-    // Exact match OR first 50 chars match (catches slight variations of same reply)
-    if (lastContent === reply || (lastContent.substring(0, 50) === reply.substring(0, 50) && lastContent.length > 20)) {
-      reply = getStateFallback(state.current, state.collected, honorific);
+  // FIX 4: Enhanced duplicate reply prevention — check last 3 bot messages
+  const recentBotMsgs = state.messages.filter(m => m.role === 'assistant').slice(-3);
+  const _normForCmp = (s) => (s || '').replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim().toLowerCase().substring(0, 80);
+  const currentNorm = _normForCmp(reply);
+  if (currentNorm.length > 15) {
+    for (const botMsg of recentBotMsgs) {
+      const prevNorm = _normForCmp(botMsg.content);
+      if (currentNorm === prevNorm || (prevNorm.length > 20 && currentNorm.substring(0, 50) === prevNorm.substring(0, 50))) {
+        reply = getStateFallback(state.current, state.collected, honorific);
+        // If fallback ALSO matches, add a variation
+        const fallbackNorm = _normForCmp(reply);
+        if (prevNorm.length > 20 && fallbackNorm.substring(0, 50) === prevNorm.substring(0, 50)) {
+          reply = `${honorific}, main aapki baat samajh gayi. ` + getStateFallback(state.current, state.collected, honorific);
+        }
+        break;
+      }
+    }
+  }
+
+  // FIX 5: Upsell-after-no protection — don't push products after customer declined
+  if (/\b(nahi|no|bas|enough|rehne\s*do|cancel|na\s*chahiye|mat|nhi|band\s*karo)\b/i.test(msgLower)) {
+    if (/\b(discount|offer|deal|product.*bhi|aur\s*kuch|ek\s*aur)\b/i.test(reply.toLowerCase()) && state.current !== 'UPSELL_SHOW') {
+      // Remove upsell pitch from reply, keep the rest
+      reply = reply.replace(/discount.*$/i, '').replace(/offer.*$/i, '').replace(/aur\s*kuch.*$/i, '').trim();
+      if (reply.length < 10) reply = getStateFallback(state.current, state.collected, honorific);
+    }
+  }
+
+  // FIX 6: Stuck-in-state breaker — track consecutive same-state count
+  if (!state._sameStateCount) state._sameStateCount = 0;
+  if (!state._lastTrackedState) state._lastTrackedState = null;
+  if (state.current === state._lastTrackedState) {
+    state._sameStateCount++;
+  } else {
+    state._sameStateCount = 1;
+    state._lastTrackedState = state.current;
+  }
+  // After 3+ exchanges in same collection state, add helpful context to reply
+  if (state._sameStateCount >= 3 && ['COLLECT_NAME', 'COLLECT_PHONE', 'COLLECT_CITY', 'COLLECT_ADDRESS'].includes(state.current)) {
+    // Customer might be confused or asking questions — give a direct, clear prompt
+    const stuckHelpers = {
+      'COLLECT_NAME': activeProduct
+        ? `${honorific}, ${activeProduct.short} ki price ${fmtPrice(activeProduct.price)} hai — COD + free delivery 🚚 Order ke liye bus apna naam bata dein 😊`
+        : `${honorific}, order ke liye bus apna naam bata dein 😊`,
+      'COLLECT_PHONE': `${state.collected.name || honorific}, apna phone number bata dein (03XX format) — rider call karega 📱`,
+      'COLLECT_CITY': `Delivery konsi city mein karni hai? Bas city ka naam bata dein 🚚`,
+      'COLLECT_ADDRESS': `Apna poora address bhej dein — ghar number, mohalla/area, qareeb ki koi jagah 📍`,
+    };
+    reply = stuckHelpers[state.current] || reply;
+  }
+
+  // FIX 7: Frustration detection → faster human escalation
+  const frustrationPatterns = /\b(time\s*waste|bakwas|pagal|bewakoof|stupid|choro|chor\s*do|rehne\s*do|band\s*karo|khatam|bol\s*bol\s*ke|thak\s*gaya|thak\s*gayi|pareshan|tang|fed\s*up|enough|stop|shut\s*up)\b/i;
+  if (frustrationPatterns.test(msgLower)) {
+    // Count frustration signals in recent messages
+    const recentFrustrations = state.messages.filter(m => m.role === 'user' && frustrationPatterns.test((m.content || '').toLowerCase())).length;
+    if (recentFrustrations >= 2 && dbConv) {
+      // 2+ frustration signals → escalate to human
+      getDb().prepare('UPDATE conversations SET needs_human = 1 WHERE id = ?').run(dbConv.id);
+      reply = `Maaf kijiye ${honorific}, aapko taklif hui. Hamara team member abhi aapki madad karega 🙏`;
     }
   }
 
