@@ -243,6 +243,22 @@ app.get('/api/model', requireAuth, (req, res) => {
   res.json({ model: active, name: info.name, pricing: { input: info.input, output: info.output }, options: MODEL_OPTIONS });
 });
 
+// Debug: test location analysis
+app.get('/api/debug/location', requireAuth, async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) return res.json({ error: 'Need ?lat=...&lng=...' });
+    const settingsModel = require('./db/models/settings');
+    const apiKey = settingsModel.get('openai_api_key', '') || process.env.OPENAI_API_KEY || '';
+    console.log('[Debug] Testing location analysis, apiKey:', apiKey ? 'SET' : 'NOT SET');
+    const { analyzeLocation } = require('./whatsapp/location-utils');
+    const result = await analyzeLocation(parseFloat(lat), parseFloat(lng), apiKey);
+    res.json({ success: true, result });
+  } catch (e) {
+    res.json({ success: false, error: e.message, stack: e.stack?.split('\n').slice(0, 5) });
+  }
+});
+
 // Stats
 app.get('/api/stats', requireAuth, (req, res) => {
   try {
