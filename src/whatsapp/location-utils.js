@@ -232,20 +232,89 @@ async function findNearbyOSM(lat, lng) {
 }
 
 /**
- * Find nearby landmarks — tries Google Maps first, falls back to OSM
+ * Get nearest key landmarks (school, hospital, mosque) from OSM
+ */
+async function getNearestKeyPlaces(lat, lng) {
+  try {
+    const query = `[out:json][timeout:10];(
+      node(around:500,${lat},${lng})["amenity"="school"];
+      way(around:500,${lat},${lng})["amenity"="school"];
+      node(around:500,${lat},${lng})["amenity"="hospital"];
+      way(around:500,${lat},${lng})["amenity"="hospital"];
+      node(around:500,${lat},${lng})["amenity"="place_of_worship"];
+      way(around:500,${lat},${lng})["amenity"="place_of_worship"];
+    );out center;`;
+    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+    const data = await fetchJSON(url, 10000);
+    if (!data || !data.elements) return [];
+
+    const toRad = (deg) => deg * Math.PI / 180;
+    const haversine = (lat1, lon1, lat2, lon2) => {
+      const R = 6371000;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    return data.elements
+      .filter(e => e.tags && e.tags.name)
+      .map(e => {
+        const eLat = e.lat || e.center?.lat;
+        const eLon = e.lon || e.center?.lon;
+        if (!eLat || !eLon) return null;
+        return {
+          name: e.tags.name,
+          type: e.tags.amenity || 'place',
+          distance: Math.round(haversine(lat, lng, eLat, eLon)),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.distance - b.distance);
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Find nearby landmarks — Google Maps + OSM key places supplement
  */
 async function findNearbyLandmarks(lat, lng, apiKey) {
-  // Try Google Maps screenshot approach first
-  try {
-    const gmapsResults = await findNearbyGoogleMaps(lat, lng, apiKey);
-    console.log('[Location] Google Maps results:', gmapsResults.length, 'places');
-    if (gmapsResults.length > 0) return gmapsResults;
-    console.warn('[Location] Google Maps returned 0 places — falling back to OSM');
-  } catch (e) {
-    console.warn('[Location] Google Maps screenshot failed:', e.message, '— falling back to OSM');
+  // Run Google Maps screenshots + OSM key places in parallel
+  const [gmapsResults, keyPlaces] = await Promise.all([
+    (async () => {
+      try {
+        const r = await findNearbyGoogleMaps(lat, lng, apiKey);
+        console.log('[Location] Google Maps results:', r.length, 'places');
+        return r;
+      } catch (e) {
+        console.warn('[Location] Google Maps screenshot failed:', e.message);
+        return [];
+      }
+    })(),
+    getNearestKeyPlaces(lat, lng).catch(() => []),
+  ]);
+
+  // If Google Maps got results, supplement with nearest OSM school/hospital/mosque if missing
+  if (gmapsResults.length > 0) {
+    const gmapsNames = new Set(gmapsResults.map(r => r.name.toLowerCase().trim()));
+    const gmapsTypes = new Set(gmapsResults.map(r => r.type));
+
+    for (const kp of keyPlaces) {
+      // Add nearest school/hospital if that type is missing from Google Maps results
+      const typeKey = kp.type === 'place_of_worship' ? 'mosque' : kp.type;
+      if (!gmapsTypes.has(typeKey) && !gmapsTypes.has(kp.type)) {
+        if (!gmapsNames.has(kp.name.toLowerCase().trim())) {
+          gmapsResults.push({ name: kp.name, type: typeKey, distance: kp.distance });
+          gmapsTypes.add(typeKey);
+          logDebug(`Supplemented with OSM ${typeKey}: ${kp.name} (${kp.distance}m)`);
+        }
+      }
+    }
+    return gmapsResults;
   }
 
-  // Fallback to OSM Overpass
+  // Fallback to full OSM if Google Maps failed
   try {
     return await findNearbyOSM(lat, lng);
   } catch (e) {
