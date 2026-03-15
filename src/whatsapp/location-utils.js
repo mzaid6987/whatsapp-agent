@@ -278,8 +278,8 @@ async function findNearbyLandmarks(lat, lng, apiKey) {
 
   // Sort by distance, top 10
   combined.sort((a, b) => a.distance - b.distance);
-  logDebug(`Combined: ${combined.length} places (${osmResults.length} OSM + ${gmapsResults.length} GMaps). Top 10 returned.`);
-  return combined.slice(0, 10);
+  logDebug(`Combined: ${combined.length} places (${osmResults.length} OSM + ${gmapsResults.length} GMaps). Top 20 returned.`);
+  return combined.slice(0, 20);
 }
 
 /**
@@ -346,7 +346,7 @@ async function analyzeLocation(lat, lng, apiKey) {
       fuel: '⛽', petrol_pump: '⛽', bank: '🏦', supermarket: '🛒', store: '🏪', other: '📍',
     };
     // Already sorted by distance — just show top 10
-    for (const lm of landmarks.slice(0, 10)) {
+    for (const lm of landmarks.slice(0, 20)) {
       const icon = typeIcons[lm.type] || '📍';
       const dist = lm.distance ? ` (~${lm.distance}m)` : '';
       msg += `${icon} ${lm.name}${dist}\n`;
