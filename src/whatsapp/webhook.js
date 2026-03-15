@@ -460,6 +460,49 @@ async function webhookHandler(req, res) {
           const locAddr = loc.address || '';
           const locLabel = [locName, locAddr].filter(Boolean).join(', ') || `${lat}, ${lng}`;
           displayContent = `[📍 Location: ${locLabel}]`;
+
+          // Smart location analysis — reverse geocode + nearby landmarks
+          try {
+            const { analyzeLocation } = require('./location-utils');
+            const locationData = await analyzeLocation(parseFloat(lat), parseFloat(lng));
+
+            if (locationData) {
+              // Save rich location data in display content
+              const landmarkNames = locationData.landmarks.slice(0, 5).map(l => l.name).join(', ');
+              displayContent = `[📍 Location: ${locLabel}]\n📌 Area: ${locationData.area || 'N/A'}, ${locationData.city || ''}\n🗺️ Nearby: ${landmarkNames || 'N/A'}`;
+
+              // Check customer's conversation state — auto-fill if in collection
+              const customerModel = require('../db/models/customer');
+              const _locCust = customerModel.findByPhone(fromPhone);
+              if (_locCust) {
+                const _locConv = conversationModel.findActive(_locCust.id);
+                if (_locConv && !_locConv.needs_human && !_locConv.is_spam) {
+                  const convState = _locConv.state || '';
+                  const collected = _locConv.collected_json ? JSON.parse(_locConv.collected_json) : {};
+
+                  // Auto-fill city if in COLLECT_CITY or COLLECT_ADDRESS
+                  if (locationData.city && ['COLLECT_CITY', 'COLLECT_ADDRESS'].includes(convState) && !collected.city) {
+                    collected.city = locationData.city;
+                    getDb().prepare('UPDATE conversations SET collected_json = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
+                      .run(JSON.stringify(collected), _locConv.id);
+                  }
+
+                  // Send smart location message instead of generic reply
+                  const smartReply = locationData.customerMessage;
+                  await sendMessage(fromPhone, smartReply, phoneNumberId, accessToken);
+                  markAsRead(messageId, phoneNumberId, accessToken);
+                  messageModel.create(_locConv.id, 'incoming', 'customer', displayContent, { source: 'unsupported_media' });
+                  messageModel.create(_locConv.id, 'outgoing', 'bot', smartReply, { source: 'location_analysis' });
+                  conversationModel.updateLastMessage(_locConv.id, smartReply);
+                  conversationModel.setAdminUnread(_locConv.id, true);
+                  _broadcast({ type: 'new_message', conversationId: _locConv.id });
+                  return; // Already handled — skip generic reply below
+                }
+              }
+            }
+          } catch (locErr) {
+            console.error('[WA] Location analysis failed, using fallback:', locErr.message);
+          }
         } catch (e) { /* fallback to default */ }
       } else if (msgTypeLabel === 'sticker') {
         displayContent = '[🏷️ Sticker]';
