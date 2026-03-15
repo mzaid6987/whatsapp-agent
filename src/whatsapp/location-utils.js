@@ -397,17 +397,24 @@ async function analyzeLocation(lat, lng, apiKey) {
       bakery: '🍞', sweets: '🍰', park: '🌳', salon: '💇', shop: '🏪',
       fuel: '⛽', petrol_pump: '⛽', bank: '🏦', supermarket: '🛒', other: '📍',
     };
-    // Pick diverse types — 1 from each category first, then fill remaining
-    const priorityTypes = ['mosque', 'place_of_worship', 'school', 'hospital', 'clinic', 'bakery', 'park', 'restaurant', 'fast_food', 'salon', 'bank', 'petrol_pump', 'fuel', 'pharmacy', 'shop', 'supermarket', 'sweets', 'other'];
+    // Pick diverse types — prioritize key landmarks, allow 2 schools/mosques
     const picked = [];
     const usedNames = new Set();
-    // First pass: one from each type
-    for (const t of priorityTypes) {
-      if (picked.length >= 8) break;
-      const match = landmarks.find(l => l.type === t && !usedNames.has(l.name));
+    const pickOne = (type) => {
+      const match = landmarks.find(l => l.type === type && !usedNames.has(l.name));
       if (match) { picked.push(match); usedNames.add(match.name); }
+    };
+    // Key landmarks first (nearest from OSM come first in list)
+    pickOne('mosque'); pickOne('school'); pickOne('hospital');
+    // Second school (Google Maps one, different from OSM)
+    pickOne('school');
+    // Other types
+    const otherTypes = ['bakery', 'park', 'restaurant', 'fast_food', 'salon', 'clinic', 'bank', 'petrol_pump', 'fuel', 'pharmacy', 'shop', 'supermarket', 'sweets', 'place_of_worship', 'other'];
+    for (const t of otherTypes) {
+      if (picked.length >= 8) break;
+      pickOne(t);
     }
-    // Second pass: fill remaining slots up to 8
+    // Fill remaining up to 8
     for (const lm of landmarks) {
       if (picked.length >= 8) break;
       if (!usedNames.has(lm.name)) { picked.push(lm); usedNames.add(lm.name); }
