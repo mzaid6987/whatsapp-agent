@@ -317,7 +317,22 @@ async function analyzeLocation(lat, lng, apiKey) {
       bakery: '🍞', sweets: '🍰', park: '🌳', salon: '💇', shop: '🏪',
       fuel: '⛽', petrol_pump: '⛽', bank: '🏦', supermarket: '🛒', other: '📍',
     };
-    for (const lm of landmarks.slice(0, 6)) {
+    // Pick diverse types — 1 from each category first, then fill remaining
+    const priorityTypes = ['mosque', 'place_of_worship', 'school', 'hospital', 'clinic', 'bakery', 'park', 'restaurant', 'fast_food', 'salon', 'bank', 'petrol_pump', 'fuel', 'pharmacy', 'shop', 'supermarket', 'sweets', 'other'];
+    const picked = [];
+    const usedNames = new Set();
+    // First pass: one from each type
+    for (const t of priorityTypes) {
+      if (picked.length >= 8) break;
+      const match = landmarks.find(l => l.type === t && !usedNames.has(l.name));
+      if (match) { picked.push(match); usedNames.add(match.name); }
+    }
+    // Second pass: fill remaining slots up to 8
+    for (const lm of landmarks) {
+      if (picked.length >= 8) break;
+      if (!usedNames.has(lm.name)) { picked.push(lm); usedNames.add(lm.name); }
+    }
+    for (const lm of picked) {
       const icon = typeIcons[lm.type] || '📍';
       const dist = lm.distance ? ` (~${lm.distance}m)` : '';
       msg += `${icon} ${lm.name}${dist}\n`;
