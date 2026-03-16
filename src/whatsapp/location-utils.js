@@ -136,27 +136,27 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
   if (!apiKey) throw new Error('No API key');
 
   // Take 2 screenshots at different zoom levels:
-  // 17z = ~500m area (wider view, catches more labels in sparse areas)
-  // 19z = ~250-300m area (medium — shop names, mosques, schools)
+  // 18z = ~400m area (wider view — catches labels that 19z misses, smaller image than 17z)
+  // 20z = ~150m area (medium-close — shop names, mosques, schools)
   // 21z = ~50-100m area (very close shops, salons, bakeries)
   const baseUrl = `https://image.thum.io/get/width/1280/crop/900/wait/5000`;
-  const urlWide = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},17z`;
-  const urlMid = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},19z`;
+  const urlWide = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},18z`;
+  const urlMid = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},20z`;
   const urlClose = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},21z`;
 
   logDebug(`Starting screenshots for ${lat},${lng}`);
-  console.log('[Location] Taking Google Maps screenshots (17z + 19z + 21z)...');
+  console.log('[Location] Taking Google Maps screenshots (18z + 20z + 21z)...');
   const [bufWide, bufMid, bufClose] = await Promise.all([
     fetchBuffer(urlWide, 45000).catch(e => { logDebug(`17z fetch FAILED: ${e.message}`); return null; }),
     fetchBuffer(urlMid, 45000).catch(e => { logDebug(`19z fetch FAILED: ${e.message}`); return null; }),
     fetchBuffer(urlClose, 45000).catch(e => { logDebug(`21z fetch FAILED: ${e.message}`); return null; }),
   ]);
 
-  logDebug(`Screenshots done: 17z=${bufWide?.length || 0}b, 19z=${bufMid?.length || 0}b, 21z=${bufClose?.length || 0}b`);
+  logDebug(`Screenshots done: 18z=${bufWide?.length || 0}b, 20z=${bufMid?.length || 0}b, 21z=${bufClose?.length || 0}b`);
 
   // Analyze valid screenshots in parallel
   const analyses = [];
-  for (const [label, buf] of [['17z', bufWide], ['19z', bufMid], ['21z', bufClose]]) {
+  for (const [label, buf] of [['18z', bufWide], ['20z', bufMid], ['21z', bufClose]]) {
     if (buf && buf.length > 10000) {
       analyses.push(analyzeScreenshot(buf, apiKey).catch(e => { logDebug(`${label} GPT FAILED: ${e.message}`); return []; }));
     } else {
