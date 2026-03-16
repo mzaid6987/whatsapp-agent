@@ -501,10 +501,23 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
   }
 
   // Complaint intercept — code enforces
-  if (aiResponse.is_complaint || (aiNextState === 'COMPLAINT' && state.current !== 'COMPLAINT')) {
+  // FIX: Don't flag as complaint if customer is just asking about quality (hypothetical/future tense)
+  const isQualityQuestion = /\b(kharab|fake|nakli)\s*(to|tou|tw)?\s*(nahi|nhi|na|nh)\s*(ho|hoga|hogi|ayga|ayegi|nikle|nikla|milega|milegi)\b/i.test(message) ||
+    /\b(quality|qlty)\s*(kaisi|kesi|ksi|acha|achi)\b/i.test(message) ||
+    /\b(sahi|theek|original|asli)\s*(hoga|hogi|hai\s*na|milega|milegi|ayga|ayegi)\b/i.test(message) ||
+    /\b(cheez|product|item)\s*(perfect|sahi|theek|acha|achi)\s*(honi|hona|ho)\s*(chahiye|chahie)\b/i.test(message) ||
+    /\b(pehle|phle|pahle)\s*(bhi|b)\s*(kharab|fake|nakli)\s*(mila|mili|tha|thi|nikla|nikli)\b/i.test(message);
+  if ((aiResponse.is_complaint || (aiNextState === 'COMPLAINT' && state.current !== 'COMPLAINT')) && !isQualityQuestion) {
     state.current = 'COMPLAINT';
     if (dbConv) {
       getDb().prepare('UPDATE conversations SET complaint_flag = 1, needs_human = 1 WHERE id = ?').run(dbConv.id);
+    }
+  } else if (isQualityQuestion && (aiResponse.is_complaint || aiNextState === 'COMPLAINT')) {
+    // Override: customer is asking quality question, not complaining — stay in current state
+    aiNextState = state.current;
+    reply = `Aap bilkul fikar mat karein — hamari har cheez quality checked hoti hai. 7 din ka exchange bhi hai, agar koi bhi masla ho to hum replace kar dein ge 😊`;
+    if (['COLLECT_ADDRESS', 'COLLECT_CITY', 'COLLECT_PHONE', 'COLLECT_NAME', 'COLLECT_DELIVERY_PHONE'].includes(state.current)) {
+      reply += '\n' + getStateFallback(state.current, state.collected, honorific);
     }
   }
 
