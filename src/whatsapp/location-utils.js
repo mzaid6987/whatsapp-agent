@@ -136,32 +136,32 @@ async function findNearbyGoogleMaps(lat, lng, apiKey) {
   if (!apiKey) throw new Error('No API key');
 
   // Take 2 screenshots at different zoom levels:
-  // 19z = ~250-300m area (ensures labels visible even in sparse areas)
+  // 17z = ~500m area (wider view, catches more labels in sparse areas)
+  // 19z = ~250-300m area (medium — shop names, mosques, schools)
   // 21z = ~50-100m area (very close shops, salons, bakeries)
   const baseUrl = `https://image.thum.io/get/width/1280/crop/900/wait/5000`;
-  const url18 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},19z`;
-  const url20 = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},21z`;
+  const urlWide = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},17z`;
+  const urlMid = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},19z`;
+  const urlClose = `${baseUrl}/https://www.google.com/maps/@${lat},${lng},21z`;
 
   logDebug(`Starting screenshots for ${lat},${lng}`);
-  console.log('[Location] Taking Google Maps screenshots (18z + 20z)...');
-  const [buf18, buf20] = await Promise.all([
-    fetchBuffer(url18, 45000).catch(e => { logDebug(`18z fetch FAILED: ${e.message}`); return null; }),
-    fetchBuffer(url20, 45000).catch(e => { logDebug(`20z fetch FAILED: ${e.message}`); return null; }),
+  console.log('[Location] Taking Google Maps screenshots (17z + 19z + 21z)...');
+  const [bufWide, bufMid, bufClose] = await Promise.all([
+    fetchBuffer(urlWide, 45000).catch(e => { logDebug(`17z fetch FAILED: ${e.message}`); return null; }),
+    fetchBuffer(urlMid, 45000).catch(e => { logDebug(`19z fetch FAILED: ${e.message}`); return null; }),
+    fetchBuffer(urlClose, 45000).catch(e => { logDebug(`21z fetch FAILED: ${e.message}`); return null; }),
   ]);
 
-  logDebug(`Screenshots done: 18z=${buf18?.length || 0}b, 20z=${buf20?.length || 0}b`);
+  logDebug(`Screenshots done: 17z=${bufWide?.length || 0}b, 19z=${bufMid?.length || 0}b, 21z=${bufClose?.length || 0}b`);
 
-  // Analyze both screenshots in parallel
+  // Analyze valid screenshots in parallel
   const analyses = [];
-  if (buf18 && buf18.length > 10000) {
-    analyses.push(analyzeScreenshot(buf18, apiKey).catch(e => { logDebug(`18z GPT FAILED: ${e.message}`); return []; }));
-  } else {
-    logDebug(`18z too small or null: ${buf18?.length || 0}b`);
-  }
-  if (buf20 && buf20.length > 10000) {
-    analyses.push(analyzeScreenshot(buf20, apiKey).catch(e => { logDebug(`20z GPT FAILED: ${e.message}`); return []; }));
-  } else {
-    logDebug(`20z too small or null: ${buf20?.length || 0}b`);
+  for (const [label, buf] of [['17z', bufWide], ['19z', bufMid], ['21z', bufClose]]) {
+    if (buf && buf.length > 10000) {
+      analyses.push(analyzeScreenshot(buf, apiKey).catch(e => { logDebug(`${label} GPT FAILED: ${e.message}`); return []; }));
+    } else {
+      logDebug(`${label} too small or null: ${buf?.length || 0}b`);
+    }
   }
 
   if (analyses.length === 0) {
@@ -227,6 +227,7 @@ async function findNearbyOSM(lat, lng) {
       };
     })
     .filter(Boolean)
+    .filter(e => e.distance <= 300) // Filter out far-away way centers (e.g. university campus 1km+ away)
     .sort((a, b) => a.distance - b.distance);
 }
 
