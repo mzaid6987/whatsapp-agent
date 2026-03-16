@@ -103,14 +103,18 @@ function validateExtracted(aiExtracted, state) {
   }
 
   // Name: basic sanity check
-  if (aiExtracted.name && !state.collected.name) {
+  // FIX: Also allow name UPDATE if new name is longer (multi-part name fix)
+  if (aiExtracted.name) {
     let name = String(aiExtracted.name).trim();
     // Title case
     name = name.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
     // Reject obvious non-names
     const nonNameWords = /\b(order|chahiye|product|price|send|nahi|haan|ok|purani|soorh|address|delivery|city|gali|road|colony|bazar|market|street|mohalla)\b/i;
     if (name.length >= 2 && name.length <= 50 && !nonNameWords.test(name)) {
-      validated.name = name;
+      // Accept if no name yet, OR if new name is longer (customer gave full name after first name)
+      if (!state.collected.name || (name.split(/\s+/).length > state.collected.name.split(/\s+/).length)) {
+        validated.name = name;
+      }
     }
   }
 
@@ -138,19 +142,41 @@ function validateExtracted(aiExtracted, state) {
     const city = extractCity(String(aiExtracted.city));
     if (city) validated.city = city;
     else {
-      // AI might have correct city not in our list — accept if reasonable
+      // AI might have correct city not in our list — but validate it's not an area/colony name
       const raw = String(aiExtracted.city).trim().replace(/\s*(hai|h|he)\s*$/i, '').trim();
-      if (raw.length >= 3 && raw.length <= 50) validated.city = raw;
+      // Reject if it looks like an area name (contains colony/town/block/phase/sector/scheme/goth/mohalla)
+      const isAreaName = /\b(colony|town|block|phase|sector|scheme|goth|mohalla|nagar|pura|abad|society|housing|villas|enclave|chowk|bazaar|market|road|street|gali)\b/i.test(raw);
+      if (raw.length >= 3 && raw.length <= 30 && !isAreaName) validated.city = raw;
     }
   }
 
-  // Address: accept as-is if reasonable length
-  if (aiExtracted.address && !state.collected.address) {
+  // Address: accept as-is if reasonable length (including Urdu script)
+  // FIX: If old address exists, COMBINE instead of replacing (multi-part address fix)
+  if (aiExtracted.address) {
     const addr = String(aiExtracted.address).trim();
-    if (addr.length >= 5) validated.address = addr;
+    // Accept if >= 5 chars OR if contains Urdu script (shorter Urdu text may still be valid)
+    const hasUrdu = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(addr);
+    if (addr.length >= 5 || (hasUrdu && addr.length >= 3)) {
+      if (state.collected.address) {
+        // Combine: check if new address is substantially different from old
+        const oldAddr = state.collected.address.toLowerCase().trim();
+        const newAddr = addr.toLowerCase().trim();
+        // Don't combine if new address is subset of old or vice versa
+        if (!oldAddr.includes(newAddr) && !newAddr.includes(oldAddr)) {
+          // Combine old + new, removing duplicate parts
+          validated.address = state.collected.address + ', ' + addr;
+        } else if (newAddr.length > oldAddr.length) {
+          // New is more detailed version of old — use new
+          validated.address = addr;
+        }
+        // If new is subset of old, keep old (don't set validated.address)
+      } else {
+        validated.address = addr;
+      }
+    }
   }
 
-  // Auto-extract city from address if city is missing
+  // Auto-extract city from address if city is missing — check address AND original message
   if (!validated.city && !state.collected.city) {
     const addrToCheck = validated.address || state.collected.address || '';
     if (addrToCheck) {
@@ -195,6 +221,15 @@ function validateState(aiState, state) {
       const addrWithoutCity = addr.replace(new RegExp(collected.city || 'XXXXX', 'gi'), '').trim();
       // If address is just the city name or too short (<10 chars without city), ask for more
       if (addrWithoutCity.length < 10) {
+        return 'COLLECT_ADDRESS';
+      }
+      // FIX: House/shop number enforcement — address must have a number (house/flat/plot/gali/block)
+      // Exception: rural addresses (gaon/chak/goth/village/killi/dhoke), shop delivery, "nahi pata" acknowledged
+      const isRural = /\b(gaon|gao|chak|goth|village|killi|dhoke|dhok|mauza|mouza|dehat)\b/i.test(addr);
+      const isShopDelivery = /\b(shop|dukaan|dukan|store|salon|parlour|bakery|hotel|restaurant|office|workshop|mart|pharmacy|medical|clinic|hospital)\b/i.test(addr);
+      const hasNumber = /\d/.test(addr);
+      const customerSaidNoPata = collected._address_no_number_ok;
+      if (!isRural && !isShopDelivery && !hasNumber && !customerSaidNoPata) {
         return 'COLLECT_ADDRESS';
       }
     }
@@ -265,6 +300,37 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
       reply: 'Ji, sirf text messages samajh aata hai. Apna sawal likh ke bhejein.',
       state: 'UNKNOWN', collected: {}, needs_human: false, source: 'guard',
       intent: 'non_text', tokens_in: 0, tokens_out: 0, response_ms: 0,
+    };
+  }
+
+  // Guard: garbled voice-to-text detection
+  // Speech-to-text sometimes produces long words without spaces: "Abduljabbarsonofattamuhammad..."
+  const trimmedMsg = message.trim();
+  const words = trimmedMsg.split(/\s+/);
+  const longestWord = words.reduce((max, w) => w.length > max.length ? w : max, '');
+  const isGarbled = words.length <= 2 && longestWord.length > 35 && /^[a-z]/i.test(longestWord) && !/^https?:\/\//i.test(longestWord);
+  if (isGarbled) {
+    // Don't save as address/name — ask customer to type clearly
+    const stateObj = getOrCreateConvV2(phone);
+    // Still save to DB for records but flag it
+    let dbCustomer2 = null, dbConv2 = null;
+    try {
+      dbCustomer2 = customerModel.findOrCreate(phone);
+      dbConv2 = conversationModel.getOrCreateActive(dbCustomer2.id, storeName);
+      if (dbConv2) {
+        messageModel.create(dbConv2.id, 'incoming', 'customer', message, { source: 'whatsapp', wa_message_id: options.wa_message_id });
+        conversationModel.updateLastMessage(dbConv2.id, message);
+      }
+    } catch (e) {}
+    const garbledReply = 'Yeh message samajh nahi aaya — shayad voice message se text bana hai 🤔 Meharbani karke apna jawab TYPE karke bhejein, taake hum sahi samajh sakein 🙏';
+    if (dbConv2) {
+      messageModel.create(dbConv2.id, 'outgoing', 'bot', garbledReply, { source: 'v2_guard' });
+      conversationModel.updateLastMessage(dbConv2.id, garbledReply);
+    }
+    return {
+      reply: garbledReply,
+      state: stateObj.current, collected: stateObj.collected, needs_human: false, source: 'v2_guard',
+      intent: 'garbled', tokens_in: 0, tokens_out: 0, response_ms: Date.now() - startTime,
     };
   }
 
@@ -374,6 +440,14 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     aiExtracted.product = codeDetectedProduct.short;
   }
 
+  // Code-side: "nahi pata" for house number → allow address without number
+  if (state.current === 'COLLECT_ADDRESS' && state.collected.address && !state.collected._address_no_number_ok) {
+    const lmsg = message.toLowerCase().trim();
+    if (/\b(nahi\s*pata|pta\s*nhi|nhi\s*pata|nahi\s*hai|number\s*nahi|nhi\s*hai|nahi\s*maloom|yaad\s*nahi)\b/i.test(lmsg)) {
+      state.collected._address_no_number_ok = true;
+    }
+  }
+
   // Code-side: "yahi number/same/WhatsApp wala" → use sender phone
   if (state.current === 'COLLECT_PHONE' && !state.collected.phone && !aiExtracted.phone) {
     const lmsg = message.toLowerCase().replace(/[\s\-]/g, '');
@@ -411,7 +485,7 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
   if (validated.phone) state.collected.phone = validated.phone;
   if (validated.delivery_phone) state.collected.delivery_phone = validated.delivery_phone;
   if (validated.city) state.collected.city = validated.city;
-  if (validated.address) state.collected.address = validated.address;
+  if (validated.address) state.collected.address = validated.address; // Now handles combine logic in validateExtracted
 
   // Validate AI's state transition
   const newState = validateState(aiNextState, state);
