@@ -73,7 +73,13 @@ RULES:
 - Agar customer ek message mein MULTIPLE fields de ("Rehman 03001234567 Lahore") → SAARI extract kar
 - "next_state" = tu decide karega conversation kahan jaani chahiye
 - "send_media" = product short name SIRF jab pehli baar product discuss ho (video bhejni hai). Baad mein mat bhej.
-- "is_complaint" = true SIRF jab customer ACTUALLY received kharab/broken/fake product bole (past tense — "aa gaya kharab", "broken mila", "fake hai ye"). ⚠️ QUALITY QUESTIONS = NOT COMPLAINT: "kharab to nahi hoga?", "fake to nahi?", "quality kaisi hai?", "cheez perfect honi chahiye", "pehle bhi kharab mila tha" — yeh SIRF quality pooch raha hai, is_complaint=FALSE rakhna, reassure karo "7 din exchange hai, fikar mat karein"
+- "is_complaint" = true SIRF jab customer ACTUALLY received kharab/broken/fake product bole (past tense — "aa gaya kharab", "broken mila", "fake hai ye").
+  ⚠️ YEH COMPLAINT NAHI HAI — is_complaint=FALSE:
+  • Quality questions: "kharab to nahi hoga?", "fake to nahi?", "quality kaisi hai?", "cheez perfect honi chahiye" → reassure karo "7 din exchange hai"
+  • Delivery timing: "Monday ko bhejein", "3 baje se pehle", "jaldi bhejein", "kb ayga", "daftar band ho jata hai" → delivery time batao
+  • Delivery instructions: "pehle call karna", "door pe rakh dena", "roza hai", "office mein bhejein" → acknowledge karo
+  • Past experience: "pehle bhi kharab mila tha" → reassure karo, current order ke baare mein baat karo
+  • Cancel request: "cancel kardo" → CANCEL_AFTER_CONFIRM state mein jaao, COMPLAINT mein NAHI
 - "reply" KABHI EMPTY mat chhod — HAMESHA meaningful reply de jo current state se relevant ho
 
 # VALID STATES (sirf yeh use kar next_state mein)

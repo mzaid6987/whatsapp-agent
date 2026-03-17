@@ -507,15 +507,27 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     /\b(sahi|theek|original|asli)\s*(hoga|hogi|hai\s*na|milega|milegi|ayga|ayegi)\b/i.test(message) ||
     /\b(cheez|product|item)\s*(perfect|sahi|theek|acha|achi)\s*(honi|hona|ho)\s*(chahiye|chahie)\b/i.test(message) ||
     /\b(pehle|phle|pahle)\s*(bhi|b)\s*(kharab|fake|nakli)\s*(mila|mili|tha|thi|nikla|nikli)\b/i.test(message);
-  if ((aiResponse.is_complaint || (aiNextState === 'COMPLAINT' && state.current !== 'COMPLAINT')) && !isQualityQuestion) {
+  // Also detect delivery timing/instructions — NOT a complaint
+  const isDeliveryRequest = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|peer|mangal|budh|jumerat|juma|hafta|itwar|somwar)\b/i.test(message) ||
+    /\b(baje|bajay|waje|wajay)\s*(se|sy)?\s*(pehle|pahle|phle|baad|bad)\b/i.test(message) ||
+    /\b(daftar|office|ghar|home)\s*(band|khul|close|open)\b/i.test(message) ||
+    /\b(jaldi|jld)\s*(bhej|send|deliver|dispatch)\b/i.test(message) ||
+    /\b(kb|kab|kitne\s*din|kitna\s*time|kitni\s*der)\s*(ay|aay|aye|aaye|lag|mile|milega)\b/i.test(message) ||
+    /\b(roza|raze|fast)\b/i.test(message) && !/\b(kharab|broken|fake|toot|damage)\b/i.test(message);
+  const isFalseComplaint = isQualityQuestion || isDeliveryRequest;
+  if ((aiResponse.is_complaint || (aiNextState === 'COMPLAINT' && state.current !== 'COMPLAINT')) && !isFalseComplaint) {
     state.current = 'COMPLAINT';
     if (dbConv) {
       getDb().prepare('UPDATE conversations SET complaint_flag = 1, needs_human = 1 WHERE id = ?').run(dbConv.id);
     }
-  } else if (isQualityQuestion && (aiResponse.is_complaint || aiNextState === 'COMPLAINT')) {
-    // Override: customer is asking quality question, not complaining — stay in current state
+  } else if (isFalseComplaint && (aiResponse.is_complaint || aiNextState === 'COMPLAINT')) {
+    // Override: customer is asking quality question or delivery timing — NOT complaining
     aiNextState = state.current;
-    reply = `Aap bilkul fikar mat karein — hamari har cheez quality checked hoti hai. 7 din ka exchange bhi hai, agar koi bhi masla ho to hum replace kar dein ge 😊`;
+    if (isQualityQuestion) {
+      reply = `Aap bilkul fikar mat karein — hamari har cheez quality checked hoti hai. 7 din ka exchange bhi hai, agar koi bhi masla ho to hum replace kar dein ge 😊`;
+    }
+    // For delivery requests, let AI's reply stand (it usually answers delivery timing correctly)
+    // but prevent COMPLAINT state
     if (['COLLECT_ADDRESS', 'COLLECT_CITY', 'COLLECT_PHONE', 'COLLECT_NAME', 'COLLECT_DELIVERY_PHONE'].includes(state.current)) {
       reply += '\n' + getStateFallback(state.current, state.collected, honorific);
     }
