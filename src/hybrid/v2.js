@@ -108,9 +108,12 @@ function validateExtracted(aiExtracted, state) {
     let name = String(aiExtracted.name).trim();
     // Title case
     name = name.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-    // Reject obvious non-names
-    const nonNameWords = /\b(order|chahiye|product|price|send|nahi|haan|ok|purani|soorh|address|delivery|city|gali|road|colony|bazar|market|street|mohalla)\b/i;
-    if (name.length >= 2 && name.length <= 50 && !nonNameWords.test(name)) {
+    // Reject obvious non-names — expanded list to catch "Pictures Bijwado", "Kub Aye Ga", "I Went This" etc.
+    const nonNameWords = /\b(order|chahiye|product|price|send|nahi|haan|ok|purani|soorh|address|delivery|city|gali|road|colony|bazar|market|street|mohalla|picture|pictures|photo|bhijwa|bijwa|bhejo|bhej|dikhao|dikha|batao|bata|went|want|this|that|please|plz|same|kub|kab|aye|ayega|ayegi|kitne|kitna|kitni|cancel|confirm|tracking|track|parcel|courier|return|refund|exchange|replace|broken|kharab|fake|damage|complaint|abhi|jaldi|urgent|pehle|baad|kal|aaj|raat|subah|sham|din|waqt|time|west|waste|liye|leny|lena|manga|mangwa|karwa|krwa|karao|kr[uo]|kardo|krdo|kar\s*do|dekhna|dekh|check|main|mein|mujhe|mjhe|mera|humara|hamara|apna|apni|apke|aap)\b/i;
+    // Also reject if name looks like a sentence (4+ words with common verbs/prepositions)
+    const words = name.split(/\s+/);
+    const hasSentencePattern = words.length >= 3 && /\b(ka|ki|ke|ko|se|ne|hai|he|ho|tha|thi|the|ga|gi|ge|na|ni|ya|in|is|us|do|de|le|lo|ab|to|ye|wo|or|aur|bhi|pe|par|me|mein)\b/i.test(name);
+    if (name.length >= 2 && name.length <= 50 && !nonNameWords.test(name) && !hasSentencePattern) {
       // Accept if no name yet, OR if new name is longer (customer gave full name after first name)
       if (!state.collected.name || (name.split(/\s+/).length > state.collected.name.split(/\s+/).length)) {
         validated.name = name;
@@ -557,12 +560,25 @@ async function handleMessageV2(message, phone, storeName, apiKey, options = {}) 
     }
     state._media_sent = true;
   }
-  // AI requested media
-  if (aiResponse.send_media) {
+  // AI requested media — but only if not already sent in this conversation
+  if (aiResponse.send_media && !mediaToSend && !state._media_sent) {
     const mediaProduct = detectProduct(aiResponse.send_media) || state.product;
     if (mediaProduct) {
-      mediaToSend = { product_id: mediaProduct.id, type: 'video', product_name: mediaProduct.short };
+      // Double-check DB
+      let alreadySent = false;
+      if (dbConv) {
+        try {
+          const check = getDb().prepare(
+            "SELECT COUNT(*) as cnt FROM messages WHERE conversation_id = ? AND direction = 'outgoing' AND media_type = 'video'"
+          ).get(dbConv.id);
+          alreadySent = (check?.cnt || 0) > 0;
+        } catch (e) {}
+      }
+      if (!alreadySent) {
+        mediaToSend = { product_id: mediaProduct.id, type: 'video', product_name: mediaProduct.short };
+      }
     }
+    state._media_sent = true;
   }
 
   // ============= COMPREHENSIVE QUALITY CHECKS =============
@@ -753,12 +769,12 @@ function getStateFallback(currentState, collected, honorific) {
     case 'PRODUCT_SELECTION':
       if (collected.product) {
         const p = PRODUCTS.find(pr => pr.short === collected.product);
-        return `${collected.product} ki price Rs.${p ? fmtPrice(p.price) : '?'} hai. Kya aap order karna chahenge? 😊`;
+        return `${collected.product} ki price ${p ? fmtPrice(p.price) : 'Rs.?'} hai. Kya aap order karna chahenge? 😊`;
       }
       return `Hamare paas kaafi products hain — aap konsa dekhna chahenge? 😊`;
     case 'COLLECT_NAME': {
       const p = collected.product ? PRODUCTS.find(pr => pr.short === collected.product) : null;
-      if (p) return `${collected.product} ki price Rs.${fmtPrice(p.price)} hai, COD hai aur delivery FREE hai. ${h}, apna naam bata dein? 😊`;
+      if (p) return `${collected.product} ki price ${fmtPrice(p.price)} hai, COD hai aur delivery FREE hai. ${h}, apna naam bata dein? 😊`;
       return `${h}, apna naam bata dein taake order process kar sakein? 😊`;
     }
     case 'COLLECT_PHONE':
@@ -777,7 +793,7 @@ function getStateFallback(currentState, collected, honorific) {
       return `${collected.name || h}, discount products dekhna chahein ge? Sath delivery free hogi 🚚`;
     case 'UPSELL_SHOW': {
       const upsellList = PRODUCTS.filter(p => p.short !== collected.product).slice(0, 4)
-        .map((p, i) => `${i+1}. ${p.name} — Rs.${fmtPrice(Math.max(499, p.price - 500))}`).join('\n');
+        .map((p, i) => `${i+1}. ${p.name} — ${fmtPrice(Math.max(499, p.price - 500))}`).join('\n');
       return `Yeh hain discount products:\n${upsellList}\nKoi pasand aaye to number ya naam bata dein 😊`;
     }
     case 'ORDER_CONFIRMED':

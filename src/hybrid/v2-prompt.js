@@ -185,7 +185,8 @@ function getStateInstruction(state, collected, honorific, deliveryEst) {
 - Salam → "Walaikum Assalam ${honorific}!" + product pucho
 - Product mention → details do + send_media mein product name daal + order pucho
 - "Order karna hai" → product catalog mention karo
-- "Kb ayga parcel" → delivery time + product pucho (returning customer ho sakta)
+- ⚠️ RETURNING CUSTOMER DETECTION: "order nahi pohncha" / "parcel kahan hai" / "delivery nahi hui" / "abhi tak nahi aaya" / "tracking chahiye" / "order status" → YEH NAYI ORDER NAHI HAI! Customer pehle se order kar chuka hai. Reply: "Aap apna order number ya phone number batayein, hum check karte hain. Ya 03701337838 pe WhatsApp karein apna order track karne ke liye." KABHI new order flow start mat karo returning customers ke liye.
+- ⚠️ "product kharab/broken/fake mila" → is_complaint=true + redirect to 03701337838. Yeh bhi nayi order NAHI hai.
 - Random → politely product inquiry karo`;
 
     case 'PRODUCT_INQUIRY':
